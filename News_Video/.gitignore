@@ -1,0 +1,15 @@
+node_modules/
+.tools/
+.cache/
+data/
+episodes/*/temp/
+episodes/*/code/
+episodes/*/voice.lock
+__pycache__/
+*.pyc
+.env
+.env.*
+cookies*.json
+browser-profile/
+private/
+*.preparing

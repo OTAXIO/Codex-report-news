@@ -1,0 +1,149 @@
+{
+  "timezone": "Asia/Shanghai",
+  "main_video_ready_times": [
+    "06:00",
+    "12:00",
+    "18:00"
+  ],
+  "ai_rss_fetch_trigger": "before_each_episode",
+  "social_rss_collection_interval_minutes": 60,
+  "social_collection_allow_model_calls": false,
+  "ai_item_limit": null,
+  "social_domestic_count": 3,
+  "social_international_count": 3,
+  "upload_enabled": false,
+  "auto_publish": false,
+  "x_enabled": true,
+  "theme": {
+    "blue": "#01A1FE",
+    "black": "#101218",
+    "yellow": "#F6D544",
+    "white": "#F2F5FA",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "reference_image": "E:\\图\\FUN\\AI\\exec-eae21881-c52d-40ce-82ce-0936f290928c.png",
+    "color_sampling": "mode of top-right clear background",
+    "background": "#FFFFFF",
+    "text": "#101218",
+    "layout": "white background, black text, blue accents and edge-only patterns",
+    "yellow_enabled": false
+  },
+  "voice": {
+    "repository": "D:/Basement/Codex_Video/Voice_Generate",
+    "engine": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604",
+    "profile": "D:/Basement/Codex_Video/admin_retrain/recommended_profile.json",
+    "cleanup": "strong",
+    "speed": 1.0,
+    "pause": 0.2,
+    "language": "zh",
+    "reference_audio": "D:\\Basement\\Codex_Video\\News_Video\\assets\\references\\dijiang-ready.wav",
+    "reference_text": "帝江号，我已就位，该出发了。",
+    "soft_release": false,
+    "tail_style": "natural",
+    "pronunciations": {
+      "OpenAI": "Open AI"
+    },
+    "ai_pronunciation": "Connected English letter name sequence, no punctuation or sentence split inside AI"
+  },
+  "publication_preset": {
+    "category_name": "News",
+    "ai_generated": true,
+    "work_type": "original",
+    "other_fields": "Use confirmed workflow defaults; ask only genuinely missing account-specific fields",
+    "zone_name": "科技",
+    "tags": [
+      "AI",
+      "OpenAI",
+      "千问",
+      "Claude",
+      "科技资讯"
+    ],
+    "activity_preference": "Relevant popular creation activity",
+    "upload_backend": "manual_or_browser_until_verified",
+    "creator_declarations": [
+      "含AI生成内容",
+      "内容为自制：未经作者允许，禁止转载"
+    ]
+  },
+  "editorial": {
+    "company_names": "Foreign names keep official English; domestic brands use established Chinese names, Qwen -> 千问; DeepSeek remains English",
+    "include_episode_notes_chapter": false,
+    "preferred_vendors": [
+      "OpenAI",
+      "Anthropic",
+      "DeepSeek",
+      "Qwen",
+      "Z.ai"
+    ],
+    "secondary_vendors": [
+      "MiniMax",
+      "Google",
+      "Meta",
+      "Mistral"
+    ],
+    "research_sources_policy": "review_only_for_major_broad_impact_updates; ordinary paper/tool posts are supplementary",
+    "preferred_topics": [
+      "model releases",
+      "consumer and developer product updates",
+      "availability and pricing changes",
+      "practical workflow changes"
+    ],
+    "ai_item_limit": null,
+    "nightly_builds": "skip unless substantial user-visible change",
+    "minor_sdk_patches": "supplementary, not a main-video default",
+    "domestic_names": "Use established Chinese names for domestic brands; Qwen -> 千问; DeepSeek remains English",
+    "allowed_producers": [
+      "Codex current conversation",
+      "DeepSeek Harness",
+      "manual editor"
+    ]
+  },
+  "edition_labels": {
+    "06:00": "早间新闻",
+    "12:00": "午间新闻",
+    "18:00": "晚间新闻"
+  },
+  "release": {
+    "directory": "D:/Basement/Codex_Video/release",
+    "prepare_before_upload": true,
+    "folder_template": "YYYY_MM_DD_{morning|noon|night}",
+    "video_template": "YYYY_MM_DD_{slot}_{早间新闻|午间新闻|晚间新闻}.mp4",
+    "cleanup_after_publication": true,
+    "temporary_folder_template": "YYYY_MM_DD_temporary_HHmmss_alertid",
+    "temporary_video_template": "YYYY_MM_DD_temporary_HHmmss_alertid_临时新闻.mp4"
+  },
+  "x_collection": {
+    "mode": "agent_reach_read_only",
+    "trigger": "hourly",
+    "executable": "agent-reach",
+    "limit_per_account": 10,
+    "timeout_seconds": 40,
+    "hourly_polling": true,
+    "paid_x_api": false,
+    "leader_post_without_official_news_allowed": true,
+    "stop_on_auth_rate_limit_or_platform_block": true,
+    "primary": "agent_reach_twitter",
+    "public_mirror_fallback_allowed": true,
+    "public_mirror_allowlist": [
+      "www.sotwe.com"
+    ],
+    "mirror_policy": "public discovery/context fallback; verify original status author/date/body before ingestion; do not bypass channel verification or rate-limit stops",
+    "collection_interval_minutes": 60
+  },
+  "reset_alerts": {
+    "enabled": true,
+    "author_handle": "thsottiaux",
+    "edition_label": "临时新闻",
+    "edition_slot": "temporary",
+    "max_age_hours": 6,
+    "priority": "emergency",
+    "counts_toward_daily_main_limit": false,
+    "content_scope": "Only the reset post, author, publication time, original link and faithful Chinese summary",
+    "semantic_review_required": true,
+    "no_retroactive_republish": true,
+    "publication_authorized_by_user": true,
+    "upload_backend": "current_verified_backend_or_notify_with_release",
+    "auto_upload_backend_verified": false
+  }
+}

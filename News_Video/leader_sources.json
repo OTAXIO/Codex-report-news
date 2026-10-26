@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "checked_on": "2026-10-26",
+  "policy": "Tibo before OpenAI official; other verified leaders before their company; a fresh leader post can stand alone. Priority is not a truth guarantee. Recheck affiliation before production.",
+  "accounts": [
+    {
+      "id": "x-leader-thsottiaux",
+      "name": "tibo",
+      "handle": "thsottiaux",
+      "vendor": "OpenAI",
+      "type": "leader_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "priority_tier": 1,
+      "source_priority": 0,
+      "selection_policy": "leader_attribution_required",
+      "identity_evidence": "https://x.com/thsottiaux/with_replies?lang=en",
+      "role": "Profile lists Codex & ChatGPT @OpenAI"
+    },
+    {
+      "id": "x-leader-sama",
+      "name": "Sam Altman",
+      "handle": "sama",
+      "vendor": "OpenAI",
+      "type": "leader_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "priority_tier": 1,
+      "source_priority": 10,
+      "selection_policy": "leader_attribution_required",
+      "identity_evidence": "https://x.com/sama",
+      "role": "OpenAI CEO; confirm current role and profile at each production"
+    },
+    {
+      "id": "x-leader-bcherny",
+      "name": "Boris Cherny",
+      "handle": "bcherny",
+      "vendor": "Anthropic",
+      "type": "leader_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "priority_tier": 1,
+      "source_priority": 10,
+      "selection_policy": "leader_attribution_required",
+      "identity_evidence": "https://x.com/bcherny/with_replies?lang=en",
+      "role": "Profile lists Claude Code @anthropicai"
+    }
+  ],
+  "pending_company_leaders": [
+    "DeepSeek",
+    "Qwen/千问",
+    "Z.ai/智谱",
+    "MiniMax"
+  ],
+  "pending_policy": "Discover and verify real official-affiliated accounts during production, add to allowlist only with identity evidence; do not guess handles or use fan accounts. Official feeds remain usable."
+}

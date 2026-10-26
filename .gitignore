@@ -1,0 +1,40 @@
+# Local credentials and account state
+.env
+.env.*
+!.env.example
+*cookie*
+*credential*
+*.pem
+*.key
+browser-profile/
+private/
+.local/
+
+# Dependencies, caches, model and training data
+node_modules/
+__pycache__/
+*.py[cod]
+.cache/
+.tools/
+.validation-temp/
+*.ckpt
+*.pth
+*.pt
+*.safetensors
+admin_retrain/
+admin_voice_study/
+
+# Runtime state and generated deliverables
+News_Video/data/
+News_Video/logs/
+News_Video/film/
+release/
+*.mp4
+*.wav
+*.flac
+*.mp3
+*.zip
+*.ttc
+*.ttf
+*.log
+*.preparing

@@ -1,0 +1,331 @@
+{
+  "id": "sample-20261026-v5",
+  "producer": "Codex current conversation",
+  "title": "资讯样片 · 2026.10.26",
+  "candidate_window_hours": 72,
+  "ranking": "Codex qualitative ranking within collected sources: recency, public relevance, specificity, evidence and safety. Not a measured global trending ranking.",
+  "review_status": "local_sample_pending_human_review",
+  "scenes": [
+    {
+      "id": "intro",
+      "section": "资讯样片",
+      "title": "先看事实，再看变化",
+      "facts": [
+        {
+          "title": "本期内容",
+          "detail": "4 条 AI 动态、3 条国内新闻、2 条国际新闻，逐条查看关键变化。"
+        },
+        {
+          "title": "事实与来源",
+          "detail": "各条消息保留发布机构、原始日期和来源链接。"
+        },
+        {
+          "title": "阅读方式",
+          "detail": "正文补充解释，口播与字幕提炼重点；底部显示逐条新闻进度。"
+        }
+      ],
+      "narration": "这是一条本地资讯样片。先看人工智能动态，再看国内外新闻。所有条目都保留来源和日期。",
+      "short_title": "导览"
+    },
+    {
+      "id": "claude",
+      "item_id": "97c5df49eed3f0cf21b0",
+      "section": "AI 动态",
+      "title": "Claude Code 更新",
+      "facts": [
+        {
+          "title": "版本 2.1.310",
+          "detail": "本次为 Claude Code 的官方版本更新，具体改动以发布记录为准。"
+        },
+        {
+          "title": "新增 Monitor 支持",
+          "detail": "更新涉及 Bedrock、Vertex、Foundry 等平台上的监控工具与插件监控支持。"
+        },
+        {
+          "title": "兼容与清理修复",
+          "detail": "修复部分网关的请求兼容问题，以及后台清理误删近期文件等问题。"
+        }
+      ],
+      "narration": "Claude Code 更新到二点一点三一零版本。官方更新记录列出了监控工具支持，以及网关兼容和文件清理等修复。",
+      "source_url": "https://github.com/anthropics/claude-code/releases/tag/v2.1.310",
+      "publisher": "Anthropic",
+      "published": "2026-10-23T23:39:00+00:00",
+      "selection_reason": "官方产品版本更新，直接影响开发者使用。",
+      "evidence": [
+        "Official release: Added the Monitor tool and plugin monitors on Bedrock, Vertex, and Foundry",
+        "Fixed requests failing behind some gateways",
+        "Fixed background cleanup deleting some recent files",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "Claude 更新",
+      "company": "Anthropic",
+      "logo": "assets/logos/anthropic.png"
+    },
+    {
+      "id": "openai-storage",
+      "item_id": "ee4c22366ef7e7abd786",
+      "section": "AI 动态",
+      "title": "OpenAI 分享存储扩展",
+      "facts": [
+        {
+          "title": "面向规模化服务的存储方案",
+          "detail": "官方工程文章介绍多租户、全球缓存与 Azure Cosmos DB 等方案。"
+        },
+        {
+          "title": "读取性能：官方报告提升 12 倍",
+          "detail": "这项指标描述存储读取，不等于模型回答速度提升 12 倍。"
+        },
+        {
+          "title": "来源范围",
+          "detail": "本条依据 OpenAI 官方 RSS 摘要整理；未将其写作独立实测结论。"
+        }
+      ],
+      "narration": "OpenAI 发布存储系统扩展的工程文章。官方介绍了多租户和全球缓存等方案，并报告读取性能提升十二倍。这是工程指标，不代表模型回答速度。",
+      "source_url": "https://openai.com/index/scaling-storage-one-billion-users-part-two",
+      "publisher": "OpenAI",
+      "published": "2026-10-23T17:00:00+00:00",
+      "selection_reason": "官方基础设施技术进展；明确区分系统指标与用户体验。",
+      "evidence": [
+        "OpenAI official RSS description: scaled Habitat with reliable multi-tenancy, global caching, and Azure Cosmos DB to deliver 12× faster reads for ChatGPT. Original page returned 403; facts limited to official RSS description.",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "存储扩展",
+      "company": "OpenAI",
+      "logo": "assets/logos/openai.png"
+    },
+    {
+      "id": "openai-training",
+      "item_id": "f8c156dba7886826388b",
+      "section": "AI 动态",
+      "title": "训练环境安全措施",
+      "facts": [
+        {
+          "title": "训练与评估环境隔离",
+          "detail": "官方文章介绍加强前沿模型训练和评估环境隔离的防护方向。"
+        },
+        {
+          "title": "离线环境与安全测试",
+          "detail": "官方摘要提及离线环境及高算力安全测试，不展开攻击操作细节。"
+        },
+        {
+          "title": "公开信息的边界",
+          "detail": "本条只总结公开防护措施，不推断其内部配置或实际防护效果。"
+        }
+      ],
+      "narration": "同一天，OpenAI 还介绍了训练与评估环境的隔离措施，包括离线环境与安全测试。本条只概述公开的防护方向。",
+      "source_url": "https://openai.com/index/securing-our-frontier-model-training-environment",
+      "publisher": "OpenAI",
+      "published": "2026-10-23T10:00:00+00:00",
+      "selection_reason": "另一项独立的官方更新，非与存储文章重复，不展示攻击细节。",
+      "evidence": [
+        "OpenAI official RSS: strengthened containment for frontier model training and evaluation, including offline environments and high-compute red-teaming. Original page returned 403; summary restricted to official RSS.",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "训练安全",
+      "company": "OpenAI",
+      "logo": "assets/logos/openai.png"
+    },
+    {
+      "id": "litpivot",
+      "item_id": "5d794c3788a3a4be0d42",
+      "section": "AI 动态",
+      "title": "用文献校准研究想法",
+      "facts": [
+        {
+          "title": "围绕文献修订研究构思",
+          "detail": "Ai2 团队介绍 LitPivot，将研究想法与相关文献证据联系起来。"
+        },
+        {
+          "title": "分别检查问题、贡献与评估",
+          "detail": "工具围绕正在编辑的部分组织文献，并提供带证据的修改建议。"
+        },
+        {
+          "title": "最终决定仍由研究者作出",
+          "detail": "用户可接受、修改或拒绝建议；小样本研究结果不能推广为普遍保证。"
+        }
+      ],
+      "narration": "Ai2 团队介绍了研究构思工具 LitPivot。它把问题、贡献和评估方案分别关联到文献，并提供有依据的修改建议。研究者仍然决定是否采用。",
+      "source_url": "https://huggingface.co/blog/allenai/litpivot",
+      "publisher": "Hugging Face",
+      "published": "2026-10-23T16:15:50+00:00",
+      "selection_reason": "团队原文可核验，研究工具具有实际使用价值；不把小样本研究写成普遍结论。",
+      "evidence": [
+        "Ai2 author article on Hugging Face: separates a research idea into its problem, proposed contribution, and evaluation plan.",
+        "suggests revisions that researchers can accept, edit, or reject.",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "LitPivot",
+      "company": "Ai2",
+      "logo": "assets/logos/ai2.png"
+    },
+    {
+      "id": "energy",
+      "item_id": "bd990d0d99529dec2927",
+      "section": "国内 01 / 03",
+      "title": "风光装机突破 20 亿千瓦",
+      "facts": [
+        {
+          "title": "累计装机达到 20.1 亿千瓦",
+          "detail": "统计截至 2026 年 9 月底，其中太阳能 13.1 亿、风电 7.0 亿千瓦。"
+        },
+        {
+          "title": "装机容量与发电量是不同指标",
+          "detail": "装机反映设备规模，实际发电还取决于运行时间与资源条件。"
+        },
+        {
+          "title": "保留数据的统计时点",
+          "detail": "本条为国家能源局发布的数据，经中国新闻网转载，不将存量当成当天新增。"
+        }
+      ],
+      "narration": "国内方面，国家能源局消息显示，截至九月底，风电和太阳能发电累计装机达到二十点一亿千瓦。这里说的是装机容量，不能直接当作实际发电量。",
+      "source_url": "https://www.chinanews.com.cn/gn/2026/10-26/10721128.shtml",
+      "publisher": "中国新闻网",
+      "published": "2026-10-26T07:06:54+00:00",
+      "selection_reason": "公共关注度、数据规模和时效性较高，原文有明确统计时点。",
+      "evidence": [
+        "原文：截至2026年9月底，风电和太阳能发电累计装机容量达到20.1亿千瓦。",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "风光装机"
+    },
+    {
+      "id": "rocket",
+      "item_id": "a38f73f764e4ef76f535",
+      "section": "国内 02 / 03",
+      "title": "力箭二号完成转运",
+      "facts": [
+        {
+          "title": "力箭二号遥二转至发射工位",
+          "detail": "报道指出火箭总装、测试已经完成，进入发射前的关键准备阶段。"
+        },
+        {
+          "title": "后续还需接口与全流程演练",
+          "detail": "转运后继续开展箭地接口、全流程演练及发射前准备工作。"
+        },
+        {
+          "title": "计划与结果分开表述",
+          "detail": "消息称将近期择机发射；转运完成不能表述为已经发射成功。"
+        }
+      ],
+      "narration": "力箭二号遥二运载火箭已转运到发射工位，进入发射前准备阶段。后续还要进行接口和全流程演练。转运完成并不等于已经发射成功。",
+      "source_url": "https://www.chinanews.com.cn/gn/2026/10-26/10721136.shtml",
+      "publisher": "中国新闻网",
+      "published": "2026-10-26T07:19:28+00:00",
+      "selection_reason": "航天科技进展，时间明确，避免把计划误写成结果。",
+      "evidence": [
+        "原文：今天(26日)…转运至专属发射工位，进入发射前的关键准备阶段，近期择机发射。",
+        "即将展开箭地接口与全流程演练。",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "火箭转运"
+    },
+    {
+      "id": "elder-care",
+      "item_id": "a9aabf8681e058fe5d82",
+      "section": "国内 03 / 03",
+      "title": "居家养老服务新场景",
+      "facts": [
+        {
+          "title": "上门照护与社区服务",
+          "detail": "报道以沈阳等地案例，介绍上门照护和社区嵌入式养老服务。"
+        },
+        {
+          "title": "智能照护产品进入应用场景",
+          "detail": "相关产品用于陪伴、巡检等照护场景；不将展示功能写成医疗效果保证。"
+        },
+        {
+          "title": "办理条件需要按当地核对",
+          "detail": "报道中的补贴和服务标准具有地区差异，不推广成全国统一标准。"
+        }
+      ],
+      "narration": "一则居家养老报道关注了上门照护、社区助餐和智能照护产品的应用。各地的服务条件和补贴标准不同，具体办理仍要核对当地规定。",
+      "source_url": "https://www.chinanews.com.cn/sh/2026/10-26/10721120.shtml",
+      "publisher": "中国新闻网",
+      "published": "2026-10-26T06:58:41+00:00",
+      "selection_reason": "民生实用性高，避免展示患者、诊疗建议和未经核验的医疗效果。",
+      "evidence": [
+        "原文报道沈阳上门照护服务、社区嵌入式养老服务和智能照护产品应用；不同地区案例不可推广成全国统一标准。",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "居家养老"
+    },
+    {
+      "id": "panda",
+      "item_id": "abf8163842574b277a1e",
+      "section": "国际 01 / 02",
+      "title": "大熊猫“冉冉”拟赴比",
+      "facts": [
+        {
+          "title": "“冉冉”将参加保护研究合作",
+          "detail": "根据补充协议，中方向比方增补成年雌性大熊猫，延续合作项目。"
+        },
+        {
+          "title": "赴比前准备正在进行",
+          "detail": "有关单位正在落实饲养管理安排，做好出发前的准备。"
+        },
+        {
+          "title": "目前不能写成已经抵达",
+          "detail": "消息描述的是未来安排；保护研究合作与实际出发、抵达属于不同阶段。"
+        }
+      ],
+      "narration": "国际方面，大熊猫冉冉将赴比利时，继续参加大熊猫保护研究合作。目前有关单位正在落实饲养管理安排，开展出发前的准备工作。",
+      "source_url": "https://www.chinanews.com.cn/gj/2026/10-26/10720988.shtml",
+      "publisher": "中国新闻网",
+      "published": "2026-10-26T03:02:16+00:00",
+      "selection_reason": "跨国生物多样性合作，低风险且适合事实短讯。",
+      "evidence": [
+        "原文：大熊猫“冉冉”…将赴比延续此前合作项目。",
+        "目前…共同落实“冉冉”饲养管理相关安排，做好赴比前的各项准备工作。",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "熊猫赴比"
+    },
+    {
+      "id": "nepal-power",
+      "item_id": "61dd073256a593c4c378",
+      "section": "国际 02 / 02",
+      "title": "尼泊尔跨境电力贸易",
+      "facts": [
+        {
+          "title": "对印出口约 6.34 亿千瓦时",
+          "detail": "统计区间为 9 月中旬至 10 月中旬，消息由中新网援引尼泊尔媒体报道。"
+        },
+        {
+          "title": "贸易方式包括协议与市场交易",
+          "detail": "报道援引当地电力局数据，约三分之二通过双边协议出售。"
+        },
+        {
+          "title": "对孟加拉国供电恢复",
+          "detail": "据报道，10 月 23 日晚恢复经印度电网向孟加拉国输电。"
+        }
+      ],
+      "narration": "中新网援引尼泊尔媒体报道，九月中旬至十月中旬，尼泊尔对印度出口电力约六点三四亿千瓦时。这是特定统计区间的数据，不是当天的出口量。",
+      "source_url": "https://www.chinanews.com.cn/gj/2026/10-26/10720938.shtml",
+      "publisher": "中国新闻网",
+      "published": "2026-10-26T02:15:42+00:00",
+      "selection_reason": "跨境能源与民生主题，日期和计量单位可核验；保留转引关系。",
+      "evidence": [
+        "原文：中国新闻网援引尼泊尔《共和报》及尼泊尔电力局数据：今年9月中旬至10月中旬，尼对印出口电力约6.34亿千瓦时。",
+        "V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications."
+      ],
+      "short_title": "跨境电力"
+    }
+  ],
+  "skipped": [
+    {
+      "reason": "政治、冲突、伤亡、宗教或其他敏感主题，先跳过待人工审核；本期不生成 P2。"
+    },
+    {
+      "reason": "部分来源失败或缺少可信发布时间，不推断其没有新消息。"
+    }
+  ],
+  "publication_preset": {
+    "category_name": "News",
+    "ai_generated": true,
+    "work_type": "original",
+    "other_fields": "pending_user_confirmation"
+  },
+  "upload_enabled": false,
+  "auto_publish": false,
+  "revision": "Item-level timeline, richer fact cards, official organization logos and word-aware Arabic-number captions."
+}

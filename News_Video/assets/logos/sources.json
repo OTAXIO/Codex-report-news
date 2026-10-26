@@ -1,0 +1,45 @@
+{
+  "retrieved_utc": "2026-10-26T09:43:22.917046+00:00",
+  "assets": [
+    {
+      "id": "openai",
+      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/openai.png",
+      "source": "https://avatars.githubusercontent.com/u/14957082?s=512&v=4",
+      "organization": "https://github.com/openai",
+      "width": 200,
+      "height": 200,
+      "sha256": "e35aa76a33f4aa9ac6f75f58f11a0e6c79e7589d392bed1eb829db561320c888",
+      "usage": "Organization identity in a locally reviewed news sample; no implied endorsement"
+    },
+    {
+      "id": "anthropic",
+      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/anthropic.png",
+      "source": "https://avatars.githubusercontent.com/u/76263028?s=512&v=4",
+      "organization": "https://github.com/anthropics",
+      "width": 388,
+      "height": 388,
+      "sha256": "61256458b6d3659b6bc3e877bb595e35b530f82999fb58196e1edbc56678e0e1",
+      "usage": "Organization identity in a locally reviewed news sample; no implied endorsement"
+    },
+    {
+      "id": "ai2",
+      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/ai2.png",
+      "source": "https://avatars.githubusercontent.com/u/5667695?s=512&v=4",
+      "organization": "https://github.com/allenai",
+      "width": 460,
+      "height": 460,
+      "sha256": "49cebcdc54f1498aefe0101b3cdcffbabf7e83e91ed08c7ecdd347d20ab2416d",
+      "usage": "Organization identity in a locally reviewed news sample; no implied endorsement"
+    },
+    {
+      "id": "qwen",
+      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/qwen.png",
+      "source": "https://avatars.githubusercontent.com/u/141221163?s=512&v=4",
+      "organization": "https://github.com/QwenLM",
+      "width": 460,
+      "height": 460,
+      "sha256": "5f3c51a8db5f7def76927e4dd371d232265766fa907c04e98bba1e8dec515447",
+      "usage": "Editorial organization identification; no endorsement"
+    }
+  ]
+}

@@ -1,0 +1,157 @@
+[
+  {
+    "id": "openai",
+    "name": "OpenAI",
+    "group": "ai",
+    "publisher": "OpenAI",
+    "url": "https://openai.com/news/rss.xml",
+    "type": "rss",
+    "vendor": "OpenAI",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "claude-code",
+    "name": "Claude Code Releases",
+    "group": "ai",
+    "publisher": "Anthropic",
+    "url": "https://github.com/anthropics/claude-code/releases.atom",
+    "type": "rss",
+    "vendor": "Anthropic",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "anthropic",
+    "name": "Anthropic News",
+    "group": "ai",
+    "publisher": "Anthropic",
+    "url": "https://www.anthropic.com/news",
+    "type": "official_page",
+    "vendor": "Anthropic",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "deepseek",
+    "name": "DeepSeek API Changelog",
+    "group": "ai",
+    "publisher": "DeepSeek",
+    "url": "https://api-docs.deepseek.com/updates/",
+    "type": "official_page",
+    "vendor": "DeepSeek",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "minimax",
+    "name": "MiniMax News",
+    "group": "ai",
+    "publisher": "MiniMax",
+    "url": "https://www.minimax.io/news",
+    "type": "official_page",
+    "vendor": "MiniMax",
+    "priority_tier": 2,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "deepmind",
+    "name": "Google DeepMind",
+    "group": "ai",
+    "publisher": "Google DeepMind",
+    "url": "https://deepmind.google/blog/rss.xml",
+    "type": "rss",
+    "vendor": "Google",
+    "priority_tier": 2,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "huggingface",
+    "name": "Hugging Face",
+    "group": "ai",
+    "publisher": "Hugging Face",
+    "url": "https://huggingface.co/blog/feed.xml",
+    "type": "rss",
+    "vendor": "Hugging Face",
+    "priority_tier": 3,
+    "selection_policy": "supplementary_research_review"
+  },
+  {
+    "id": "cns-all",
+    "name": "中新网滚动",
+    "group": "social",
+    "publisher": "中国新闻网",
+    "url": "https://www.chinanews.com.cn/rss/scroll-news.xml",
+    "type": "rss"
+  },
+  {
+    "id": "cns-society",
+    "name": "中新网社会",
+    "group": "social",
+    "publisher": "中国新闻网",
+    "url": "https://www.chinanews.com.cn/rss/society.xml",
+    "type": "rss"
+  },
+  {
+    "id": "cns-culture",
+    "name": "中新网文化",
+    "group": "social",
+    "publisher": "中国新闻网",
+    "url": "https://www.chinanews.com.cn/rss/cul.xml",
+    "type": "rss"
+  },
+  {
+    "id": "cns-world",
+    "name": "中新网国际",
+    "group": "social",
+    "publisher": "中国新闻网",
+    "url": "https://www.chinanews.com.cn/rss/world.xml",
+    "type": "rss"
+  },
+  {
+    "id": "bbc-zh",
+    "name": "BBC 中文",
+    "group": "social",
+    "publisher": "BBC",
+    "url": "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml",
+    "type": "rss"
+  },
+  {
+    "id": "guardian",
+    "name": "The Guardian World",
+    "group": "social",
+    "publisher": "The Guardian",
+    "url": "https://www.theguardian.com/world/rss",
+    "type": "rss"
+  },
+  {
+    "id": "un-zh",
+    "name": "联合国新闻中文",
+    "group": "social",
+    "publisher": "UN News",
+    "url": "https://news.un.org/feed/subscribe/zh/news/all/rss.xml",
+    "type": "rss"
+  },
+  {
+    "id": "qwen-code-releases",
+    "name": "Qwen Code Releases",
+    "group": "ai",
+    "publisher": "Qwen",
+    "vendor": "Qwen",
+    "url": "https://github.com/QwenLM/qwen-code/releases.atom",
+    "type": "rss",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "glm-zcode",
+    "name": "Z.ai ZCode Changelog",
+    "group": "ai",
+    "publisher": "Z.ai",
+    "vendor": "Z.ai",
+    "url": "https://zcode.z.ai/en/changelog",
+    "type": "official_page",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first"
+  }
+]

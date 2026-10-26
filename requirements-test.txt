@@ -1,0 +1,3 @@
+# Run from the repository root. TTS inference still uses the external runtime.
+-r News_Video/requirements.txt
+librosa>=0.10

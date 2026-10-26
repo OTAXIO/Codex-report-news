@@ -1,0 +1,426 @@
+{
+  "snapshot_date": "2026-10-26",
+  "files": [
+    {
+      "file": "export_news_source.py",
+      "bytes": 4513,
+      "source_sha256": "8aade69ba881f5c7124c50dc4e939b62aa24aca2b9c49a6020e8940d51adcb2d",
+      "export_sha256": "8aade69ba881f5c7124c50dc4e939b62aa24aca2b9c49a6020e8940d51adcb2d"
+    },
+    {
+      "file": "News_Video/.gitignore",
+      "bytes": 175,
+      "source_sha256": "3675f79c985b9ad5cda76246bab6946e6fc249097f6d395758f0b5709e5da3c8",
+      "export_sha256": "3675f79c985b9ad5cda76246bab6946e6fc249097f6d395758f0b5709e5da3c8"
+    },
+    {
+      "file": "News_Video/analyze_tails.py",
+      "bytes": 2258,
+      "source_sha256": "12d82144e2ea325db1501d16e6aa5796524578a0ac1ce6a71364117c89934885",
+      "export_sha256": "12d82144e2ea325db1501d16e6aa5796524578a0ac1ce6a71364117c89934885"
+    },
+    {
+      "file": "News_Video/assets/logos/ai2.png",
+      "bytes": 4933,
+      "source_sha256": "49cebcdc54f1498aefe0101b3cdcffbabf7e83e91ed08c7ecdd347d20ab2416d",
+      "export_sha256": "49cebcdc54f1498aefe0101b3cdcffbabf7e83e91ed08c7ecdd347d20ab2416d"
+    },
+    {
+      "file": "News_Video/assets/logos/anthropic.png",
+      "bytes": 10825,
+      "source_sha256": "61256458b6d3659b6bc3e877bb595e35b530f82999fb58196e1edbc56678e0e1",
+      "export_sha256": "61256458b6d3659b6bc3e877bb595e35b530f82999fb58196e1edbc56678e0e1"
+    },
+    {
+      "file": "News_Video/assets/logos/openai.png",
+      "bytes": 4139,
+      "source_sha256": "e35aa76a33f4aa9ac6f75f58f11a0e6c79e7589d392bed1eb829db561320c888",
+      "export_sha256": "e35aa76a33f4aa9ac6f75f58f11a0e6c79e7589d392bed1eb829db561320c888"
+    },
+    {
+      "file": "News_Video/assets/logos/qwen.png",
+      "bytes": 15319,
+      "source_sha256": "5f3c51a8db5f7def76927e4dd371d232265766fa907c04e98bba1e8dec515447",
+      "export_sha256": "5f3c51a8db5f7def76927e4dd371d232265766fa907c04e98bba1e8dec515447"
+    },
+    {
+      "file": "News_Video/assets/logos/sources.json",
+      "bytes": 1942,
+      "source_sha256": "645656af33a20d4145989c7fec77aebe2113cfdee15f51e56797d0f78c8b5a46",
+      "export_sha256": "645656af33a20d4145989c7fec77aebe2113cfdee15f51e56797d0f78c8b5a46"
+    },
+    {
+      "file": "News_Video/build_film.py",
+      "bytes": 10095,
+      "source_sha256": "9b302744cd192f12197afc46afd929b5ceff95c1fdafc78ed463690185c14530",
+      "export_sha256": "9b302744cd192f12197afc46afd929b5ceff95c1fdafc78ed463690185c14530"
+    },
+    {
+      "file": "News_Video/build_handoff.py",
+      "bytes": 4221,
+      "source_sha256": "aa1dc64f29b6b6b38a7b2dc98933b5bfcfb06a2c7a9a5eedb70cb8f05aa0f808",
+      "export_sha256": "aa1dc64f29b6b6b38a7b2dc98933b5bfcfb06a2c7a9a5eedb70cb8f05aa0f808"
+    },
+    {
+      "file": "News_Video/caption_layout.py",
+      "bytes": 6683,
+      "source_sha256": "9855629d328984a89d734f47289e6adf96041f89e5cb984ef2c117ff00cc1fb0",
+      "export_sha256": "9855629d328984a89d734f47289e6adf96041f89e5cb984ef2c117ff00cc1fb0"
+    },
+    {
+      "file": "News_Video/compare_voice.py",
+      "bytes": 1936,
+      "source_sha256": "6d5b8610a934c873670045fe22f59a05b96d008bedb3b9fc44140cea960e01c1",
+      "export_sha256": "6d5b8610a934c873670045fe22f59a05b96d008bedb3b9fc44140cea960e01c1"
+    },
+    {
+      "file": "News_Video/config.json",
+      "bytes": 5319,
+      "source_sha256": "51f7e3c7909fa849f6a028545288d027071a0729926f16f479e85653e04e958d",
+      "export_sha256": "51f7e3c7909fa849f6a028545288d027071a0729926f16f479e85653e04e958d"
+    },
+    {
+      "file": "News_Video/cover_generator.py",
+      "bytes": 3494,
+      "source_sha256": "40dbd37840f5e4e4c8f2513eac72687efd2bc0b0b174c054cd7abc1595c059e5",
+      "export_sha256": "40dbd37840f5e4e4c8f2513eac72687efd2bc0b0b174c054cd7abc1595c059e5"
+    },
+    {
+      "file": "News_Video/crisp_tails.py",
+      "bytes": 8047,
+      "source_sha256": "1df369f47c16deafa663f6ee9cfda094a92c1834711b3a623fe2ef1c466c39b2",
+      "export_sha256": "1df369f47c16deafa663f6ee9cfda094a92c1834711b3a623fe2ef1c466c39b2"
+    },
+    {
+      "file": "News_Video/episode_paths.py",
+      "bytes": 1000,
+      "source_sha256": "f08c2b64055ab1090adac49ad70f8acc0bbe2f054ccc041929d23ebf88a83fd0",
+      "export_sha256": "f08c2b64055ab1090adac49ad70f8acc0bbe2f054ccc041929d23ebf88a83fd0"
+    },
+    {
+      "file": "News_Video/episodes/sample-20261026/captions.json",
+      "bytes": 5810,
+      "source_sha256": "3920bd809d628f46d3d7990fd510dc18d6ec084bce6a97a8735ccf25cac6da44",
+      "export_sha256": "3920bd809d628f46d3d7990fd510dc18d6ec084bce6a97a8735ccf25cac6da44"
+    },
+    {
+      "file": "News_Video/episodes/sample-20261026/episode.json",
+      "bytes": 11169,
+      "source_sha256": "667d53bcf34e8665f159cc165c2bf48b77d19c6b7a332b6fa595579e960caf09",
+      "export_sha256": "667d53bcf34e8665f159cc165c2bf48b77d19c6b7a332b6fa595579e960caf09"
+    },
+    {
+      "file": "News_Video/episodes/sample-20261026/timings.json",
+      "bytes": 5752,
+      "source_sha256": "d334929a020240c1dfc6907b59c1b54d70f9d552e5cf4f1c691010e64e971b42",
+      "export_sha256": "d334929a020240c1dfc6907b59c1b54d70f9d552e5cf4f1c691010e64e971b42"
+    },
+    {
+      "file": "News_Video/episodes/sample-20261026-v5/episode.json",
+      "bytes": 16819,
+      "source_sha256": "4032a4a5651c04a369d3c5c9c39a207c44a6c1dc0325cfae2713057dbfb4173b",
+      "export_sha256": "4032a4a5651c04a369d3c5c9c39a207c44a6c1dc0325cfae2713057dbfb4173b"
+    },
+    {
+      "file": "News_Video/fetch_logos.py",
+      "bytes": 1141,
+      "source_sha256": "011f7f996aefc71642cc929af909288f521b807a826b5a875d980442979d8255",
+      "export_sha256": "011f7f996aefc71642cc929af909288f521b807a826b5a875d980442979d8255"
+    },
+    {
+      "file": "News_Video/finalize_release.py",
+      "bytes": 8901,
+      "source_sha256": "ea3ec0ea5cc62fa63ecc0042f6d6079bbf8424149cfce1ef717f1bce5873246d",
+      "export_sha256": "ea3ec0ea5cc62fa63ecc0042f6d6079bbf8424149cfce1ef717f1bce5873246d"
+    },
+    {
+      "file": "News_Video/hourly_monitor.py",
+      "bytes": 1038,
+      "source_sha256": "77ac623d80dae3db11c087d74fe209dab91f115d7e3940086ea7db8d3205ca82",
+      "export_sha256": "77ac623d80dae3db11c087d74fe209dab91f115d7e3940086ea7db8d3205ca82"
+    },
+    {
+      "file": "News_Video/leader_sources.json",
+      "bytes": 2051,
+      "source_sha256": "534cb11279badbcc3ffbe3269e8ea5c8ce2fb687309a539216f1c4fe74a7ac7e",
+      "export_sha256": "534cb11279badbcc3ffbe3269e8ea5c8ce2fb687309a539216f1c4fe74a7ac7e"
+    },
+    {
+      "file": "News_Video/leader_sources.py",
+      "bytes": 8893,
+      "source_sha256": "0ed0fbe8e9873c38f7f1a70dfdaa86bda48b67fe6d8b6211c21282e1189b9417",
+      "export_sha256": "0ed0fbe8e9873c38f7f1a70dfdaa86bda48b67fe6d8b6211c21282e1189b9417"
+    },
+    {
+      "file": "News_Video/make_daily_cover.py",
+      "bytes": 1955,
+      "source_sha256": "1907c905d558e0fa8e1371f8a0068f79743404e6f4d9987e5f1e49097cb7da64",
+      "export_sha256": "1907c905d558e0fa8e1371f8a0068f79743404e6f4d9987e5f1e49097cb7da64"
+    },
+    {
+      "file": "News_Video/make_sample_editorial.py",
+      "bytes": 7593,
+      "source_sha256": "818e31497da0ba07bc48714669b0ca5f349da8b88a75d66ed2d9e4d6b33af8fa",
+      "export_sha256": "818e31497da0ba07bc48714669b0ca5f349da8b88a75d66ed2d9e4d6b33af8fa"
+    },
+    {
+      "file": "News_Video/news_video.py",
+      "bytes": 24437,
+      "source_sha256": "59d34b90e9a93f1061c212d4d520e9bd692eb6a4b5ae2dd3db42f06597904a06",
+      "export_sha256": "59d34b90e9a93f1061c212d4d520e9bd692eb6a4b5ae2dd3db42f06597904a06"
+    },
+    {
+      "file": "News_Video/package.json",
+      "bytes": 57,
+      "source_sha256": "8dd5e712b3e4d36c4ecc5db6e2903af9c59839e6abfed6fa46e0199974944161",
+      "export_sha256": "8dd5e712b3e4d36c4ecc5db6e2903af9c59839e6abfed6fa46e0199974944161"
+    },
+    {
+      "file": "News_Video/pnpm-lock.yaml",
+      "bytes": 35403,
+      "source_sha256": "f4de69165861fc29114a617442be42fd89b94bc32b625e57a8b36f322876b91d",
+      "export_sha256": "f4de69165861fc29114a617442be42fd89b94bc32b625e57a8b36f322876b91d"
+    },
+    {
+      "file": "News_Video/pnpm-workspace.yaml",
+      "bytes": 50,
+      "source_sha256": "d6d0c24446d91ef762d37c6ba801bb516e65d7055aa9f8027fcd457409a97ce1",
+      "export_sha256": "d6d0c24446d91ef762d37c6ba801bb516e65d7055aa9f8027fcd457409a97ce1"
+    },
+    {
+      "file": "News_Video/prepare_publish_20261026.py",
+      "bytes": 7777,
+      "source_sha256": "d0569642c628db34dfde0601f33391b85cca05bace009ae316229dee9a33a7d6",
+      "export_sha256": "d0569642c628db34dfde0601f33391b85cca05bace009ae316229dee9a33a7d6"
+    },
+    {
+      "file": "News_Video/probe_priority_sources.py",
+      "bytes": 1249,
+      "source_sha256": "440de2dfbad19f5eae3d2707305c276ef6e9cb10ba273799c4ac369adb1af5a9",
+      "export_sha256": "440de2dfbad19f5eae3d2707305c276ef6e9cb10ba273799c4ac369adb1af5a9"
+    },
+    {
+      "file": "News_Video/progress_overlay.py",
+      "bytes": 5590,
+      "source_sha256": "fe58d6ce2760225eb72da5a33600498a855417b371754b2319502c8af2ed2925",
+      "export_sha256": "fe58d6ce2760225eb72da5a33600498a855417b371754b2319502c8af2ed2925"
+    },
+    {
+      "file": "News_Video/pronunciation.py",
+      "bytes": 426,
+      "source_sha256": "f4b6b36b907e6d43c4fe59561760ccf45e8f049b2f5ca67f96342fe7e21ce194",
+      "export_sha256": "f4b6b36b907e6d43c4fe59561760ccf45e8f049b2f5ca67f96342fe7e21ce194"
+    },
+    {
+      "file": "News_Video/release_manager.py",
+      "bytes": 8203,
+      "source_sha256": "3c3f20b31bf1f06ac2eb24522b2856eb048e20c3818c8de0251d973e9b9d09c8",
+      "export_sha256": "3c3f20b31bf1f06ac2eb24522b2856eb048e20c3818c8de0251d973e9b9d09c8"
+    },
+    {
+      "file": "News_Video/render_sample.py",
+      "bytes": 5108,
+      "source_sha256": "68e55fbc2a31a44fc1a1589e27bc4b753393f1e3b9b025343cad0fc496aa79c2",
+      "export_sha256": "68e55fbc2a31a44fc1a1589e27bc4b753393f1e3b9b025343cad0fc496aa79c2"
+    },
+    {
+      "file": "News_Video/requirements.txt",
+      "bytes": 38,
+      "source_sha256": "23755e02e51c74d2a76e134856c44d197f765e6490d197d7f4c14f57324ae90a",
+      "export_sha256": "23755e02e51c74d2a76e134856c44d197f765e6490d197d7f4c14f57324ae90a"
+    },
+    {
+      "file": "News_Video/reset_alerts.py",
+      "bytes": 10277,
+      "source_sha256": "2a49713b3ba333d4b40fb6129420262768fa2cc707bbedd394b6f1a9619cc873",
+      "export_sha256": "2a49713b3ba333d4b40fb6129420262768fa2cc707bbedd394b6f1a9619cc873"
+    },
+    {
+      "file": "News_Video/scene_pauses.py",
+      "bytes": 2079,
+      "source_sha256": "ef7d3dfd19b33231d8a6b13ca4cf85ecba5714b8bb6fe0114083d0e1cd21791c",
+      "export_sha256": "ef7d3dfd19b33231d8a6b13ca4cf85ecba5714b8bb6fe0114083d0e1cd21791c"
+    },
+    {
+      "file": "News_Video/set_vendor_priority.py",
+      "bytes": 2391,
+      "source_sha256": "58bb449b274d5023bd2f7f9ee707428523261894cced568475e8adf98e55ec2b",
+      "export_sha256": "58bb449b274d5023bd2f7f9ee707428523261894cced568475e8adf98e55ec2b"
+    },
+    {
+      "file": "News_Video/sources.json",
+      "bytes": 4182,
+      "source_sha256": "27accd04f47b5d2af1017dc0bb73e316e33f6fe2118e7f6b1f48f3819f29366e",
+      "export_sha256": "27accd04f47b5d2af1017dc0bb73e316e33f6fe2118e7f6b1f48f3819f29366e"
+    },
+    {
+      "file": "News_Video/speech_editorial.py",
+      "bytes": 4007,
+      "source_sha256": "ce72d6fc04659c4829ac25d697587d7ffbb1d93b656650997f2fde1c8a9bb6af",
+      "export_sha256": "ce72d6fc04659c4829ac25d697587d7ffbb1d93b656650997f2fde1c8a9bb6af"
+    },
+    {
+      "file": "News_Video/test_caption_layout.py",
+      "bytes": 3104,
+      "source_sha256": "7cf338538e110f16622de9510fb9c82be9f838cdd7d60b3e4e4d67b371e031eb",
+      "export_sha256": "7cf338538e110f16622de9510fb9c82be9f838cdd7d60b3e4e4d67b371e031eb"
+    },
+    {
+      "file": "News_Video/test_crisp_tails.py",
+      "bytes": 3100,
+      "source_sha256": "f15b34047195e39a1c8bc297c0798def5c7c0e0dc74ca2b5a83aa927e5f6ed7f",
+      "export_sha256": "f15b34047195e39a1c8bc297c0798def5c7c0e0dc74ca2b5a83aa927e5f6ed7f"
+    },
+    {
+      "file": "News_Video/test_handoff_producer.py",
+      "bytes": 935,
+      "source_sha256": "fe618276002f47396f2a25b3cde039ed94e6e32f22e75cd749801fe8646468d4",
+      "export_sha256": "fe618276002f47396f2a25b3cde039ed94e6e32f22e75cd749801fe8646468d4"
+    },
+    {
+      "file": "News_Video/test_leader_sources.py",
+      "bytes": 4758,
+      "source_sha256": "901ee3c6f070449a6e47a298808fa81930b3099d0f58b6b7c68bfb4721bac5f5",
+      "export_sha256": "901ee3c6f070449a6e47a298808fa81930b3099d0f58b6b7c68bfb4721bac5f5"
+    },
+    {
+      "file": "News_Video/test_pipeline.py",
+      "bytes": 3612,
+      "source_sha256": "07c4762c6cff6de2f20c24caf9fde8292740f9496fbbc2f72ba9bf17123e35e3",
+      "export_sha256": "844fd0f7bfc83b330579816b78aec5a2d87dceddf280fde66b47209aa21f7409",
+      "change": "Skip the production database mapping check when the local database is absent."
+    },
+    {
+      "file": "News_Video/test_pronunciation.py",
+      "bytes": 528,
+      "source_sha256": "2f0df001db1c6b47883809b12e74cdba432b6e1bbefe065f685647e25f6960b4",
+      "export_sha256": "2f0df001db1c6b47883809b12e74cdba432b6e1bbefe065f685647e25f6960b4"
+    },
+    {
+      "file": "News_Video/test_release_workflow.py",
+      "bytes": 3398,
+      "source_sha256": "d279f9368aa749b0970ae9cde10008e8c23ef0e4075a71dffe69cc29a7bbda99",
+      "export_sha256": "d279f9368aa749b0970ae9cde10008e8c23ef0e4075a71dffe69cc29a7bbda99"
+    },
+    {
+      "file": "News_Video/test_reset_alerts.py",
+      "bytes": 4309,
+      "source_sha256": "bcc02d594c45f8a5c287ec1e89b048484327489227a85a458cfec0abcefcabea",
+      "export_sha256": "bcc02d594c45f8a5c287ec1e89b048484327489227a85a458cfec0abcefcabea"
+    },
+    {
+      "file": "News_Video/test_scene_pauses.py",
+      "bytes": 1206,
+      "source_sha256": "d802868889dcb243d35bcdcc3e7c5465d0c80497af0a60855f693a99c09da996",
+      "export_sha256": "d802868889dcb243d35bcdcc3e7c5465d0c80497af0a60855f693a99c09da996"
+    },
+    {
+      "file": "News_Video/test_upload_plan.py",
+      "bytes": 1731,
+      "source_sha256": "1aea07111ffcccf644c72a0d05b73051dd5bec4d3eca731a24108cd6164431b6",
+      "export_sha256": "1aea07111ffcccf644c72a0d05b73051dd5bec4d3eca731a24108cd6164431b6"
+    },
+    {
+      "file": "News_Video/test_used_news.py",
+      "bytes": 1802,
+      "source_sha256": "747955caaec561ac0a9cc6f624f6c9062196a0e1d2234114b549c05cc260fab6",
+      "export_sha256": "747955caaec561ac0a9cc6f624f6c9062196a0e1d2234114b549c05cc260fab6"
+    },
+    {
+      "file": "News_Video/test_vendor_priority.py",
+      "bytes": 1238,
+      "source_sha256": "24da9efb927af53d0c44f00aac99af0de74aca9f6eda44c76fcde3faf9a44bd6",
+      "export_sha256": "24da9efb927af53d0c44f00aac99af0de74aca9f6eda44c76fcde3faf9a44bd6"
+    },
+    {
+      "file": "News_Video/upgrade_v5.py",
+      "bytes": 5119,
+      "source_sha256": "2cfff97bb3f7d89561a1aa65c84bec3ad23014a30b65144b74ca3d300873c08e",
+      "export_sha256": "2cfff97bb3f7d89561a1aa65c84bec3ad23014a30b65144b74ca3d300873c08e"
+    },
+    {
+      "file": "News_Video/uploader_plan.py",
+      "bytes": 3116,
+      "source_sha256": "0f2615bd4e053d4707b8ed50ef144afce1bd8dc90bea152401a6cb455f6aab44",
+      "export_sha256": "0f2615bd4e053d4707b8ed50ef144afce1bd8dc90bea152401a6cb455f6aab44"
+    },
+    {
+      "file": "News_Video/used_news.py",
+      "bytes": 6102,
+      "source_sha256": "9ad3184774ed3d286c3f48ad4e65a44e7a3f6ba227d95932857d45e4ec793216",
+      "export_sha256": "9ad3184774ed3d286c3f48ad4e65a44e7a3f6ba227d95932857d45e4ec793216"
+    },
+    {
+      "file": "News_Video/verify_progress_video.py",
+      "bytes": 2998,
+      "source_sha256": "269120088d33d38467fa802440250ddc70698a717c3c8251428cd89ba9e437e2",
+      "export_sha256": "269120088d33d38467fa802440250ddc70698a717c3c8251428cd89ba9e437e2"
+    },
+    {
+      "file": "News_Video/voice_tuning.py",
+      "bytes": 2850,
+      "source_sha256": "05f52f9ac981d810384a29163ef5b5c4ddb16ecadde1eb0b2f5fd154099a6a05",
+      "export_sha256": "05f52f9ac981d810384a29163ef5b5c4ddb16ecadde1eb0b2f5fd154099a6a05"
+    },
+    {
+      "file": "Voice_Generate/LICENSE",
+      "bytes": 1065,
+      "source_sha256": "8a064eada186601fc602e45feef61c6abb62246d5ae9c3764dd1fc92d946c3c6",
+      "export_sha256": "8a064eada186601fc602e45feef61c6abb62246d5ae9c3764dd1fc92d946c3c6"
+    },
+    {
+      "file": "Voice_Generate/tools/audio_cleanup.py",
+      "bytes": 3210,
+      "source_sha256": "048777de88baa1fc1463fa541ba744a4e464cb34effd013b072a4e02133cc28e",
+      "export_sha256": "048777de88baa1fc1463fa541ba744a4e464cb34effd013b072a4e02133cc28e"
+    },
+    {
+      "file": "Voice_Generate/tools/common.py",
+      "bytes": 1346,
+      "source_sha256": "7754938e172c2f24521e3f6426752bc2d9d4ff63b1c246b3ae1f8d8d1fce4ede",
+      "export_sha256": "7754938e172c2f24521e3f6426752bc2d9d4ff63b1c246b3ae1f8d8d1fce4ede"
+    },
+    {
+      "file": "Voice_Generate/tools/generate_job.py",
+      "bytes": 4975,
+      "source_sha256": "8f1a65cf43138c9989b47b74ec12adceaee6e603823c42292ae1e56dcd1fe3cd",
+      "export_sha256": "8f1a65cf43138c9989b47b74ec12adceaee6e603823c42292ae1e56dcd1fe3cd"
+    },
+    {
+      "file": "README.md",
+      "bytes": 4249,
+      "export_sha256": "4df51a01c5f76f2e4f9b1405c22842673c07834c378272770c1f0f96f0160a44",
+      "change": "Added for source archive documentation and validation."
+    },
+    {
+      "file": ".gitignore",
+      "bytes": 483,
+      "export_sha256": "31bb1a076afbbe3b2bfb63ae3d991e900a51939662d18796f6219e867e4b1116",
+      "change": "Added for source archive documentation and validation."
+    },
+    {
+      "file": "requirements-test.txt",
+      "bytes": 124,
+      "export_sha256": "b6491a16bedd9606fd4aba63e5e1df8ea1b871828a26f387e05269ade3190ce7",
+      "change": "Added for source archive documentation and validation."
+    },
+    {
+      "file": "VALIDATION.md",
+      "bytes": 877,
+      "export_sha256": "8a67a6e03617586cf461c9461dd58a4ba2f5215f75487082af42b5319585c240",
+      "change": "Added for source archive documentation and validation."
+    }
+  ],
+  "excluded": [
+    "credentials and browser profiles",
+    "model weights and training projects",
+    "reference audio",
+    "news database and collection history",
+    "release videos",
+    "generated film and audio",
+    "node_modules and runtimes",
+    "Microsoft fonts",
+    "internal instructions, handoff documents, historical state and skill snapshots"
+  ],
+  "note": "Source snapshot with one documented test-only database guard; no production code changes. See README.md."
+}
