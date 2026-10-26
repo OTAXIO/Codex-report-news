@@ -2,11 +2,12 @@
 import argparse,json
 from pathlib import Path
 from episode_paths import release_movie
+from project_paths import release_root
 
 ROOT=Path(__file__).resolve().parent
 
 def plan(directory,root=ROOT):
-    directory=Path(directory).resolve();release=(Path(root).resolve().parent/'release').resolve()
+    directory=Path(directory).resolve();release=release_root(root)
     if not directory.is_relative_to(release):raise ValueError('Uploads must use a release directory')
     receipt=json.loads((directory/'release.json').read_text(encoding='utf-8'))
     if receipt.get('published'):raise ValueError('Already published; refusing duplicate upload plan')
@@ -32,8 +33,16 @@ def plan(directory,root=ROOT):
             '逐项读回 AI 声明、原创声明、双封面、标签，发现缺项不得提交',
             '网页 skill 自身禁止最终提交；不得修改或绕过其点击守卫'],
         final_submit='Human, or a separate explicitly authorized and verified compatible tool; this script never submits')
+    from upload_bridge import settings,prepare
+    if settings(root).get('enabled'):
+        prepared=prepare(directory,root)
+        instructions=dict(state='ready_for_codex_upload',upload_metadata='upload.codex.json',backend='codex-upload',
+            required_readback=['title','dual covers','tags including selected activity','original and AI declarations','actual collection ID','partition','visibility'],
+            final_submit='codex-upload performs the authorized final submit; this plan command remains read-only')
+        metadata=prepared['manifest']
+    else:metadata=str(directory/'upload.web-skill.json')
     (directory/'upload-checklist.json').write_text(json.dumps(instructions,ensure_ascii=False,indent=2),encoding='utf-8')
-    return dict(metadata=str(directory/'upload.web-skill.json'),checklist=str(directory/'upload-checklist.json'),submitted=False)
+    return dict(metadata=metadata,checklist=str(directory/'upload-checklist.json'),submitted=False)
 
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('directory');a=p.parse_args();print(json.dumps(plan(a.directory),ensure_ascii=False,indent=2))

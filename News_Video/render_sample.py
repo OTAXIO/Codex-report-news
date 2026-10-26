@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parent
 NODE=Path('C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe')
 CLI=ROOT/'node_modules/hyperframes/bin/hyperframes.mjs'
 FFMPEG=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
-def render(episode_id):
+def render(episode_id,allow_upload=True):
     episode=ROOT/'episodes'/episode_id
     if (episode/'release.json').exists():raise ValueError('Published edition is archived; create a new revision before rendering')
     timing=json.loads((episode/'timings.json').read_text(encoding='utf-8'))
@@ -64,7 +64,12 @@ def render(episode_id):
     if ep.get('alert_id'):
         from reset_alerts import mark_release
         mark_release(ep['alert_id'],ready['directory'])
+    if allow_upload:
+        from upload_bridge import publish_ready
+        upload=publish_ready(ready['directory'])
+        (episode/'upload-result.json').write_text(json.dumps(upload,ensure_ascii=False,indent=2),encoding='utf-8')
+        if upload.get('ok') is False:print('Automatic upload did not complete: '+upload.get('error',{}).get('code',upload.get('error_code','see upload-result.json')))
     print(Path(ready['directory'])/ready['video_filename'])
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser();p.add_argument('episode');render(p.parse_args().episode)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--no-upload',action='store_true');a=p.parse_args();render(a.episode,not a.no_upload)

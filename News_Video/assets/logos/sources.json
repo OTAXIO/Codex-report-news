@@ -3,7 +3,7 @@
   "assets": [
     {
       "id": "openai",
-      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/openai.png",
+      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/openai.png",
       "source": "https://avatars.githubusercontent.com/u/14957082?s=512&v=4",
       "organization": "https://github.com/openai",
       "width": 200,
@@ -13,7 +13,7 @@
     },
     {
       "id": "anthropic",
-      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/anthropic.png",
+      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/anthropic.png",
       "source": "https://avatars.githubusercontent.com/u/76263028?s=512&v=4",
       "organization": "https://github.com/anthropics",
       "width": 388,
@@ -23,7 +23,7 @@
     },
     {
       "id": "ai2",
-      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/ai2.png",
+      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/ai2.png",
       "source": "https://avatars.githubusercontent.com/u/5667695?s=512&v=4",
       "organization": "https://github.com/allenai",
       "width": 460,
@@ -33,7 +33,7 @@
     },
     {
       "id": "qwen",
-      "path": "D:/Basement/Codex_Video/News_Video/assets/logos/qwen.png",
+      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/qwen.png",
       "source": "https://avatars.githubusercontent.com/u/141221163?s=512&v=4",
       "organization": "https://github.com/QwenLM",
       "width": 460,

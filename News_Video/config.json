@@ -11,8 +11,8 @@
   "ai_item_limit": null,
   "social_domestic_count": 3,
   "social_international_count": 3,
-  "upload_enabled": false,
-  "auto_publish": false,
+  "upload_enabled": true,
+  "auto_publish": true,
   "x_enabled": true,
   "theme": {
     "blue": "#01A1FE",
@@ -37,7 +37,7 @@
     "speed": 1.0,
     "pause": 0.2,
     "language": "zh",
-    "reference_audio": "D:\\Basement\\Codex_Video\\News_Video\\assets\\references\\dijiang-ready.wav",
+    "reference_audio": "D:\\Basement\\Codex_Video\\Codex-report-news\\News_Video\\assets\\references\\dijiang-ready.wav",
     "reference_text": "帝江号，我已就位，该出发了。",
     "soft_release": false,
     "tail_style": "natural",
@@ -50,7 +50,7 @@
     "category_name": "News",
     "ai_generated": true,
     "work_type": "original",
-    "other_fields": "Use confirmed workflow defaults; ask only genuinely missing account-specific fields",
+    "other_fields": "Reuse confirmed defaults; only ask when required data is actually missing",
     "zone_name": "科技",
     "tags": [
       "AI",
@@ -60,7 +60,7 @@
       "科技资讯"
     ],
     "activity_preference": "Relevant popular creation activity",
-    "upload_backend": "manual_or_browser_until_verified",
+    "upload_backend": "codex-upload",
     "creator_declarations": [
       "含AI生成内容",
       "内容为自制：未经作者允许，禁止转载"
@@ -143,7 +143,21 @@
     "semantic_review_required": true,
     "no_retroactive_republish": true,
     "publication_authorized_by_user": true,
-    "upload_backend": "current_verified_backend_or_notify_with_release",
-    "auto_upload_backend_verified": false
-  }
+    "upload_backend": "codex-upload",
+    "auto_upload_backend_verified": false,
+    "backend_capability_validation": "offline_dom_e2e_and_authenticated_readonly"
+  },
+  "publisher": {
+    "enabled": true,
+    "backend": "codex-upload",
+    "user_authorized": true,
+    "auto_submit": true,
+    "skill_cli": "skills/codex-upload/scripts/codex_upload.py",
+    "private_home": "../../.codex-upload-private",
+    "browser": "chrome",
+    "validation": "offline_dom_e2e_and_authenticated_readonly",
+    "full_live_new_upload_tested": false,
+    "verify_approval_before_cleanup": true
+  },
+  "workspace_directory": "../.."
 }

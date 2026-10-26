@@ -1,10 +1,26 @@
-import datetime as dt,json,tempfile,unittest
+import datetime as dt,json,tempfile,unittest,subprocess
 from pathlib import Path
 from unittest.mock import patch
 import news_video as n
 import leader_sources as x
 
 class LeaderChecks(unittest.TestCase):
+    def test_local_browser_lock_denial_is_not_an_x_failure(self):
+        process=subprocess.CompletedProcess([],1,stdout='',stderr='PermissionError: [Errno 13] browser-locks/lock; cookie=PRIVATE_SECRET')
+        with patch.object(x.subprocess,'run',return_value=process):
+            result=x.run_reach('reader',dict(handle='thsottiaux'),10,40)
+        self.assertEqual(result['error']['code'],'LOCAL_PERMISSION_DENIED')
+        self.assertNotIn('PRIVATE_SECRET',json.dumps(result))
+
+    def test_platform_stop_survives_wrapper_unchanged(self):
+        envelope=dict(ok=False,error=dict(code='PLATFORM_BLOCKED',message='Verification required'))
+        with patch.object(x.subprocess,'run',return_value=subprocess.CompletedProcess([],1,json.dumps(envelope),'')):
+            self.assertEqual(x.run_reach('reader',dict(handle='thsottiaux'),10,40),envelope)
+
+    def test_permission_denied_at_process_start(self):
+        with patch.object(x.subprocess,'run',side_effect=PermissionError('Denied')):
+            self.assertEqual(x.run_reach('reader',dict(handle='thsottiaux'),10,40)['error']['code'],'LOCAL_PERMISSION_DENIED')
+
     def setUp(self):
         self.now=dt.datetime.now(n.UTC)
         self.source=x.registry()[0]

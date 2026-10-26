@@ -121,7 +121,7 @@ def draft(alert_id,review_path,now=None):
             subtitle=review.get('cover_subtitle','原始推文信息'),image='assets/logos/openai.png',image_label='tibo 推文',footnote='原文及中文概括'))
         description=review['summary']+'\n\n原始推文：\n'+alert['source_url']+'\n发布时间：'+alert['published']+'\n\n内容由 AI 辅助整理和配音，字幕已内嵌。'
         pub=dict(title=ep['title'],description=description,tags=['AI','OpenAI','临时新闻'],original=True,ai_generated=True,
-            category_requested='News',zone_requested='科技数码',auto_publish=False)
+            category_requested='News',zone_requested='科技数码',auto_publish=bool(n.config().get('auto_publish')))
         n.dump(out/'publication.json',pub);(out/'description.txt').write_text(description,encoding='utf-8')
         alert.update(status='drafted',episode_id=ep_id,reset_event_key=review['reset_event_key'],review=review)
         n.dump(path,alert);n.dump(out/'reset-alert.json',alert)
@@ -129,7 +129,8 @@ def draft(alert_id,review_path,now=None):
 
 def mark_release(alert_id,directory,published=False):
     directory=Path(directory).resolve()
-    if not directory.is_relative_to(n.ROOT.parent/'release'):raise ValueError('Use release only')
+    from project_paths import release_root
+    if not directory.is_relative_to(release_root(n.ROOT)):raise ValueError('Use release only')
     receipt=n.load(directory/'release.json');ep=n.load(directory/'episode.json')
     if ep.get('alert_id')!=alert_id or (published and not receipt.get('published')):raise ValueError('Release/alert state mismatch')
     with locked():

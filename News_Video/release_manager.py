@@ -1,6 +1,7 @@
 """Prepare named deliverables in release before any upload; never publish here."""
 import argparse,datetime as dt,hashlib,json,shutil,subprocess,re
 from pathlib import Path
+from project_paths import release_root
 
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
@@ -40,7 +41,7 @@ def infer_slot(ep):
     raise ValueError('Set edition_slot to morning, noon, night or temporary')
 
 def release_target(root,ep,slot):
-    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('alert_id'));target=Path(root).resolve().parent/'release'/folder
+    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('alert_id'));target=release_root(root)/folder
     if (target/'release.json').exists():
         previous=json.loads((target/'release.json').read_text(encoding='utf-8'))
         if previous.get('episode_id')!=ep['id']:
@@ -83,12 +84,14 @@ def prepare(episode_id,slot=None,root=ROOT):
     (target/'title.txt').write_text(publication['title']+'\n',encoding='utf-8')
     (target/'tags.txt').write_text('\n'.join(publication.get('tags',[]))+'\n',encoding='utf-8')
     receipt=dict(state='ready_for_upload',published=False,episode_id=episode_id,edition_slot=slot,
-        edition_date=ep['edition_date'],directory=str(target),relative_directory=target.relative_to(root.parent/'release').as_posix(),video_filename=video_name,
+        edition_date=ep['edition_date'],directory=str(target),relative_directory=target.relative_to(release_root(root)).as_posix(),video_filename=video_name,
         prepared_at=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).isoformat(),archive_files=files,
         duration=timing['duration'],upload_source='release only',
         counts_toward_daily_main_limit=ep.get('counts_toward_daily_main_limit',slot!='temporary'))
     (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     (source/'release-target.json').write_text(json.dumps(dict(directory=str(target),video_filename=video_name),ensure_ascii=False,indent=2),encoding='utf-8')
+    from upload_bridge import prepare as prepare_upload
+    prepare_upload(target,root)
     return receipt
 
 def migrate_video_name(directory):
@@ -103,7 +106,7 @@ def migrate_video_name(directory):
         if digest(target)!=before:raise ValueError('Renamed video hash mismatch')
     if not target.is_file():raise ValueError('Release video is missing')
     receipt['video_filename']=name;receipt['state']='published' if receipt.get('published') else 'ready_for_upload'
-    receipt['relative_directory']=directory.relative_to(ROOT.parent/'release').as_posix()
+    receipt['relative_directory']=directory.relative_to(release_root(ROOT)).as_posix()
     for item in receipt.get('archive_files',[]):
         if item['file']==old_name:item['file']=name
     (directory/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')

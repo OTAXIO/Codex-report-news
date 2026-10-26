@@ -1,6 +1,7 @@
 """Archive a user-confirmed published edition, verify, then clean generated work."""
 import argparse,datetime as dt,hashlib,json,os,subprocess,zipfile
 from pathlib import Path
+from project_paths import release_root
 
 ROOT=Path(__file__).resolve().parent
 FINAL_NAMES={
@@ -22,17 +23,18 @@ def safe(path,base):
     if not path.is_relative_to(base) or path==base:raise ValueError('Path outside intended directory: '+str(path))
     return path
 
-def finalize(episode_id,slot,published=False,dry_run=False):
+def finalize(episode_id,slot,published=False,dry_run=False,publication_evidence=None):
     if not published:raise ValueError('Publication must first be confirmed by the user')
     source=safe(ROOT/'episodes'/episode_id,ROOT/'episodes')
     if (source/'release.json').exists():return json.loads((source/'release.json').read_text(encoding='utf-8'))
     ep=json.loads((source/'episode.json').read_text(encoding='utf-8'))
     date=dt.date.fromisoformat(ep['edition_date'])
     from release_manager import prepare,release_target
-    target=safe(release_target(ROOT,ep,slot)[0],ROOT.parent/'release')
+    target=safe(release_target(ROOT,ep,slot)[0],release_root(ROOT))
     if target.exists() and any(target.iterdir()):
         ready=json.loads((target/'release.json').read_text(encoding='utf-8'))
-        if ready.get('published') or ready.get('episode_id')!=episode_id:raise ValueError('Release folder belongs to another/published edition')
+        if ready.get('episode_id')!=episode_id:raise ValueError('Release folder belongs to another edition')
+        if ready.get('published') and not publication_evidence:raise ValueError('Published release is immutable; verify before cleanup')
     else:ready=None
     final=[p for p in source.iterdir() if p.is_file() and p.name in FINAL_NAMES]
     for required in ['sample.mp4','episode.json','publication.json','script.txt','cover-16x9.png','cover-4x3.png']:
@@ -55,7 +57,11 @@ def finalize(episode_id,slot,published=False,dry_run=False):
     protected={str(p.relative_to(ROOT)):sha(p) for p in retained if p.is_file()}
     summary=dict(episode_id=episode_id,directory=str(target),final_files=len(final),cleanup_files=len(cleanup),cleanup_bytes=sum(p.stat().st_size for p in cleanup),protected_files=len(protected))
     if dry_run:return summary
-    ready=prepare(episode_id,slot)
+    if ready:
+        for item in final:
+            destination=target/(ready['video_filename'] if item.name=='sample.mp4' else item.name)
+            if not destination.is_file() or sha(destination)!=sha(item):raise ValueError('Prepared release differs from working source; create a revision')
+    else:ready=prepare(episode_id,slot)
     video_name=ready['video_filename']
     target.mkdir(parents=True,exist_ok=True);audit=target/'audit';audit.mkdir(exist_ok=True)
     manifest=[]
@@ -99,9 +105,11 @@ def finalize(episode_id,slot,published=False,dry_run=False):
     for name,digest in protected.items():
         if sha(ROOT/name)!=digest:raise ValueError('Protected file changed after cleanup: '+name)
     source.mkdir(parents=True,exist_ok=True)
-    receipt=dict(**summary,state='published',relative_directory=target.relative_to(ROOT.parent/'release').as_posix(),video_filename=video_name,published=True,edition_slot=slot,counts_toward_daily_main_limit=ep.get('counts_toward_daily_main_limit',slot!='temporary'),publication_evidence='User confirmed publication in current Codex conversation; no platform URL supplied',
+    receipt=dict(**summary,state='published',relative_directory=target.relative_to(release_root(ROOT)).as_posix(),video_filename=video_name,published=True,edition_slot=slot,counts_toward_daily_main_limit=ep.get('counts_toward_daily_main_limit',slot!='temporary'),publication_evidence=publication_evidence or 'User confirmed publication in current Codex conversation; no platform URL supplied',
         completed_at=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).isoformat(),recovery_zip=str(backup),archive_files=manifest,
         deleted_work_files=deleted_files,deleted_work_bytes=deleted_bytes,skipped_locked_files=skipped,recovery_zip_bytes=backup.stat().st_size)
+    if publication_evidence:receipt.update(platform=publication_evidence['receipt'],submitted=True,upload_backend='codex-upload')
+    elif ready.get('platform'):receipt.update(platform=ready['platform'],submitted=True)
     (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     (source/'release.json').write_text(json.dumps(dict(episode_id=episode_id,directory=str(target),relative_directory=receipt['relative_directory'],published=True,video_filename=video_name),ensure_ascii=False,indent=2),encoding='utf-8')
     release_logs=ROOT/'logs/releases';release_logs.mkdir(exist_ok=True)

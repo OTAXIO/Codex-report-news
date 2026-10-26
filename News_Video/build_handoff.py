@@ -2,8 +2,9 @@
 import argparse,hashlib,json,sqlite3,tempfile,zipfile
 from contextlib import closing
 from pathlib import Path
+from project_paths import workspace_root,release_root
 
-ROOT=Path(__file__).resolve().parent;WORK=ROOT.parent
+ROOT=Path(__file__).resolve().parent;WORK=workspace_root(ROOT)
 
 def digest(data):return hashlib.sha256(data).hexdigest()
 
@@ -34,7 +35,7 @@ def build(date='2026-10-26'):
     for p in (ROOT/'episodes').rglob('*'):
         if p.is_file() and p.suffix in {'.json','.txt'}:add(p)
     for name in ['generate_job.py','audio_cleanup.py','common.py']:add(WORK/'Voice_Generate/tools'/name)
-    example=WORK/'release/2026_10_26_night'
+    example=release_root(ROOT)/'2026_10_26_night'
     for p in example.iterdir():
         if p.is_file() and p.suffix in {'.mp4','.png','.jpg','.json','.txt','.md','.wav','.yaml'}:add(p)
     cache=ROOT/'.cache';cache.mkdir(exist_ok=True)
@@ -43,7 +44,7 @@ def build(date='2026-10-26'):
         if not staging.is_relative_to(cache.resolve()):raise ValueError('Unsafe staging directory')
         snapshot=staging/'news.sqlite3'
         with closing(sqlite3.connect(ROOT/'data/news.sqlite3')) as source,closing(sqlite3.connect(snapshot)) as dest:source.backup(dest)
-        add(snapshot,'News_Video/data/news.sqlite3')
+        add(snapshot,ROOT.relative_to(WORK).as_posix()+'/data/news.sqlite3')
         manifest=[]
         with zipfile.ZipFile(target,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=5,allowZip64=True) as z:
             for arc,path in sorted(files.items()):

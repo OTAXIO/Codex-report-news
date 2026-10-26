@@ -4,7 +4,7 @@ import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess
 from pathlib import Path
 import news_video as n
 
-STOP_CODES={'NEED_SETUP','NEED_LOGIN','UPSTREAM_BROKEN','TIMEOUT','RATE_LIMITED','PLATFORM_BLOCKED','BUSY'}
+STOP_CODES={'NEED_SETUP','NEED_LOGIN','UPSTREAM_BROKEN','TIMEOUT','RATE_LIMITED','PLATFORM_BLOCKED','BUSY','LOCAL_PERMISSION_DENIED'}
 
 def registry():
     return n.load(n.ROOT/'leader_sources.json')['accounts']
@@ -44,16 +44,28 @@ def validate_scene(scene, evidence):
     aliases=[evidence['author'],evidence['handle']]+scene.get('author_spoken_aliases',[])
     if not any(a and a.casefold() in public for a in aliases):raise ValueError('Attribute the speaker in narration')
 
+def local_failure(process):
+    # Classify locally; never persist raw stderr or session data.
+    diagnostic=(process.stderr or '')+'\n'+(process.stdout or '')
+    if re.search(r'PermissionError|\[Errno 13\]|Access is denied|EACCES',diagnostic,re.I):
+        return dict(ok=False,error=dict(code='LOCAL_PERMISSION_DENIED',stage='local_runtime',
+            message='Local runtime permission denied before a usable platform response.',
+            hint='Run the same approved collector with access to the existing runtime and browser locks; do not change account or backend.'))
+    return dict(ok=False,error=dict(code='UPSTREAM_BROKEN',stage='cli_response',
+        message='Reader returned no valid structured response; inspect local runtime diagnostics.'))
+
+
 def run_reach(executable, source, limit, timeout):
     env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
     try:
         process=subprocess.run([executable,'twitter','tweets',source['handle'],'--limit',str(limit),'--timeout',str(timeout)],
                                capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout+15,env=env)
-        result=json.loads(process.stdout.lstrip('\ufeff'))
-        if not isinstance(result,dict) or not isinstance(result.get('ok'),bool):raise ValueError('Invalid result envelope')
+        try:result=json.loads(process.stdout.lstrip('\ufeff'))
+        except (json.JSONDecodeError,ValueError):return local_failure(process)
+        if not isinstance(result,dict) or not isinstance(result.get('ok'),bool):return local_failure(process)
         return result
     except subprocess.TimeoutExpired:return dict(ok=False,error=dict(code='TIMEOUT'))
-    except (json.JSONDecodeError,ValueError):return dict(ok=False,error=dict(code='UPSTREAM_BROKEN'))
+    except PermissionError:return dict(ok=False,error=dict(code='LOCAL_PERMISSION_DENIED',stage='process_start'))
     except OSError:return dict(ok=False,error=dict(code='NEED_SETUP'))
 
 def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False):
@@ -92,6 +104,8 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False):
             if result.get('meta',{}).get('update'):report['update_available']=result['meta']['update'].get('latest')
             if not result['ok']:
                 code=result.get('error',{}).get('code','UPSTREAM_BROKEN');status['error_code']=code
+                if result.get('error',{}).get('stage') in {'local_runtime','process_start','cli_response'}:
+                    status['error_stage']=result['error']['stage']
                 report['sources'].append(status)
                 if code!='NOT_FOUND':
                     report.update(stopped=True,reason=code)

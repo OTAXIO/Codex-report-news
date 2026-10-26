@@ -2,8 +2,9 @@
 import argparse, json, os, sys, wave
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
+from project_paths import workspace_root
 ENGINE=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604')
-sys.path.insert(0,str(ROOT.parent/'Voice_Generate/tools'))
+sys.path.insert(0,str(workspace_root(ROOT)/'Voice_Generate/tools'))
 from common import environment
 
 def analyze(episode_id):

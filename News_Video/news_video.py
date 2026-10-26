@@ -22,8 +22,10 @@ def load(path):
 
 def config():
     cfg = load(ROOT / "config.json")
-    if cfg.get("upload_enabled") or cfg.get("auto_publish"):
-        raise ValueError("Automatic upload/publish is not configured.")
+    if cfg.get('upload_enabled') or cfg.get('auto_publish'):
+        publisher=cfg.get('publisher',{})
+        if not publisher.get('enabled') or publisher.get('backend')!='codex-upload' or not publisher.get('user_authorized'):
+            raise ValueError('Automatic upload requires the configured, user-authorized codex-upload backend')
     if cfg.get("x_enabled") and cfg.get('x_collection',{}).get('mode')!='agent_reach_read_only':
         raise ValueError("X requires the read-only Agent Reach adapter.")
     if cfg.get("social_collection_allow_model_calls"):
@@ -305,7 +307,7 @@ def import_editorial(path):
     _,already_used,_=exclude_used(selected_rows,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
     if already_used:raise ValueError('News already used in another completed edition: '+', '.join(x['id'] for x in already_used))
     episode["publication_preset"]=cfg["publication_preset"]
-    episode["upload_enabled"]=False; episode["auto_publish"]=False
+    episode['upload_enabled']=bool(cfg.get('upload_enabled'));episode['auto_publish']=bool(cfg.get('auto_publish'))
     directory=ROOT/"episodes"/episode["id"]; directory.mkdir(parents=True,exist_ok=True)
     if (directory/'release.json').exists():raise ValueError('Published edition is archived; create a new revision ID')
     dump(directory/"episode.json",episode)
@@ -366,7 +368,10 @@ def voice(episode_id):
 
 def doctor():
     cfg=config();v=cfg["voice"]
-    checks={"voice_worker":(Path(v["repository"])/"tools/generate_job.py").is_file(),"voice_python":(Path(v["engine"])/"runtime/python.exe").is_file(),"voice_profile":Path(v["profile"]).is_file(),"upload_disabled":not cfg["upload_enabled"],"hourly_model_calls_disabled":not cfg["social_collection_allow_model_calls"]}
+    checks={"voice_worker":(Path(v["repository"])/"tools/generate_job.py").is_file(),"voice_python":(Path(v["engine"])/"runtime/python.exe").is_file(),"voice_profile":Path(v["profile"]).is_file(),"upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg["social_collection_allow_model_calls"]}
+    if cfg.get('publisher',{}).get('enabled'):
+        from upload_bridge import paths
+        cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
 def main():

@@ -18,9 +18,9 @@ class PipelineChecks(unittest.TestCase):
     def test_x_and_non_web_refused(self):
         for url in ['https://x.com/test','https://twitter.com/test','https://t.co/test','file:///C:/secret']:
             with self.assertRaises(ValueError):n.normalized_url(url)
-    def test_upload_and_hourly_models_disabled(self):
+    def test_authorized_upload_and_hourly_models_disabled(self):
         config=n.config()
-        self.assertFalse(config['upload_enabled'])
+        self.assertTrue(config['upload_enabled']);self.assertEqual(config['publisher']['backend'],'codex-upload');self.assertTrue(config['publisher']['user_authorized'])
         self.assertFalse(config['social_collection_allow_model_calls'])
         self.assertEqual(config['main_video_ready_times'],['06:00','12:00','18:00'])
     def test_sample_timeline(self):
@@ -29,7 +29,7 @@ class PipelineChecks(unittest.TestCase):
         self.assertAlmostEqual(timing['sentences'][-1]['end'],timing['duration'],places=3)
         for a,b in zip(captions,captions[1:]):self.assertLessEqual(a['end'],b['start']+1e-8)
         self.assertTrue(all(0<=c['start']<c['end']<=timing['duration']+.001 for c in captions))
-    @unittest.skipUnless((Path(__file__).parent/'data/news.sqlite3').is_file(), 'Production news database is excluded from the source snapshot')
+    @unittest.skipUnless((Path(__file__).parent/'data/news.sqlite3').is_file(), 'Production news database is local and not included in Git')
     def test_white_theme_and_source_mapping(self):
         config=n.config();self.assertEqual(config['theme']['background'],'#FFFFFF')
         self.assertEqual(config['theme']['blue'],'#01A1FE')

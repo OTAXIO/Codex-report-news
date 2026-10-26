@@ -1,73 +1,58 @@
-# 新闻视频生成代码
+# 新闻视频生成项目
 
-从本地项目整理的视频生成源码备份，保存 2026-10-26 的生成实现、配置、依赖锁文件与回归测试。当前实际运行项目仍保留在原位置。
-
-## 目录
-
-| 路径 | 用途 |
-| --- | --- |
-| `News_Video/*.py` | 新闻采集、稿件导入、配音调用、封面、字幕、HTML 构建、渲染、校验和 release 管理 |
-| `News_Video/config.json` | 原生成参数；包含本机路径，迁移前修改 |
-| `News_Video/sources.json`、`leader_sources.json` | 公开新闻源配置 |
-| `News_Video/package.json`、`pnpm-lock.yaml` | HyperFrames 渲染依赖 |
-| `News_Video/assets/logos/` | 小体积 logo 和公开来源记录，权利归原权利人 |
-| `News_Video/episodes/` | 测试所需的四个公开新闻样例 JSON，不是新稿件 |
-| `Voice_Generate/tools/` | 直接调用的三个语音工具源码文件 |
-| `Voice_Generate/LICENSE` | 原语音工具的上游许可 |
-| `SOURCE_MANIFEST.json` | 源文件与备份的 SHA-256、大小和改动说明 |
-| `export_news_source.py` | 白名单导出工具，只写新的空目录，不移动或删除原文件 |
-
-## 配音依赖
+本仓库现在也是实际运行目录，代码、修改和 Git 版本保存在同一个位置，不再另存一份源码备份。
 
 ```text
-news_video.py voice <episode>
-  -> Voice_Generate/tools/generate_job.py
-  -> 外部 GPT-SoVITS 运行时、模型 profile 与参考音频
-  -> News_Video/episodes/<episode>/narration.wav
-  -> HTML、字幕与视频合成
+工作区/
+  Codex-report-news/
+    News_Video/         唯一制作代码与本机运行数据
+  Voice_Generate/      既有语音工具仓库，通过配置引用
+  admin_retrain/       现有模型 profile 和模型
+  admin_voice_study/   原语音实验
+  release/             成品包，保持原位置
+  .codex-upload-private/ 本地认证与投稿账本，不进 Git
 ```
 
-原本机的 Voice_Generate 是一个独立语音工具 Git 仓库，GPT-SoVITS 引擎与模型另存于本地。这里仅保存新闻生成直接调用的工具源码，未复制整个语音仓库或完整 TTS 环境。主体推理引擎来自 [GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS)，这些工具不能替代引擎、模型或其安装步骤。
+## 代码入口
 
-## 安装与检查
+| 文件 | 功能 |
+| --- | --- |
+| `News_Video/news_video.py` | 采集、候选、稿件导入、配音、环境检查 |
+| `News_Video/build_film.py` | HTML、单行字幕和导航构建 |
+| `News_Video/cover_generator.py` | 本期双比例封面 |
+| `News_Video/render_sample.py` | 渲染、成片校验、先准备 release，按配置对接投稿 |
+| `News_Video/project_paths.py` | 根据配置定位工作区和成品目录，支持仓库嵌套 |
+| `News_Video/episode_paths.py` | 解析工作期次和已归档成品 |
+| `News_Video/upload_bridge.py` | 对接现有 codex-upload CLI，区分提交与公开发布 |
+| `News_Video/release_manager.py`、`finalize_release.py` | 成品准备与发布确认后的收尾 |
+| `News_Video/hourly_monitor.py`、`reset_alerts.py` | 小时采集、临时消息队列和去重 |
 
-使用 Python 3.10+。在仓库根目录运行：
+## 本机使用
+
+所有制作命令在 `News_Video` 中运行。原工作区的项目规则和本地 docs/skills 随目录指引读取；公开仓库不包含这些内部资料或账号状态。
 
 ```powershell
-python -m pip install -r requirements-test.txt
-Set-Location News_Video
+Set-Location ./News_Video
 $env:PYTHONIOENCODING='utf-8'
 $env:PYTHONDONTWRITEBYTECODE='1'
+python -B news_video.py doctor
 python -B -m unittest discover -p 'test_*.py' -v
 ```
 
-基本制作依赖见 `News_Video/requirements.txt`，全部回归额外需要 librosa。系统临时目录受限时，将本进程 TEMP / TMP 指向工作目录内自行创建的临时文件夹。
+本机数据库、已用新闻日志、素材、依赖和技能随实际项目迁移，仍可在原有环境中使用。release 和语音/模型/投稿私有目录保持原位。小时巡检使用新的代码目录。
 
-实际制作还需要 Node、pnpm、HyperFrames（锁文件版本 0.8.196）、Chrome、FFmpeg / FFprobe、中文字体和已有 GPT-SoVITS 环境。安装 Node 依赖后，修改 config.json 中 voice.repository、voice.engine、voice.profile、voice.reference_audio，并检查渲染源码内的 Node、FFmpeg、Chrome 和 Windows 字体路径。
+## 换机安装
 
-```powershell
-# 在 News_Video 内，配置本机资源路径后运行
-pnpm install --frozen-lockfile
-python -B news_video.py doctor
-python -B news_video.py collect --kind ai
-python -B news_video.py collect --kind social
-python -B news_video.py candidates --hours 48
-# 根据来源核验并编写本期 editorial JSON
-python -B news_video.py import-editorial <editorial.json>
-python -B news_video.py voice <episode>
-# 根据本期事实另行填写 episodes/<episode>/cover.json
-python -B cover_generator.py <episode>
-python -B build_film.py <episode>
-# HyperFrames check 和截图检查通过后渲染
-python -B render_sample.py <episode>
-```
+使用 Python 3.10+，在仓库根目录安装 `requirements-test.txt`；基础制作依赖见 `News_Video/requirements.txt`。Node 渲染依赖使用 package.json 与 pnpm-lock.yaml 安装，HyperFrames 锁定版本为 0.8.196。另需准备 Chrome、FFmpeg/FFprobe、字体和合法可用的 GPT-SoVITS 环境。
 
-生成程序保留原实现和参数，本仓库不是跨平台即装即用安装包。固定日期脚本仅作为历史代码保存，不能当作实时内容生成器。`build_handoff.py` 需要原生产数据和成品作为输入，此源码备份未提供这些文件。
+config.json 的 workspace_directory 相对于 News_Video；release.directory 可为绝对路径或相对于 News_Video 的路径。voice 中的工具、引擎、模型 profile 和参考音频路径需按本机设置。publisher.private_home 相对于 News_Video，认证始终留在仓库外。独立投稿 CLI 必须另行安装并配置，缺少时 doctor 会报告，不应默认自动投稿可用。
 
-## 保存范围
+语音直接调用既有 Voice_Generate 工具，并使用外部 GPT-SoVITS 引擎和模型，在本期 episodes 下生成音频。本仓库不再复制 Voice_Generate 源码。GPT-SoVITS 主体来自原上游项目，模型与音频权利按原授权。
 
-保存代码、依赖配置和测试。排除内部项目规则、历史状态、交接文档、技能快照、账号、Cookie、浏览器 profile、API key、模型、参考音频、数据库、运行记录、视频成品、运行时、依赖目录及微软字体。
+仅克隆 Git 不能获得本机运行环境。数据库、去重日志和 reset 基线需另行安全迁移；缺少生产数据库时对应的来源映射测试跳过。历史固定日期脚本不作为实时选题入口，历史稿件不可重新投稿。
 
-原生产数据库、已用新闻日志和监测状态仍留在本机；迁移正式制作时需另行保存这些状态，避免重复选题或重发历史消息。
+## Git 保存范围
 
-备份副本的 38 项测试中，37 项通过、1 项因缺少原新闻数据库跳过。生成源码与源文件逐项核对，仅测试文件增加数据库缺失时跳过条件。详细范围见 `VALIDATION.md` 和 `SOURCE_MANIFEST.json`。此次未重新生成真实配音、渲染或投稿。
+提交代码、公开源配置、锁文件和必要测试素材。忽略本机数据、运行依赖、项目技能快照、内部文档、生成视频、模型、字体及所有认证信息。后续直接在这个工作副本编辑、测试和提交，不再使用旧的源码导出脚本。
+
+迁移核验见 VALIDATION.md。未为本次目录整理生成或投稿新视频。
