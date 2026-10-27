@@ -21,6 +21,14 @@ class RenderSelectionChecks(unittest.TestCase):
     def test_old_in_progress_episode_stays_hyperframes(self):
         r.save(self.episode/'scene-timings.json',[])
         self.assertEqual(r.select_plan(self.root,self.episode)['backend'],'hyperframes')
+    def test_temporary_reset_and_model_editions_use_graphic_default(self):
+        cfg=r.load(self.root/'config.json');cfg['rendering']['default_template']='graphic';r.save(self.root/'config.json',cfg)
+        for alert_type in ['reset','model']:
+            episode=self.root/'episodes'/alert_type;episode.mkdir()
+            r.save(episode/'episode.json',dict(edition_slot='temporary',alert_type=alert_type))
+            plan=r.select_plan(self.root,episode)
+            self.assertEqual((plan['backend'],plan['template']),('multiplane','graphic'))
+            self.assertEqual(r.load(episode/'render-plan.json'),plan)
     def test_explicit_old_engine_and_graphic_option(self):
         self.assertEqual(r.select_plan(self.root,self.episode,'hyperframes')['template'],'legacy')
         other=self.root/'episodes/graphic';other.mkdir()

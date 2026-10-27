@@ -227,3 +227,6 @@ layout_policy.py导览使用完整主语标题、已核验一句事实和板块�
 
 
 2026-10-27 Multiplane扩展已实际验收：npm锁定0.3.13，项目本地Chromium/FFmpeg，A/B各94.81秒完整v4样片、24秒预览和双比例封面，旧HyperFrames同素材对照均通过。doctor/lint/inspect/stills/verify/render、DOM边界/单行字幕、实际MP4解码/导航/两侧满幅及右侧64px完整蓝块通过；三版soundtrack哈希相同。A渲染86.073秒、B87.612秒，2 workers。三版隔离release与from-release/validate_meta契约通过，未启动浏览器/投稿；技术preview强制hold且不写已用新闻。用户明确选B，config默认已切换multiplane/graphic，A/editorial及hyperframes/legacy保留，旧在制计划不变。最终新闻回归133项通过；运行时doctor通过（可选three未装）。生产规则、工作流、制作skill、DSH交接和Notion章节已同步；V_0历史源码基线保持。详情见MULTIPLANE.md、RENDERER_ACCEPTANCE.md。Git状态以最终远端核验为准，不把本地完成当成已推送。本轮不改已发布稿、不改模型/音色/BGM参数。
+
+
+2026-10-27 临时新闻B版同步：用户明确所有新建temporary（tibo reset/新模型）同样采用multiplane/graphic。应用reset任务已更新并实际读回ACTIVE、每小时30分和原绑定会话不变；显式build B并核对render-plan，替换旧HyperFrames check措辞，保留reset无概览/正文01/单消息及防重回查。RESET_ALERTS、MODEL_ALERTS、小时提示、生产规则、工作流、制作skill、工作区与DSH副本、Notion已同步。8项后端检查通过（新增reset/model默认B验证）；既有统一配置/选择逻辑已覆盖临时稿，无需复制新制作流程。已发布视频不重做不重传，本轮未产生视频或投稿。

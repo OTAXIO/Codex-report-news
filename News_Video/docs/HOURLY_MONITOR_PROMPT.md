@@ -1,3 +1,13 @@
+
+
+### 临时新闻统一B版（2026-10-27）
+
+后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template graphic`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
+
+reset仍只讲该次已核实重置消息，不加00导览、正文01起；新模型临时稿继续遵循MODEL_ALERTS的概览及页数规则。不占早晚主片次数，主片重点回顾仍逐事件日内去重。使用`renderer_backends.py check <id>`及实际截图、最终MP4解码/导航/字幕/边缘检查，质检后先release再按既有授权自动投稿。
+
+B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并记录真实原因。已有固定render-plan的在制任务沿用原计划。已发布的视频、封面与投稿记录不重做、不修改、不重传；unknown先回查，同原帖/事件防重。小时任务继续每小时30分只读tibo并处理reset/投稿回查，不扩大到公司X或社会RSS。
+
 > 2026-10-27 最新主片安排：取消午间新闻，只制作北京时间06:00开始的morning早报和18:00开始的night晚报；不提前15分钟，质检通过后沿用默认设置自动投稿。不再制作、补做或投稿新的noon午报。tibo reset临时新闻及每小时30分巡检保留。历史午报成品与记录保留。
 
 2026-10-27 最新采集范围：小时巡检只读取 tibo @thsottiaux 并处理 reset、回查投稿；不采集社会 RSS，不读取公司或其他负责人 X。社会 RSS、公司官方 X 和其他负责人仅在视频制作前刷新。每期执行 collect --kind all（社会 RSS + AI 官方来源 + 全部启用 X），不能只复用旧社会缓存。新模型线索在制作阶段采集后按 MODEL_ALERTS 核验，已有授权与去重规则保留。
@@ -12,7 +22,7 @@ tibo只有明确新鲜的额度重置通知才发。reset关键词本身、请�
 
 先检查voice.lock和film/配音渲染工作是否忙；忙则保留最高优先draft，不覆盖其他任务，下轮恢复。模型临时稿默认00概览只说“这是本视频的导览。”再留2秒，正文01起；tibo reset不加概览、正文01，二者都不混其他新闻，不占主片。使用新Qwen3文本读音与复合名短停顿规范（Voice_Generate/docs/SPEECH_POLICY.md），单行字幕、来源分钟时间、边缘蓝色白底、干净双封面（大日期一次，短类型说明不重复日期）。
 
-按WORKFLOW生成双封面、HyperFrames check并实际看截图后render，解码/导航校验后先release中带日期temporary时间事件ID的MP4。render自动生成upload.codex.json并调用codex-upload，不能额外重复上传。使用项目skills/codex-upload/SKILL.md与CODEX_UPLOAD.md，Chrome优先，复用已绑定账号，科技数码/News实际合集、AI生成+自制原创禁止转载、公开可见和相关热门免费活动，标签按事实决定。不得读取/打包密码、Cookie、API key、profile、模型或微软字体。
+按WORKFLOW使用Multiplane B（multiplane/graphic）生成双封面，执行renderer_backends.py check <id>并实际看截图后render，解码/单行字幕/导航/右侧色块校验后先release中带日期temporary时间事件ID的MP4。render自动生成upload.codex.json并调用codex-upload，不能额外重复上传。使用项目skills/codex-upload/SKILL.md与CODEX_UPLOAD.md，Chrome优先，复用已绑定账号，科技数码/News实际合集、AI生成+自制原创禁止转载、公开可见和固定“明日方舟终末地创作者应援计划”（话题ID1325166，strategy=explicit、fallback=stop），标签按事实决定。不得读取/打包密码、Cookie、API key、profile、模型或微软字体。
 
 每小时同时upload_bridge.py pending；未知先回查，不能盲目重投。真实code0+aid/BV才记submitted，公开账号和标题一致才published及finalize。BV1UxnZ6AEVZ和BV1WLnf6fEgM已公开，禁止重传或修改。已有Chrome基础链真实发稿验证不等于新的小时reset/模型触发全链已实发，不能虚报。
 

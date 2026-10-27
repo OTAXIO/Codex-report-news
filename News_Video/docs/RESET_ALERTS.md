@@ -60,3 +60,12 @@ important_events读取同日成功主片导出日志及release中的episode回�
 prepare_main_recaps逐事件决定插入，并移除编辑输入中本日已由其他主片用过的回顾；episode.recap_policy输出once_per_event_per_beijing_date及skipped_event_keys。validate_recap在导入时校验，used_news.record_export在写日志锁内再次逐条验证，防止先前草稿稍后导出造成重复。不同事件或真实实质新进展仍按正常选题与事实核查，不因共用公司/人名被一并排除；相同消息换标题不算新事件。跨日重新按当日记录判断，但仍受24小时时效限制。
 
 已发布视频不改。本期未发布午报按新规则重导入时，若回顾被移除，必须同步重新生成受影响的配音、字幕、时序、导览与导航，不允许只删画面留下旧口播。涉及正在运行的配音/渲染由制作会话安全衔接，不覆盖其共享素材。
+
+
+### 临时新闻统一B版（2026-10-27）
+
+后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template graphic`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
+
+reset仍只讲该次已核实重置消息，不加00导览、正文01起；新模型临时稿继续遵循MODEL_ALERTS的概览及页数规则。不占早晚主片次数，主片重点回顾仍逐事件日内去重。使用`renderer_backends.py check <id>`及实际截图、最终MP4解码/导航/字幕/边缘检查，质检后先release再按既有授权自动投稿。
+
+B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并记录真实原因。已有固定render-plan的在制任务沿用原计划。已发布的视频、封面与投稿记录不重做、不修改、不重传；unknown先回查，同原帖/事件防重。小时任务继续每小时30分只读tibo并处理reset/投稿回查，不扩大到公司X或社会RSS。
