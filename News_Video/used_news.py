@@ -28,20 +28,30 @@ def keys(item):
     if title:result.add('title:'+title)
     return result
 
+def normalize_record(record):
+    """Read legacy export/association rows without rewriting audit history."""
+    record=dict(record)
+    episode_id=record.get('episode_id')
+    if not record.get('edition_key'):
+        record['edition_key']=re.sub(r'-v\d+$','',episode_id) if episode_id else 'legacy:'+hashlib.sha256(json.dumps(record,sort_keys=True,ensure_ascii=False).encode()).hexdigest()[:16]
+    record.setdefault('news',[])
+    return record
+
+
 def recent_records(root=ROOT,days=7,now=None):
     now=now or dt.datetime.now(CN);today=now.astimezone(CN).date();records=[]
     for i in range(days):
         path=Path(root)/'logs/news-used'/f'{today-dt.timedelta(days=i)}.jsonl'
         if path.exists():
             for line in path.read_text(encoding='utf-8').splitlines():
-                if line.strip():records.append(json.loads(line))
+                if line.strip():records.append(normalize_record(json.loads(line)))
     return records
 
 def exclude_used(items,records):
     seen=set();context={}
     for record in records:
-        for item in record['news']:
-            seen.update(keys(item));context.setdefault(item.get('event_key',item['item_id']),item)
+        for item in record.get('news',[]):
+            seen.update(keys(item));context.setdefault(item.get('event_key') or item.get('item_id') or item.get('url') or item.get('title'),item)
     fresh=[];excluded=[]
     for item in items:
         matched=keys(item)&seen
@@ -79,19 +89,22 @@ def record_export(directory,root=ROOT,now=None):
         lock_handle.close()
         try:
             records=recent_records(root,days=7,now=now)
-            if any(r['episode_id']==episode['id'] and r['video_sha256']==sha for r in records):return log
-            same=any(r['edition_key']==edition_key for r in records)
-            record=dict(event='revision_exported' if same else 'edition_exported',edition_key=edition_key,
-                episode_id=episode['id'],edition_date=episode.get('edition_date'),
-                generated_at=now.isoformat(),timezone='Asia/Shanghai',video=str(movie.resolve()),
-                video_sha256=sha,title=episode['title'],news=news,submitted=False)
-            record.update(edition_slot=episode.get('edition_slot'),edition_type=episode.get('edition_type','main'),
-                counts_toward_daily_main_limit=episode.get('counts_toward_daily_main_limit',episode.get('edition_slot')!='temporary'),alert_id=episode.get('alert_id'))
-            with log.open('a',encoding='utf-8') as output:output.write(json.dumps(record,ensure_ascii=False)+'\n');output.flush()
-            day=[json.loads(line) for line in log.read_text(encoding='utf-8').splitlines() if line.strip()]
+            record=next((r for r in records if r.get('episode_id')==episode['id'] and r.get('video_sha256')==sha),None)
+            if record is None:
+                same=any(r['edition_key']==edition_key for r in records)
+                record=dict(event='revision_exported' if same else 'edition_exported',edition_key=edition_key,
+                    episode_id=episode['id'],edition_date=episode.get('edition_date'),
+                    generated_at=now.isoformat(),timezone='Asia/Shanghai',video=str(movie.resolve()),
+                    video_sha256=sha,title=episode['title'],news=news,submitted=False)
+                record.update(edition_slot=episode.get('edition_slot'),edition_type=episode.get('edition_type','main'),
+                    counts_toward_daily_main_limit=episode.get('counts_toward_daily_main_limit',episode.get('edition_slot')!='temporary'),alert_id=episode.get('alert_id'))
+                with log.open('a',encoding='utf-8') as output:output.write(json.dumps(record,ensure_ascii=False)+'\n');output.flush()
+            day=[normalize_record(json.loads(line)) for line in log.read_text(encoding='utf-8').splitlines() if line.strip()]
             unique={}
             for r in day:
-                for item in r['news']:unique.setdefault(item['event_key'],(item,r['edition_key']))
+                for item in r['news']:
+                    key=item.get('event_key') or canonical_url(item.get('url','')) or item['item_id']
+                    unique.setdefault(key,(item,r['edition_key']))
             lines=[f'# {now.date()} 已生成视频使用的新闻','',f'成功导出记录：{len(day)}；唯一新闻：{len(unique)}。修订不计为新一期。','', '| 新闻 | 来源 | 所属期次 |','|---|---|---|']
             for item,edition in unique.values():lines.append(f"| [{item['title']}]({item['url']}) | {item['publisher']} | {edition} |")
             (folder/f'{now.date()}.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')

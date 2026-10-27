@@ -2,6 +2,7 @@
 import argparse,json
 from pathlib import Path
 from PIL import Image,ImageDraw,ImageFont,ImageChops
+from layout_policy import cover_footer
 
 ROOT=Path(__file__).parent
 BLUE='#01A1FE';BLACK='#101218'
@@ -39,9 +40,8 @@ def make(episode_id):
     for key,y,size,color in [('headline_top',250,120,BLACK),('headline_main',420,116,BLACK),('highlight',560,230,BLUE)]:
         text=brief.get(key,'')
         if text:d.text((116,y),text,font=fitted(d,text,size,1060),fill=color)
-    if brief.get('subtitle'):d.text((124,843),brief['subtitle'],font=fitted(d,brief['subtitle'],39,1100,False),fill=BLACK)
     d.text((124,895),date,font=font(89),fill=BLACK)
-    footer=brief.get('footnote','本期重点新闻');d.text((434,929),footer,font=fitted(d,footer,38,750,False),fill=BLACK)
+    footer=cover_footer(brief);d.text((434,929),footer,font=fitted(d,footer,38,750,False),fill=BLACK)
     d.line((124,1015,1670,1015),fill=BLUE,width=12)
     image.paste(logo,(1240+(480-logo.width)//2,340+(480-logo.height)//2),logo)
     name=brief.get('image_label','');box=d.textbbox((0,0),name,font=font(36));d.text((1480-(box[2]-box[0])/2,835),name,font=font(36),fill=BLACK)

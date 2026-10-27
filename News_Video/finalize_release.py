@@ -5,7 +5,7 @@ from project_paths import release_root
 
 ROOT=Path(__file__).resolve().parent
 FINAL_NAMES={
- 'sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
+ 'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
  'narration.wav','narration_原始.wav','narration.json','timings.json','captions.json',
  'scene-timings.json','progress.json','used-news-record.json','SPEECH_REVIEW.md',
@@ -112,10 +112,15 @@ def finalize(episode_id,slot,published=False,dry_run=False,publication_evidence=
     elif ready.get('platform'):receipt.update(platform=ready['platform'],submitted=True)
     (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     (source/'release.json').write_text(json.dumps(dict(episode_id=episode_id,directory=str(target),relative_directory=receipt['relative_directory'],published=True,video_filename=video_name),ensure_ascii=False,indent=2),encoding='utf-8')
+    if ep.get('model_alert_id') and (target/'publication-verified.json').exists():
+        from model_alerts import mark_published
+        mark_published(ep['model_alert_id'],target)
     release_logs=ROOT/'logs/releases';release_logs.mkdir(exist_ok=True)
     with (release_logs/f'{date}.jsonl').open('a',encoding='utf-8') as output:
-        output.write(json.dumps(dict(episode_id=episode_id,directory=str(target),published=True,confirmation_source='user',completed_at=receipt['completed_at']),ensure_ascii=False)+'\n')
-    (target/'README.md').write_text('# '+publication['title']+'\n\n发布状态：用户确认已发布。\n\n- '+video_name+'：最终视频\n- cover-4x3.png / cover-16x9.png：封面\n- title.txt / description.txt / tags.txt：发布文案及建议标签\n- script.txt / spoken_script.txt：显示稿与配音稿\n- episode.json / captions.json / timings.json：来源及字幕时间资料\n- audit/work-history.zip：已清理工作残留的恢复包，含旧样片和渲染记录；无需上传平台。\n\n平台地址未提供，未虚构 BV 号；标签为本对话建议，未声称已核验用户实际投稿设置。\n',encoding='utf-8')
+        output.write(json.dumps(dict(episode_id=episode_id,directory=str(target),published=True,confirmation_source='public_platform_verification' if publication_evidence else 'user',completed_at=receipt['completed_at']),ensure_ascii=False)+'\n')
+    status_text='平台公开核验已发布。' if publication_evidence else '用户确认已发布。'
+    platform_text=('平台地址：'+publication_evidence['receipt'].get('url','')+'；账号与标题已公开核验。') if publication_evidence else '平台地址未提供，未虚构 BV 号；标签为本对话建议，未声称已核验用户实际投稿设置。'
+    (target/'README.md').write_text('# '+publication['title']+'\n\n发布状态：'+status_text+'\n\n- '+video_name+'：最终视频\n- cover-4x3.png / cover-16x9.png：封面\n- title.txt / description.txt / tags.txt：发布文案及建议标签\n- script.txt / spoken_script.txt：显示稿与配音稿\n- episode.json / captions.json / timings.json：来源及字幕时间资料\n- audit/work-history.zip：已清理工作残留的恢复包，含旧样片和渲染记录；无需上传平台。\n\n'+platform_text+'\n',encoding='utf-8')
     if ep.get('alert_id'):
         from reset_alerts import mark_release
         mark_release(ep['alert_id'],target,published=True)

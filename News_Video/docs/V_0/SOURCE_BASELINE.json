@@ -1,0 +1,697 @@
+{
+  "version": "V_0",
+  "recorded_at": "2026-10-27T04:02:32.441198+08:00",
+  "scope": "Selected runtime sources, current configuration, production policies and manual; excludes credentials, models, generated media and this manifest itself",
+  "git_tag_created": false,
+  "committed": false,
+  "repositories": [
+    {
+      "path": "Codex-report-news",
+      "head": "2f06ec8313f16ed3b903c33c37e8b48a95217fe0",
+      "branch": "main",
+      "dirty": true,
+      "worktree_status": [
+        "M News_Video/build_film.py",
+        " M News_Video/build_handoff.py",
+        " M News_Video/caption_layout.py",
+        " M News_Video/config.json",
+        " M News_Video/cover_generator.py",
+        " M News_Video/finalize_release.py",
+        " M News_Video/hourly_monitor.py",
+        " M News_Video/leader_sources.json",
+        " M News_Video/leader_sources.py",
+        " M News_Video/news_video.py",
+        " M News_Video/pronunciation.py",
+        " M News_Video/release_manager.py",
+        " M News_Video/render_sample.py",
+        " M News_Video/test_caption_layout.py",
+        " M News_Video/test_handoff_producer.py",
+        " M News_Video/test_leader_sources.py",
+        " M News_Video/test_pronunciation.py",
+        "?? News_Video/important_events.py",
+        "?? News_Video/layout_policy.py",
+        "?? News_Video/model_alerts.py",
+        "?? News_Video/quiet_background.py",
+        "?? News_Video/temporary_editions.py",
+        "?? News_Video/test_important_events.py",
+        "?? News_Video/test_layout_policy.py",
+        "?? News_Video/test_model_alerts.py",
+        "?? News_Video/test_source_time.py",
+        "?? News_Video/test_temporary_editions.py",
+        "?? News_Video/test_upload_recovery.py"
+      ]
+    },
+    {
+      "path": "Voice_Generate",
+      "head": "5131046ba7b5db890aab33cebba629f67c13ebbd",
+      "branch": "main",
+      "dirty": true,
+      "worktree_status": [
+        "M .gitignore",
+        " M README.md",
+        "?? docs/CONTEXTUAL_VOICE.md",
+        "?? docs/QWEN3_TTS_INTEGRATION.md",
+        "?? docs/SPEECH_POLICY.md",
+        "?? docs/legacy-gpt-sovits-readme.md",
+        "?? requirements-qwen3-training.txt",
+        "?? requirements-qwen3.txt",
+        "?? start-desktop.ps1",
+        "?? tests/test_audio_cleanup.py",
+        "?? tests/test_context_alignment.py",
+        "?? tests/test_prosody.py",
+        "?? tests/test_speech_text.py",
+        "?? tools/audio_cleanup.py",
+        "?? tools/context_alignment.py",
+        "?? tools/desktop.py",
+        "?? tools/download_alignment_model.py",
+        "?? tools/download_qwen3.py",
+        "?? tools/download_qwen3_modelscope.py",
+        "?? tools/generate_job.py",
+        "?? tools/prepare_qwen_dataset.py",
+        "?? tools/prosody.py",
+        "?? tools/qwen_generate_context.py",
+        "?? tools/qwen_generate_job.py",
+        "?? tools/speech_text.py",
+        "?? vendor/",
+        "?? \"\\345\\220\\257\\345\\212\\250\\350\\257\\255\\351\\237\\263\\347\\224\\237\\346\\210\\220.bat\""
+      ]
+    },
+    {
+      "path": "codex-upload-video",
+      "head": "7e5aac5f296c3e811352652127e596739eb78f10",
+      "branch": "main",
+      "dirty": true,
+      "worktree_status": [
+        "M README.md",
+        " M codex-upload/SKILL.md",
+        " M codex-upload/references/contract.md",
+        " M codex-upload/scripts/browser.mjs",
+        " M codex-upload/scripts/codex_upload.py",
+        " M codex-upload/scripts/forms.mjs",
+        " M tests/forms.test.mjs"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 1982,
+      "sha256": "5ae6e4cabf43e96c84e50564190d86e6e8b90a797dc104db1ba7569f55e5d6ee"
+    },
+    {
+      "path": "Codex-report-news/News_Video/README.md",
+      "bytes": 2561,
+      "sha256": "d0b8554c85134fd4deb184d0695dbdfaccd4f46418ee8c2e5abe99e7b54a9321"
+    },
+    {
+      "path": "Codex-report-news/News_Video/analyze_tails.py",
+      "bytes": 2308,
+      "sha256": "0622410a4e6f0aa06d954112d0e5f9ba9c9c5a77c4346014b86b8e3bb8d4f49d"
+    },
+    {
+      "path": "Codex-report-news/News_Video/build_film.py",
+      "bytes": 10377,
+      "sha256": "0c81f2715ac6da3b0cad5e93d0c1fde3f50ccec9dd7cf906357ecc1cc9916006"
+    },
+    {
+      "path": "Codex-report-news/News_Video/build_handoff.py",
+      "bytes": 5621,
+      "sha256": "08abc29297d2a3ac1fe92ffb66983cd092477ca7ea6fc0ecc8d421b78a591359"
+    },
+    {
+      "path": "Codex-report-news/News_Video/caption_layout.py",
+      "bytes": 6880,
+      "sha256": "125b62f73f882526b4ac60976acf9f8346eb295860021df9bb44a65c36bc8e2e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/compare_voice.py",
+      "bytes": 1936,
+      "sha256": "6d5b8610a934c873670045fe22f59a05b96d008bedb3b9fc44140cea960e01c1"
+    },
+    {
+      "path": "Codex-report-news/News_Video/config.json",
+      "bytes": 7810,
+      "sha256": "88e7b60460df0a77923b9d6f67b533ea4a22ad0953ab16a93891793077a10164"
+    },
+    {
+      "path": "Codex-report-news/News_Video/cover_generator.py",
+      "bytes": 3441,
+      "sha256": "46623091c08d20d58dc063049d83e1041dc0214edda467ad8e48d48b56534a67"
+    },
+    {
+      "path": "Codex-report-news/News_Video/crisp_tails.py",
+      "bytes": 8047,
+      "sha256": "1df369f47c16deafa663f6ee9cfda094a92c1834711b3a623fe2ef1c466c39b2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/MODEL_ALERTS.md",
+      "bytes": 3010,
+      "sha256": "61986c38dbb4c2ce8366a4bfa225f42c50fae126f344316b40e507a0538ba533"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/PRODUCTION_RULES.md",
+      "bytes": 7219,
+      "sha256": "6a870b38324a7f27eb4b2ce269dc23080d818643073fbcc0a0660a251d8229a7"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/STATE.md",
+      "bytes": 14652,
+      "sha256": "509a00241fa57efb952fdecc161bd82e186574489d1d357497d9d8ea59b3ac24"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/01_principles.md",
+      "bytes": 5317,
+      "sha256": "6183dbcc8de255d2b71781badde33fe7a9b6a7fc0151b6b1c36f15188940904d"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/02_structure.md",
+      "bytes": 6683,
+      "sha256": "7917b0e60dec29de0f8e36dc4cd5fbc95930a0cec5488edd9ab97974195b1e5b"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/03_operations.md",
+      "bytes": 7071,
+      "sha256": "4c40707037f47981cb7b62acca122404686a60f5d865be3f01127ef8d24401f2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/04_standards.md",
+      "bytes": 5678,
+      "sha256": "1348e83f5818c4aa54313c51802a814433294e72a0580f7900fa8296d4eb549e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/05_maintenance.md",
+      "bytes": 6555,
+      "sha256": "102af8fe1e259b8065eadb3e745260172854419053d66f1f843e8b41c0dc9850"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/V_0/README.md",
+      "bytes": 1764,
+      "sha256": "66efe2bf404f4d3e0dc0f7e4302b53e58a9b94e6dc8145ddb4be1e439adc5ca2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/docs/WORKFLOW.md",
+      "bytes": 3033,
+      "sha256": "d78a120bda4f125391d916725a161141b7f07839601edd0d0f2bec07e37c56f2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/episode_paths.py",
+      "bytes": 1010,
+      "sha256": "5a012d9fe557d2261d225903d04b0fe0d199a29b19819b58206c244c48f00736"
+    },
+    {
+      "path": "Codex-report-news/News_Video/fetch_logos.py",
+      "bytes": 1141,
+      "sha256": "011f7f996aefc71642cc929af909288f521b807a826b5a875d980442979d8255"
+    },
+    {
+      "path": "Codex-report-news/News_Video/finalize_release.py",
+      "bytes": 9917,
+      "sha256": "43a4ebd11f801a8ca20255a9f45b5d8123300392772baca41b92fdd4e39363e3"
+    },
+    {
+      "path": "Codex-report-news/News_Video/hourly_monitor.py",
+      "bytes": 1179,
+      "sha256": "a6dfe05dd9aab8a0123a326598ca006f3c6e3badfdf046de72c0c3f87b916de2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/important_events.py",
+      "bytes": 3797,
+      "sha256": "83251f355b3ed3014a917fa846425ebf609b7ca9c763aaa9b8bca2ac528b8367"
+    },
+    {
+      "path": "Codex-report-news/News_Video/layout_policy.py",
+      "bytes": 1672,
+      "sha256": "a7c3635cb8d9c377bd8ff1906ede77beb2855e8e83ab4f80bbf85d9e42ee63f2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/leader_sources.json",
+      "bytes": 5226,
+      "sha256": "79b5e5b369fa4ce355229da148e15fb2ccc8482c4f3b5cc53bb44de0f45bc65b"
+    },
+    {
+      "path": "Codex-report-news/News_Video/leader_sources.py",
+      "bytes": 11107,
+      "sha256": "065cdd63de8ddd762fa783bbf38010cce4e1f595b656fed57e6461f0575cecd2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/make_daily_cover.py",
+      "bytes": 1955,
+      "sha256": "1907c905d558e0fa8e1371f8a0068f79743404e6f4d9987e5f1e49097cb7da64"
+    },
+    {
+      "path": "Codex-report-news/News_Video/make_sample_editorial.py",
+      "bytes": 7593,
+      "sha256": "818e31497da0ba07bc48714669b0ca5f349da8b88a75d66ed2d9e4d6b33af8fa"
+    },
+    {
+      "path": "Codex-report-news/News_Video/model_alerts.py",
+      "bytes": 9110,
+      "sha256": "974a7d514fefbec58728b5c400bac99e81ab873caa240c4156a6691186feaafe"
+    },
+    {
+      "path": "Codex-report-news/News_Video/news_video.py",
+      "bytes": 28343,
+      "sha256": "852c445da0496bc55124aca1d9bc14158acbd05e85f251a8afbd5859f759626e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/package.json",
+      "bytes": 57,
+      "sha256": "8dd5e712b3e4d36c4ecc5db6e2903af9c59839e6abfed6fa46e0199974944161"
+    },
+    {
+      "path": "Codex-report-news/News_Video/pnpm-lock.yaml",
+      "bytes": 35403,
+      "sha256": "f4de69165861fc29114a617442be42fd89b94bc32b625e57a8b36f322876b91d"
+    },
+    {
+      "path": "Codex-report-news/News_Video/prepare_publish_20261026.py",
+      "bytes": 7777,
+      "sha256": "d0569642c628db34dfde0601f33391b85cca05bace009ae316229dee9a33a7d6"
+    },
+    {
+      "path": "Codex-report-news/News_Video/probe_priority_sources.py",
+      "bytes": 1249,
+      "sha256": "440de2dfbad19f5eae3d2707305c276ef6e9cb10ba273799c4ac369adb1af5a9"
+    },
+    {
+      "path": "Codex-report-news/News_Video/progress_overlay.py",
+      "bytes": 5590,
+      "sha256": "fe58d6ce2760225eb72da5a33600498a855417b371754b2319502c8af2ed2925"
+    },
+    {
+      "path": "Codex-report-news/News_Video/project_paths.py",
+      "bytes": 639,
+      "sha256": "1ca4cf99efbc3c676dc5a0def53399533c6096c05e9903c97b9aeeae8b52bab0"
+    },
+    {
+      "path": "Codex-report-news/News_Video/pronunciation.py",
+      "bytes": 1258,
+      "sha256": "c94875d79b8b943303c66076ee132b51ef46f0e4f20d0dcec53c3d913faf031e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/quiet_background.py",
+      "bytes": 1899,
+      "sha256": "db8a5bca9ccd8b27c63d546a3bc1e8df822ff6c3c08aeb2aba8b40f5c4ed8407"
+    },
+    {
+      "path": "Codex-report-news/News_Video/release_manager.py",
+      "bytes": 8493,
+      "sha256": "69327180b2b2bbfc3f7ba8905649e2f2a2101d804c561e2359db8a3e15e88337"
+    },
+    {
+      "path": "Codex-report-news/News_Video/render_sample.py",
+      "bytes": 7029,
+      "sha256": "79e6b51251ef026b5e22e9e06b5e31f07a3ea41567fdd0d43499d47c50d358cd"
+    },
+    {
+      "path": "Codex-report-news/News_Video/requirements.txt",
+      "bytes": 38,
+      "sha256": "23755e02e51c74d2a76e134856c44d197f765e6490d197d7f4c14f57324ae90a"
+    },
+    {
+      "path": "Codex-report-news/News_Video/reset_alerts.py",
+      "bytes": 10348,
+      "sha256": "93b839648f68da285aa1a660ea19ddb96c89c2fb55ca5896132c26260b6d6438"
+    },
+    {
+      "path": "Codex-report-news/News_Video/scene_pauses.py",
+      "bytes": 2079,
+      "sha256": "ef7d3dfd19b33231d8a6b13ca4cf85ecba5714b8bb6fe0114083d0e1cd21791c"
+    },
+    {
+      "path": "Codex-report-news/News_Video/set_vendor_priority.py",
+      "bytes": 2391,
+      "sha256": "58bb449b274d5023bd2f7f9ee707428523261894cced568475e8adf98e55ec2b"
+    },
+    {
+      "path": "Codex-report-news/News_Video/sources.json",
+      "bytes": 4182,
+      "sha256": "27accd04f47b5d2af1017dc0bb73e316e33f6fe2118e7f6b1f48f3819f29366e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/speech_editorial.py",
+      "bytes": 4007,
+      "sha256": "ce72d6fc04659c4829ac25d697587d7ffbb1d93b656650997f2fde1c8a9bb6af"
+    },
+    {
+      "path": "Codex-report-news/News_Video/temporary_editions.py",
+      "bytes": 1672,
+      "sha256": "f4c79d942142310e856292c9e2c9a482ed1158afc0de7f8ed2f95eac3013da5a"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_caption_layout.py",
+      "bytes": 3592,
+      "sha256": "336a688bcd66114e33384e56c3b990e1e51dce4c15a812282c329ed8c3479f87"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_crisp_tails.py",
+      "bytes": 3100,
+      "sha256": "f15b34047195e39a1c8bc297c0798def5c7c0e0dc74ca2b5a83aa927e5f6ed7f"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_handoff_producer.py",
+      "bytes": 951,
+      "sha256": "342324a7e90573c4dd5bc992755b5df3471b2c13e6c93552acb2573fcd92f3b4"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_important_events.py",
+      "bytes": 1396,
+      "sha256": "5a44932409d9441161f876a5f7a0c599003703a1d63acfed9b224c63cea339b3"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_layout_policy.py",
+      "bytes": 1261,
+      "sha256": "cf28ab2c8283cfb53dae369410b32d7ebae9342aae48d02bbb141495a0c7d360"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_leader_sources.py",
+      "bytes": 8068,
+      "sha256": "294656c1df701fc9ec3770ab4f026db9bd3ac8aa31eaaef71767e8685cd0b00b"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_model_alerts.py",
+      "bytes": 3311,
+      "sha256": "e5919a2028b5c5352d1d5048e09e522b9d0a20432c5ef0c00891a1a7bb686311"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_pipeline.py",
+      "bytes": 3738,
+      "sha256": "c1e260e17a0005df3b0aa51d05db2e0a230bbc7c3dfbbeea338247a56056d459"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_project_layout.py",
+      "bytes": 3050,
+      "sha256": "52e3adfb2378efc7361d3ad81d7e7ab3abeadac51a4ca0b6de11d3c4038b5b26"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_pronunciation.py",
+      "bytes": 1517,
+      "sha256": "e57f307d1d0b5c13b8e6fbfc7b473ce55bca40ead841a806277d9efd39ec064a"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_release_workflow.py",
+      "bytes": 3398,
+      "sha256": "d279f9368aa749b0970ae9cde10008e8c23ef0e4075a71dffe69cc29a7bbda99"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_reset_alerts.py",
+      "bytes": 4309,
+      "sha256": "bcc02d594c45f8a5c287ec1e89b048484327489227a85a458cfec0abcefcabea"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_scene_pauses.py",
+      "bytes": 1206,
+      "sha256": "d802868889dcb243d35bcdcc3e7c5465d0c80497af0a60855f693a99c09da996"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_source_time.py",
+      "bytes": 875,
+      "sha256": "1aee6367b2d9a56b7fbad9aa81997006baf41ce3c7d9abfb0614a088b9b9b432"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_temporary_editions.py",
+      "bytes": 1237,
+      "sha256": "59251520ebf1ee974b73c6cd4327ee0ac7e03d6fb245ebc09991434e7f74e4a2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_upload_bridge.py",
+      "bytes": 2586,
+      "sha256": "34c017ccc33975922cc199b8bf745c27cc67355f07ec5ccbfd1aa93de0d2d3eb"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_upload_plan.py",
+      "bytes": 1731,
+      "sha256": "1aea07111ffcccf644c72a0d05b73051dd5bec4d3eca731a24108cd6164431b6"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_upload_recovery.py",
+      "bytes": 1375,
+      "sha256": "aafa94f8162cb3dcc1e5eb40248bcacf599946e31fb8beb38fa8d9aac879aa25"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_used_news.py",
+      "bytes": 1802,
+      "sha256": "747955caaec561ac0a9cc6f624f6c9062196a0e1d2234114b549c05cc260fab6"
+    },
+    {
+      "path": "Codex-report-news/News_Video/test_vendor_priority.py",
+      "bytes": 1238,
+      "sha256": "24da9efb927af53d0c44f00aac99af0de74aca9f6eda44c76fcde3faf9a44bd6"
+    },
+    {
+      "path": "Codex-report-news/News_Video/upgrade_v5.py",
+      "bytes": 5119,
+      "sha256": "2cfff97bb3f7d89561a1aa65c84bec3ad23014a30b65144b74ca3d300873c08e"
+    },
+    {
+      "path": "Codex-report-news/News_Video/upload_bridge.py",
+      "bytes": 5973,
+      "sha256": "c65bdbf916ea5de7a5bea88d2c3681dfacbc83c70d88e4b8535be46f183132e9"
+    },
+    {
+      "path": "Codex-report-news/News_Video/uploader_plan.py",
+      "bytes": 3716,
+      "sha256": "175ccaa12a970ae06ae6c3e9b5d6f656f33c747cbadadb37ab5e8ee3933ae5e9"
+    },
+    {
+      "path": "Codex-report-news/News_Video/used_news.py",
+      "bytes": 6102,
+      "sha256": "9ad3184774ed3d286c3f48ad4e65a44e7a3f6ba227d95932857d45e4ec793216"
+    },
+    {
+      "path": "Codex-report-news/News_Video/verify_progress_video.py",
+      "bytes": 2998,
+      "sha256": "269120088d33d38467fa802440250ddc70698a717c3c8251428cd89ba9e437e2"
+    },
+    {
+      "path": "Codex-report-news/News_Video/voice_tuning.py",
+      "bytes": 2850,
+      "sha256": "05f52f9ac981d810384a29163ef5b5c4ddb16ecadde1eb0b2f5fd154099a6a05"
+    },
+    {
+      "path": "PROJECT_PROMPT.md",
+      "bytes": 1315,
+      "sha256": "50eeba5aef9e72d31093d9e082461d8f914f4c4432db8a64c59ea52514ffd705"
+    },
+    {
+      "path": "PROJECT_VERSION.json",
+      "bytes": 501,
+      "sha256": "10f9ff5f0f38b5ba2deb5b145f7f4ee38cf52ee744f6087ab8bf16582363097c"
+    },
+    {
+      "path": "Voice_Generate/README.md",
+      "bytes": 7677,
+      "sha256": "cfeddc0491694fe055ef06971a31389821c17e6ccc8e532c44d9667cf92e5882"
+    },
+    {
+      "path": "Voice_Generate/docs/CONTEXTUAL_VOICE.md",
+      "bytes": 2244,
+      "sha256": "8ab136833fb44992dfad47ddc7fa1ee147702118bc139913685effd73aaa8d78"
+    },
+    {
+      "path": "Voice_Generate/docs/SPEECH_POLICY.md",
+      "bytes": 2050,
+      "sha256": "d92f52e72cb0e07c1d314009371d87c9a21945630bb90519016844c28d258870"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/AR/data/bucket_sampler.py",
+      "bytes": 5705,
+      "sha256": "b4a2fbe2b7fe8d9a4a7d16d961bb6811d3fd86ada89f8200f5242a338dce8ab1"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/AR/data/data_module.py",
+      "bytes": 3013,
+      "sha256": "6751ff6776fd4e9ec968446d35258736c536aac30e73490df2252d3cf111b1e4"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/AR/models/t2s_lightning_module.py",
+      "bytes": 4905,
+      "sha256": "22c076a466abd400c32e4e58eb8e5a97354ceedd70ed005a329f6aab16855ac7"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/AR/modules/lr_schedulers.py",
+      "bytes": 2591,
+      "sha256": "c14a82d1cdd3fe9d3d8114f6205c7e42cd3cf8dd1ec8e75e65e6a6d8680fd90a"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/AR/utils/io.py",
+      "bytes": 929,
+      "sha256": "7a28d50b960d22f909684c590c6a4ec523b7f9bbc5355f3581c86c271d63676b"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/process_ckpt.py",
+      "bytes": 4269,
+      "sha256": "da297da9f0d1d94af3a56f17d512e595cecf02e06155d2ba2d681b14633ac4ed"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/s1_train.py",
+      "bytes": 7342,
+      "sha256": "1bf0de44c30a6049f59482045c1f91fc253872e9f1723e6266569b19eb950463"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/s2_train.py",
+      "bytes": 24769,
+      "sha256": "b80fb99467dc24a3af628f6b5ce7d8df79aed3a8409a1d264cc1dce87ef20f60"
+    },
+    {
+      "path": "Voice_Generate/overrides/GPT_SoVITS/utils.py",
+      "bytes": 11259,
+      "sha256": "b6eb76497cbccf02187c25268c21145f2c8569261633c36c3ec86bd0f1cbce5e"
+    },
+    {
+      "path": "Voice_Generate/requirements-qwen3.txt",
+      "bytes": 210,
+      "sha256": "6bdcbfdffd9b57fcbfad13afcc4ef2d3567e200ef290dc400bef16de61a9e8e8"
+    },
+    {
+      "path": "Voice_Generate/tests/test_audio_cleanup.py",
+      "bytes": 2097,
+      "sha256": "bf012e85e0b90663208c262eee8348167fd3a2981793f46fa2e3f8a1b216f0a0"
+    },
+    {
+      "path": "Voice_Generate/tests/test_context_alignment.py",
+      "bytes": 2641,
+      "sha256": "0ea7340e10ba0d67b77b0b034d7773a3d8c110124471097a51366f3e3d59fa97"
+    },
+    {
+      "path": "Voice_Generate/tests/test_prosody.py",
+      "bytes": 2597,
+      "sha256": "0c676b9688eb1bbe203e4240dfcd29eeb742be5030fb87a7d563c0a3abeb88a1"
+    },
+    {
+      "path": "Voice_Generate/tests/test_runtime_fixes.py",
+      "bytes": 4812,
+      "sha256": "872b4de4f029290922703e3b2758b52129fbc22a1b3bc1b9a09a52c1658e160c"
+    },
+    {
+      "path": "Voice_Generate/tests/test_speech_text.py",
+      "bytes": 822,
+      "sha256": "7a938d2b27e2359ce5b4511b5deddf949b477060e7a56ffeb033d4a9f3cd947d"
+    },
+    {
+      "path": "Voice_Generate/tools/audio_cleanup.py",
+      "bytes": 3210,
+      "sha256": "048777de88baa1fc1463fa541ba744a4e464cb34effd013b072a4e02133cc28e"
+    },
+    {
+      "path": "Voice_Generate/tools/common.py",
+      "bytes": 1346,
+      "sha256": "7754938e172c2f24521e3f6426752bc2d9d4ff63b1c246b3ae1f8d8d1fce4ede"
+    },
+    {
+      "path": "Voice_Generate/tools/compare.py",
+      "bytes": 6352,
+      "sha256": "92f8756edc34b6ee8d470ace3ea42f4e50059b51cdfa1df70085c8290e0470d2"
+    },
+    {
+      "path": "Voice_Generate/tools/context_alignment.py",
+      "bytes": 9261,
+      "sha256": "9ac927d97d87695f4d8264b712cd93eb426dafb1269a33bf2edd8917e4b15b7a"
+    },
+    {
+      "path": "Voice_Generate/tools/desktop.py",
+      "bytes": 15684,
+      "sha256": "ac8c5f5e8bdd2b85a5e6f2dcfe91a2d8113201dfbc3b2f981068bebec15bea8f"
+    },
+    {
+      "path": "Voice_Generate/tools/download_alignment_model.py",
+      "bytes": 2372,
+      "sha256": "0c944143c9f335ae8726c00fdbfa1a045ab30e9d3e93f55cb70aa4203d57e8f2"
+    },
+    {
+      "path": "Voice_Generate/tools/download_qwen3.py",
+      "bytes": 879,
+      "sha256": "ee8175c372669df50eb0dd7280aa155ed6082ae5cadaa443c4d289cc7184cbb9"
+    },
+    {
+      "path": "Voice_Generate/tools/download_qwen3_modelscope.py",
+      "bytes": 2506,
+      "sha256": "4d0467d0f76aaafaf5db747bbd87451bf8e7172423b6f6a95310d8884629ecb9"
+    },
+    {
+      "path": "Voice_Generate/tools/generate_job.py",
+      "bytes": 5116,
+      "sha256": "a7a5d9f9c0d44071b7baeb0160397dcdb52a6e9630c7eddf8922d2d9f2c250a9"
+    },
+    {
+      "path": "Voice_Generate/tools/prepare.py",
+      "bytes": 7400,
+      "sha256": "930773e92b5081a8012092d6beb0203b9e424dd319302a305dca1ee3dfdb846a"
+    },
+    {
+      "path": "Voice_Generate/tools/prepare_qwen_dataset.py",
+      "bytes": 1988,
+      "sha256": "2e27036726b54f7df8fe8a4783f1a39171daac7e2f3d703cd74b8692f3a51b87"
+    },
+    {
+      "path": "Voice_Generate/tools/prosody.py",
+      "bytes": 2235,
+      "sha256": "2db211404c21239217b053e1b48998ad6d029a2b963ac00443dcaed6c54afd00"
+    },
+    {
+      "path": "Voice_Generate/tools/qwen_generate_context.py",
+      "bytes": 3058,
+      "sha256": "b157633af46630e1c683332845f29d9de2a67fb37cb3d290553e1419bc92e05c"
+    },
+    {
+      "path": "Voice_Generate/tools/qwen_generate_job.py",
+      "bytes": 4224,
+      "sha256": "b5058b6b201ce36771696cb0eeb681b5706631708e6582ab01f0bdfeedf30985"
+    },
+    {
+      "path": "Voice_Generate/tools/set_default.py",
+      "bytes": 3248,
+      "sha256": "98ecb5b7f33e36b3c520b92f40aee0fe983e2761dbb3c9a91af9737b4c5078e3"
+    },
+    {
+      "path": "Voice_Generate/tools/speech_text.py",
+      "bytes": 884,
+      "sha256": "1bba4027ff4933bc64680913da4dfee9960806acc1e92cd582ef31a8cdc9ebb4"
+    },
+    {
+      "path": "Voice_Generate/tools/synthesize.py",
+      "bytes": 1767,
+      "sha256": "26a63ddbf90a09fe7088155900b0bfc02a564a50f93310e8cceb8a84c1eea768"
+    },
+    {
+      "path": "Voice_Generate/tools/train.py",
+      "bytes": 2201,
+      "sha256": "0b6a5c93439c67263ef568f05eb322266bc18025bcd8834730b0a108f62c93cf"
+    },
+    {
+      "path": "Voice_Generate/vendor/qwen3_official/dataset.py",
+      "bytes": 8666,
+      "sha256": "53aa08554e30da0567d2c690526d01c459abd863910732c72680d6a52dca4673"
+    },
+    {
+      "path": "Voice_Generate/vendor/qwen3_official/prepare_data.py",
+      "bytes": 2412,
+      "sha256": "1e0eef4acc4b22bfeb14efa55da2531d15d048fa88f04c5c5e70d0248079ad06"
+    },
+    {
+      "path": "codex-upload-video/codex-upload/SKILL.md",
+      "bytes": 4771,
+      "sha256": "00283fc0333b22a618c9f148d189bf39645e9c68487df90bb2c65072a2bf6484"
+    },
+    {
+      "path": "codex-upload-video/codex-upload/references/contract.md",
+      "bytes": 3621,
+      "sha256": "b8d3200c117f08f7cd6d2ed83941341dc01b5dcc07b3c8509a31435929804ee1"
+    },
+    {
+      "path": "codex-upload-video/codex-upload/scripts/browser.mjs",
+      "bytes": 12371,
+      "sha256": "4a4f2d485fb8c6e88ae2211040a7ed25570c16768c389834671f0a31463eb63e"
+    },
+    {
+      "path": "codex-upload-video/codex-upload/scripts/codex_upload.py",
+      "bytes": 22307,
+      "sha256": "679cfe7db0664cb4f6d13d3018127d9e4f5d59c605c94159a92dda587f8fc2b9"
+    },
+    {
+      "path": "codex-upload-video/codex-upload/scripts/forms.mjs",
+      "bytes": 22788,
+      "sha256": "0bb0e5f4b73f695a1e8fa1647df7a64bad2e364da75bf8240fbdd5c141d0e8e2"
+    }
+  ]
+}

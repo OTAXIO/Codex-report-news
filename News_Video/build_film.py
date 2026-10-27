@@ -2,10 +2,31 @@
 import argparse, html, json, re, shutil, datetime
 from pathlib import Path
 from progress_overlay import build_progress
-from caption_layout import sentence_captions
+from layout_policy import folio_numbers,is_overview
+from caption_layout import sentence_captions,tokens,width
 ROOT=Path(__file__).parent
 def read(path): return json.loads(path.read_text(encoding='utf-8'))
 def esc(value): return html.escape(str(value),quote=True)
+def overview_markup(value):
+    parts=re.split(r'(?<=[，。；！？])',str(value))
+    units=[]
+    for part in parts:
+        if not part:continue
+        units.extend([part] if width(part)<=22 else tokens(part))
+    return ''.join('<span class="overview-phrase">'+esc(unit)+'</span>' for unit in units)
+
+
+def source_publication_label(scene):
+    published=scene.get('published','')
+    if not published:return '发布时间未提供'
+    if 'T' not in published or scene.get('published_precision')=='date':
+        return published[:10].replace('-','.')
+    try:stamp=datetime.datetime.fromisoformat(published.replace('Z','+00:00'))
+    except ValueError:return '发布时间待核实'
+    if stamp.tzinfo is None:
+        return stamp.strftime('%Y.%m.%d %H:%M')+'（来源时区未提供）'
+    return stamp.astimezone(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y.%m.%d %H:%M 北京时间')
+
 def build(episode_id):
     from episode_paths import episode_directory
     cfg=read(ROOT/'config.json'); epdir=episode_directory(ROOT,episode_id)
@@ -19,21 +40,43 @@ def build(episode_id):
     shutil.copyfile(ROOT/'node_modules/hyperframes/dist/vendor/npm/gsap@3.15.0/dist/gsap.min.js',assets/'gsap.min.js')
     shutil.copyfile(epdir/'narration.wav',assets/'narration.wav')
     duration=timing['duration']; hosts=[]; offsets=[]; captions=[]
+    folios=folio_numbers(episode['scenes'])
     for index,scene in enumerate(episode['scenes']):
         parts=[x for x in timing['sentences'] if x['scene_id']==scene['id']]
         start=parts[0]['start']; end=(next((x['start'] for x in timing['sentences'] if x['start']>parts[-1]['end']),duration))
         length=end-start; sid=scene['id']; offsets.append(dict(id=sid,start=start,end=end))
         facts=''.join(f'<li><div class="point">{esc(f["title"])}</div><div class="detail">{esc(f["detail"])}</div></li>' if isinstance(f,dict) else f'<li><div class="point">{esc(f)}</div></li>' for f in scene['facts'])
+        overview=is_overview(scene)
+        lead_html=''
+        overview_css=''
+        if overview:
+            facts=''.join(f'<li><div class="overview-category">{esc(f.get("category","重点新闻"))}</div><div class="point">{overview_markup(f["title"])}</div><div class="detail">{overview_markup(f["detail"])}</div></li>' for f in scene['facts'])
+            lead_html=f'<div class="overview-lead">{esc(scene.get("lead","本期我们将一起了解这些重点新闻。"))}</div><div class="overview-note">{esc(scene.get("footer_note","本期重点将按正文顺序展开。"))}</div>'
+            overview_css='''
+.title{font-size:62px;width:1460px}
+.overview-lead{position:absolute;left:192px;top:284px;width:1460px;font-size:28px;line-height:1.45;color:#414955}
+.facts{top:354px;width:1460px}
+.facts ul{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:216px;column-gap:42px;row-gap:18px}
+.facts li{margin:0;padding:0 0 0 20px;border-left:4px solid var(--blue);overflow:visible}
+.facts li:before{content:none}
+.overview-phrase{white-space:nowrap}
+.overview-category{font-size:28px;line-height:1.3;color:#006AAA;margin-bottom:9px;font-weight:700}
+.point{font-size:30px;line-height:1.32}
+.detail{font-size:28px;line-height:1.42;margin-top:10px;color:#414955}
+.overview-note{position:absolute;left:192px;top:822px;width:1460px;font-size:22px;line-height:1.3;color:#414955}
+'''
         logo=''
         if scene.get('logo'):
             source_logo=ROOT/scene['logo']
             if not source_logo.is_file():raise ValueError('Missing verified company logo: '+str(source_logo))
             (assets/'logos').mkdir(exist_ok=True);shutil.copyfile(source_logo,assets/'logos'/source_logo.name)
             logo=f'<div class="brand"><img src="{esc(scene["logo"])}" alt="{esc(scene["company"])} organization logo"><div>{esc(scene["company"])}</div></div>'
-        published=scene.get('published','')
-        date=(datetime.datetime.fromisoformat(published).astimezone(datetime.timezone(datetime.timedelta(hours=8))).date().isoformat() if 'T' in published else published[:10]).replace('-','.')
-        if episode.get('edition_slot')=='temporary' and 'T' in published:
-            date=datetime.datetime.fromisoformat(published).astimezone(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y.%m.%d %H:%M 北京时间')
+        identity_html='';identity_css=''
+        if scene.get('speaker_identity') and not overview:
+            label={'opinion':'个人观点','preview':'预告 / 计划','experience':'使用体会','reshare':'转发信息'}.get(scene.get('claim_type'),'推文动态')
+            identity_html=f'<div class="speaker-line"><strong>{esc(scene.get("speaker_name",scene.get("publisher","")))}</strong><span>　｜　{esc(scene["speaker_identity"])}　·　{esc(label)}</span></div>'
+            identity_css='.title{top:178px;font-size:56px;line-height:1.25;width:'+('1000px' if logo else '1460px')+'}.speaker-line{position:absolute;left:192px;top:350px;width:1050px;padding-left:18px;border-left:4px solid var(--blue);font-size:28px;line-height:1.4}.speaker-line strong{color:#006AAA}.speaker-line span{font-weight:400}.facts,.facts.has-brand{top:418px}'
+        date=source_publication_label(scene)
         source=scene.get('publisher','本地制作流程说明')
         url=scene.get('source_url','')
         shorturl=re.sub(r'^https?://','',url).split('?')[0]
@@ -62,12 +105,16 @@ ul{{margin:0;padding:0;list-style:none}}li{{position:relative;margin:0 0 18px;pa
 .point{{font-size:36px;line-height:1.3;font-weight:700}}.detail{{font-size:29px;line-height:1.4;margin-top:8px}}
 .source{{position:absolute;left:192px;top:740px;width:1450px;font-size:23px;line-height:1.35;overflow-wrap:anywhere}}
 .stamp{{position:absolute;left:192px;top:1005px;color:#101218;font-size:22px;letter-spacing:2px}}
+{overview_css}
+{identity_css}
 </style>
 <div id="root" data-composition-id="{sid}" data-width="1920" data-height="1080">
 <div id="{sid}-body" class="clip" data-start="0" data-duration="{length:.6f}" data-layout-allow-overlap="true" data-layout-allow-overflow="true">
-<div class="edge"></div><div class="folio">{index:02d}</div>
+<div class="edge"></div><div class="folio">{folios[index]:02d}</div>
 <div class="kicker">{esc(scene['section'])}</div><div class="title">{esc(scene['title'])}</div>
 {logo}
+{lead_html}
+{identity_html}
 <div class="facts{' has-brand' if logo else ''}"><ul>{facts}</ul></div>
 {source_html}
 </div></div>

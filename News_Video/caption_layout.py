@@ -6,7 +6,7 @@ REPLACEMENTS={'十月二十六日':'10 月 26 日','二点一点三一零':'2.1.
 REPLACEMENTS.update({'百分之五十五':'55%','三十五岁':'35 岁','三小时':'3 小时'})
 PROTECTED=['人工智能','太阳能发电','累计装机','装机容量','实际发电量','中国新闻网','国家能源局','发射工位','发射前','全流程演练','上门照护','社区助餐','智能照护产品','居家养老','大熊猫','跨境电力','研究构思','存储系统','多租户','全球缓存','工程文章','保护研究合作','发电量','千瓦时','千瓦','尾音','关联到文献','转运到发射工位','训练与评估环境的隔离措施','发射前准备阶段']
 PROTECTED+=['千问','千问编程助手','国内外重点新闻']
-TOKEN=re.compile(r'Qwen Code|Claude Code|Hugging Face|OpenAI|Anthropic|Ai2|DeepSeek|MiniMax|LitPivot|\d+(?:\.\d+)*(?:\s*(?:亿|万)?(?:千瓦时|千瓦|倍|月(?:中旬|底)?|日|秒|小时|分钟|%))?|[\u4e00-\u9fff]+|[A-Za-z][A-Za-z0-9_-]*|.',re.S)
+TOKEN=re.compile(r'GPT-\d+(?:\.\d+)*\s+(?:Terra|Astra|Sol)|Agents[’\']? Last Exam|ChatGPT Work|Qwen Code|Claude Code|Hugging Face|OpenAI|Anthropic|Ai2|DeepSeek|MiniMax|LitPivot|\d+(?:\.\d+)*(?:\s*(?:亿|万)?(?:千瓦时|千瓦|倍|月(?:中旬|底)?|日|秒|小时|分钟|%))?|[\u4e00-\u9fff]+|[A-Za-z][A-Za-z0-9_-]*|.',re.S)
 
 @functools.lru_cache(maxsize=1)
 def dictionary():

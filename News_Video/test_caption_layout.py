@@ -38,3 +38,11 @@ class CaptionLayoutChecks(unittest.TestCase):
         self.assertEqual([(m['label'],m['start'],m['end']) for m in spec['modules']],[('AI 动态',0,20),('国内外重点新闻',20,60)])
         self.assertIn('module-active-news',markup)
 if __name__=='__main__':unittest.main()
+
+class ModelNameChecks(__import__('unittest').TestCase):
+    def test_multiword_model_and_benchmark_names_are_atomic(self):
+        from caption_layout import cues
+        text='GPT-6 Astra 和 GPT-6.1 Sol 在 Agents’ Last Exam 测试中的表现。'
+        result=cues(text,max_width=20)
+        for name in ['GPT-6 Astra','GPT-6.1 Sol','Agents’ Last Exam']:
+            self.assertTrue(any(name in c['text'] for c in result),result)

@@ -1,0 +1,15 @@
+{
+  "project": "Codex News Video",
+  "version": "V_0",
+  "recorded_on": "2026-10-27",
+  "scope": [
+    "news production",
+    "local Qwen voice generation",
+    "hourly reset and model alerts",
+    "main edition recaps",
+    "Bilibili publishing"
+  ],
+  "manual": "Codex-report-news/News_Video/docs/V_0/README.md",
+  "source_baseline": "Codex-report-news/News_Video/docs/V_0/SOURCE_BASELINE.json",
+  "note": "Logical source/worktree baseline; not a Git tag or model checkpoint version"
+}

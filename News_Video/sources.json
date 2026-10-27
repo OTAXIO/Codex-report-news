@@ -8,7 +8,8 @@
     "type": "rss",
     "vendor": "OpenAI",
     "priority_tier": 1,
-    "selection_policy": "product_and_model_updates_first"
+    "selection_policy": "product_and_model_updates_first",
+    "region": "international"
   },
   {
     "id": "claude-code",
@@ -19,7 +20,9 @@
     "type": "rss",
     "vendor": "Anthropic",
     "priority_tier": 1,
-    "selection_policy": "product_and_model_updates_first"
+    "selection_policy": "product_and_model_updates_first",
+    "region": "international",
+    "product": "Claude Code"
   },
   {
     "id": "anthropic",
@@ -30,7 +33,8 @@
     "type": "official_page",
     "vendor": "Anthropic",
     "priority_tier": 1,
-    "selection_policy": "product_and_model_updates_first"
+    "selection_policy": "product_and_model_updates_first",
+    "region": "international"
   },
   {
     "id": "deepseek",
@@ -41,7 +45,8 @@
     "type": "official_page",
     "vendor": "DeepSeek",
     "priority_tier": 1,
-    "selection_policy": "product_and_model_updates_first"
+    "selection_policy": "product_and_model_updates_first",
+    "region": "domestic"
   },
   {
     "id": "minimax",
@@ -51,8 +56,9 @@
     "url": "https://www.minimax.io/news",
     "type": "official_page",
     "vendor": "MiniMax",
-    "priority_tier": 2,
-    "selection_policy": "product_and_model_updates_first"
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first",
+    "region": "domestic"
   },
   {
     "id": "deepmind",
@@ -62,8 +68,9 @@
     "url": "https://deepmind.google/blog/rss.xml",
     "type": "rss",
     "vendor": "Google",
-    "priority_tier": 2,
-    "selection_policy": "product_and_model_updates_first"
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first",
+    "region": "international"
   },
   {
     "id": "huggingface",
@@ -74,7 +81,8 @@
     "type": "rss",
     "vendor": "Hugging Face",
     "priority_tier": 3,
-    "selection_policy": "supplementary_research_review"
+    "selection_policy": "supplementary_research_review",
+    "region": "international"
   },
   {
     "id": "cns-all",
@@ -141,7 +149,9 @@
     "url": "https://github.com/QwenLM/qwen-code/releases.atom",
     "type": "rss",
     "priority_tier": 1,
-    "selection_policy": "product_and_model_updates_first"
+    "selection_policy": "product_and_model_updates_first",
+    "region": "domestic",
+    "product": "Qwen Code"
   },
   {
     "id": "glm-zcode",
@@ -152,6 +162,87 @@
     "url": "https://zcode.z.ai/en/changelog",
     "type": "official_page",
     "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first",
+    "region": "domestic",
+    "product": "ZCode"
+  },
+  {
+    "id": "google-ai",
+    "name": "Google AI Blog",
+    "publisher": "Google AI",
+    "vendor": "Google",
+    "region": "international",
+    "url": "https://blog.google/innovation-and-ai/technology/ai/rss/",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first"
+  },
+  {
+    "id": "kimi-announcements",
+    "name": "Kimi Official Announcements",
+    "publisher": "Kimi",
+    "vendor": "Kimi",
+    "region": "domestic",
+    "url": "https://forum.moonshot.ai/c/announcement/5.rss",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
+    "selection_policy": "official_announcements_only"
+  },
+  {
+    "id": "kimi-blog",
+    "name": "Kimi Research Blog",
+    "publisher": "Kimi",
+    "vendor": "Kimi",
+    "region": "domestic",
+    "url": "https://www.kimi.com/blog/",
+    "type": "official_page",
+    "group": "ai",
+    "priority_tier": 1,
+    "selection_policy": "major_models_and_product_updates",
+    "published_precision": "date"
+  },
+  {
+    "id": "codex-releases",
+    "name": "Codex Releases",
+    "publisher": "OpenAI",
+    "vendor": "OpenAI",
+    "product": "Codex",
+    "region": "international",
+    "url": "https://github.com/openai/codex/releases.atom",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
+    "source_priority": 80,
+    "selection_policy": "user_visible_agent_updates; skip routine prereleases and minor fixes"
+  },
+  {
+    "id": "workbuddy-changelog",
+    "name": "WorkBuddy 更新日志",
+    "publisher": "腾讯",
+    "vendor": "Tencent",
+    "product": "WorkBuddy",
+    "region": "domestic",
+    "url": "https://www.workbuddy.cn/docs/workbuddy/Changelog",
+    "type": "official_page",
+    "group": "ai",
+    "priority_tier": 1,
+    "source_priority": 80,
+    "published_precision": "date",
+    "selection_policy": "dated_product_updates; meaningful features first, no filler"
+  },
+  {
+    "id": "hunyuan-hy3-releases",
+    "name": "腾讯混元 HY Releases",
+    "publisher": "腾讯混元",
+    "vendor": "Tencent",
+    "product": "混元/HY",
+    "region": "domestic",
+    "url": "https://github.com/Tencent-Hunyuan/Hy3/releases.atom",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
+    "selection_policy": "official_model_updates; empty feed is a valid coverage gap"
   }
 ]

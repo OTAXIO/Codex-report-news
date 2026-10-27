@@ -1,10 +1,19 @@
 import datetime as dt,json,tempfile,unittest,subprocess
 from pathlib import Path
 from unittest.mock import patch
+from contextlib import nullcontext
 import news_video as n
 import leader_sources as x
 
 class LeaderChecks(unittest.TestCase):
+    def test_hidden_process_flags_are_forwarded_without_changing_result(self):
+        envelope=dict(ok=True,items=[])
+        process=subprocess.CompletedProcess([],0,json.dumps(envelope),'')
+        with patch.object(x.subprocess,'run',return_value=process) as run,patch.object(x,'hidden_kwargs',return_value=dict(creationflags=123)):
+            self.assertEqual(x.run_reach('reader',dict(handle='thsottiaux'),10,40),envelope)
+        self.assertEqual(run.call_args.kwargs['creationflags'],123)
+        self.assertTrue(run.call_args.kwargs['capture_output'])
+
     def test_local_browser_lock_denial_is_not_an_x_failure(self):
         process=subprocess.CompletedProcess([],1,stdout='',stderr='PermissionError: [Errno 13] browser-locks/lock; cookie=PRIVATE_SECRET')
         with patch.object(x.subprocess,'run',return_value=process):
@@ -22,6 +31,7 @@ class LeaderChecks(unittest.TestCase):
             self.assertEqual(x.run_reach('reader',dict(handle='thsottiaux'),10,40)['error']['code'],'LOCAL_PERMISSION_DENIED')
 
     def setUp(self):
+        quiet=patch.object(x,'quiet_reach',side_effect=lambda:nullcontext());quiet.start();self.addCleanup(quiet.stop)
         self.now=dt.datetime.now(n.UTC)
         self.source=x.registry()[0]
         self.post=dict(text='Codex has a new documented feature. Here is how the preview works.',
@@ -43,6 +53,25 @@ class LeaderChecks(unittest.TestCase):
         with self.assertRaises(ValueError):x.validate_scene(dict(scene,narration='OpenAI 正式发布了新功能。'),evidence)
         with self.assertRaises(ValueError):x.validate_scene(scene,dict(evidence,requires_context=True))
         x.validate_scene(dict(scene,context_evidence='Verified original thread and quoted post'),dict(evidence,requires_context=True))
+
+    def test_official_source_type_is_preserved_and_validated(self):
+        source=dict(self.source,type='official_x',handle='OpenAI',name='OpenAI')
+        post=dict(self.post,url='https://x.com/OpenAI/status/1234567890')
+        evidence=x.normalize_post(post,source,self.now)
+        self.assertEqual(evidence['source_type'],'official_x')
+        scene=dict(source_type='official_x',author_handle='OpenAI',claim_type='announcement',attribution_checked=True,narration='OpenAI 发布新模型。')
+        x.validate_scene(scene,evidence)
+        with self.assertRaises(ValueError):x.validate_scene(dict(scene,source_type='leader_x'),evidence)
+        self.assertTrue(x.normalize_post(dict(post,raw=dict(is_retweet=True)),source,self.now)['requires_context'])
+
+    def test_ai_refreshes_x_social_does_not(self):
+        import io
+        from contextlib import redirect_stdout
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);self.workspace(root);n.dump(root/'sources.json',[])
+            with patch.object(n,'ROOT',root),patch.object(x,'collect',return_value=dict(accepted_items=0)) as reader,redirect_stdout(io.StringIO()):
+                self.assertIn('x',n.collect('ai'));reader.assert_called_once()
+                reader.reset_mock();self.assertNotIn('x',n.collect('social'));reader.assert_not_called()
 
     def test_company_priority(self):
         def row(name,vendor,order):return dict(title=name,kind='ai',priority_tier=1,preferred_vendor_order=vendor,source_priority=order,published=self.now.isoformat())

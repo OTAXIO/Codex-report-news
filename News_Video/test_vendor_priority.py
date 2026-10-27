@@ -2,7 +2,7 @@ import unittest
 import news_video as n
 class VendorPriorityChecks(unittest.TestCase):
     def test_requested_brands_first_and_no_item_cap(self):
-        cfg=n.config();self.assertEqual(cfg['editorial']['preferred_vendors'],['OpenAI','Anthropic','DeepSeek','Qwen','Z.ai']);self.assertIsNone(cfg['ai_item_limit'])
+        cfg=n.config();self.assertEqual(cfg['editorial']['preferred_vendors'][:5],['OpenAI','Anthropic','DeepSeek','Qwen','Z.ai']);self.assertIsNone(cfg['ai_item_limit']);self.assertTrue({'Google','Kimi','MiniMax'}.issubset(cfg['editorial']['preferred_vendors']))
         sources={s['id']:s for s in n.load(n.ROOT/'sources.json')}
         for key in ['openai','claude-code','deepseek','qwen-code-releases','glm-zcode']:self.assertEqual(sources[key]['priority_tier'],1)
         self.assertEqual(sources['huggingface']['selection_policy'],'supplementary_research_review')

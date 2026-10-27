@@ -17,7 +17,7 @@ class UploadBridgeChecks(unittest.TestCase):
         with patch.object(b,'call',return_value=dict(ok=True,state='submitted',key='a'*64,receipt=dict(aid=123,bvid='BV1aaaaaaaaa'))) as call:
             result=b.publish_ready(self.release,self.root);self.assertEqual(result['state'],'submitted')
             receipt=b.load(self.release/'release.json');self.assertTrue(receipt['submitted']);self.assertFalse(receipt['published'])
-            again=b.publish_ready(self.release,self.root);self.assertIn('skipped',again);self.assertEqual(call.call_count,1)
+            again=b.publish_ready(self.release,self.root);self.assertIn('skipped',again);self.assertEqual([c.args[0][0] for c in call.call_args_list],['from-release','publish'])
     def test_per_release_manual_opt_out_and_unknown_do_not_upload(self):
         with patch.object(b,'call') as call:
             b.save(self.release/'publication.json',dict(title='Verified title',auto_publish=False))

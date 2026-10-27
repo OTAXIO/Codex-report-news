@@ -6,7 +6,7 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
- 'sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
+ 'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
  'narration.wav','narration_原始.wav','narration.json','timings.json','captions.json',
  'scene-timings.json','progress.json','used-news-record.json','SPEECH_REVIEW.md',
@@ -41,7 +41,7 @@ def infer_slot(ep):
     raise ValueError('Set edition_slot to morning, noon, night or temporary')
 
 def release_target(root,ep,slot):
-    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('alert_id'));target=release_root(root)/folder
+    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'));target=release_root(root)/folder
     if (target/'release.json').exists():
         previous=json.loads((target/'release.json').read_text(encoding='utf-8'))
         if previous.get('episode_id')!=ep['id']:
@@ -68,6 +68,8 @@ def prepare(episode_id,slot=None,root=ROOT):
     if len(tested)!=len(ep['scenes']):raise ValueError('Not all news navigation segments were verified')
     old=json.loads((target/'release.json').read_text(encoding='utf-8')) if (target/'release.json').exists() else None
     if old and old.get('published'):raise ValueError('Published release is immutable; prepare a new revision directory explicitly')
+    if old and ((target/'upload-attempt.json').exists() or old.get('state') in {'unknown','uploading','submitting','submitted','reviewing'}):
+        raise ValueError('Existing upload attempt must be recovered/verified; do not reset release via prepare')
     if target.exists() and any(target.iterdir()) and (not old or old.get('episode_id')!=episode_id):
         raise ValueError('Release folder belongs to another edition/revision')
     target.mkdir(parents=True,exist_ok=True);files=[]
@@ -97,7 +99,7 @@ def prepare(episode_id,slot=None,root=ROOT):
 def migrate_video_name(directory):
     directory=Path(directory).resolve();receipt=json.loads((directory/'release.json').read_text(encoding='utf-8'))
     ep=json.loads((directory/'episode.json').read_text(encoding='utf-8'))
-    slot=infer_slot(ep);_,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('alert_id'))
+    slot=infer_slot(ep);_,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'))
     old_name=receipt.get('video_filename','sample.mp4');source=directory/old_name;target=directory/name
     if source!=target and source.exists():
         before=digest(source)

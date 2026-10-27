@@ -28,12 +28,6 @@ admin_voice_study/
 News_Video/data/
 News_Video/logs/
 News_Video/film/
-News_Video/docs/
-News_Video/skills/
-News_Video/README.md
-News_Video/REVIEW.md
-News_Video/SPEC.md
-News_Video/STORYLINES.md
 News_Video/episodes/
 release/
 *.mp4
@@ -45,3 +39,9 @@ release/
 *.ttf
 *.log
 *.preparing
+
+# Diagnostic reports stay local; maintained Markdown manuals and skills are versioned.
+News_Video/docs/*.json
+News_Video/docs/*.log
+News_Video/docs/**/history/
+News_Video/assets/references/

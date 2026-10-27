@@ -29,7 +29,7 @@
 
 ## 本机使用
 
-所有制作命令在 `News_Video` 中运行。原工作区的项目规则和本地 docs/skills 随目录指引读取；公开仓库不包含这些内部资料或账号状态。
+所有制作命令在 `News_Video` 中运行。项目规则、制作手册和所需 skill 快照随仓库维护；先读 News_Video/docs/PRODUCTION_RULES.md 和 WORKFLOW.md。工作区入口及 DSH 提示词的版本快照保存在 workspace-context/；账号状态仍只留本地。
 
 ```powershell
 Set-Location ./News_Video
@@ -43,16 +43,28 @@ python -B -m unittest discover -p 'test_*.py' -v
 
 ## 换机安装
 
-使用 Python 3.10+，在仓库根目录安装 `requirements-test.txt`；基础制作依赖见 `News_Video/requirements.txt`。Node 渲染依赖使用 package.json 与 pnpm-lock.yaml 安装，HyperFrames 锁定版本为 0.8.196。另需准备 Chrome、FFmpeg/FFprobe、字体和合法可用的 GPT-SoVITS 环境。
+使用 Python 3.10+，在仓库根目录安装 `requirements-test.txt`；基础制作依赖见 `News_Video/requirements.txt`。Node 渲染依赖使用 package.json 与 pnpm-lock.yaml 安装，HyperFrames 锁定版本为 0.8.196。另需准备 Chrome、FFmpeg/FFprobe、字体及本地 Qwen3-TTS 语音环境。
 
 config.json 的 workspace_directory 相对于 News_Video；release.directory 可为绝对路径或相对于 News_Video 的路径。voice 中的工具、引擎、模型 profile 和参考音频路径需按本机设置。publisher.private_home 相对于 News_Video，认证始终留在仓库外。独立投稿 CLI 必须另行安装并配置，缺少时 doctor 会报告，不应默认自动投稿可用。
 
-语音直接调用既有 Voice_Generate 工具，并使用外部 GPT-SoVITS 引擎和模型，在本期 episodes 下生成音频。本仓库不再复制 Voice_Generate 源码。GPT-SoVITS 主体来自原上游项目，模型与音频权利按原授权。
+语音默认调用相邻 Voice_Generate 仓库的 Qwen3-TTS 0.6B 上下文生成入口，参考音频克隆而非已完成微调；模型、参考音频和运行环境需另行准备。既有 GPT-SoVITS 后端保留回退。本仓库不复制 Voice_Generate 源码，模型与音频权利按原授权。
 
 仅克隆 Git 不能获得本机运行环境。数据库、去重日志和 reset 基线需另行安全迁移；缺少生产数据库时对应的来源映射测试跳过。历史固定日期脚本不作为实时选题入口，历史稿件不可重新投稿。
 
 ## Git 保存范围
 
-提交代码、公开源配置、锁文件和必要测试素材。忽略本机数据、运行依赖、项目技能快照、内部文档、生成视频、模型、字体及所有认证信息。后续直接在这个工作副本编辑、测试和提交，不再使用旧的源码导出脚本。
+提交代码、公开源配置、锁文件和必要测试素材。项目手册、制作 skill 与当前投稿 skill 快照纳入版本控制；忽略本机数据库、日志、运行依赖、生成视频、参考音频、模型、字体及所有认证信息。后续直接在这个工作副本编辑、测试和提交，不再使用旧的源码导出脚本。
 
 迁移核验见 VALIDATION.md。未为本次目录整理生成或投稿新视频。
+
+
+## V_0 当前功能与配套仓库
+
+- 主片目标为北京时间06/12/18点，制作前刷新社会RSS、AI官方来源及全部启用X；小时仅巡检tibo reset和投稿状态。具体最新规则以PRODUCTION_RULES.md为准。
+- AI数量与国内外3＋3仅为建议；候选来源覆盖公司、负责人、模型及Codex/Claude Code/WorkBuddy等产品，保留事实、原发布时间和已用新闻去重。
+- 完整导览、单行字幕、分段导航、负责人身份/口播主语与原时间、页数和遗漏审计均在导入/构建阶段执行。
+- 成品先进入release，再按已确认默认设置调用独立投稿器；unknown先回查，提交与公开发布分开记录。
+- [上传skill](https://github.com/OTAXIO/codex-upload-video)：源码权威位置；本仓库skills/codex-upload是经过指纹核对的生产快照。
+- [语音项目](https://github.com/OTAXIO/Voice_Generate)：Qwen3-TTS入口、停顿和读音规则，模型/参考音频不随Git分发。
+
+详见[完整手册](News_Video/docs/V_0/README.md)、[生产规则](News_Video/docs/PRODUCTION_RULES.md)、[工作流](News_Video/docs/WORKFLOW.md)、[当前状态](News_Video/docs/STATE.md)。Git中的配置是本机生产示例；换机必须检查路径、授权、登录、模型与去重基线，不能仅克隆后直接投稿。

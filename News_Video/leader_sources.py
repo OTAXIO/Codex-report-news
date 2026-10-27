@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess
 from pathlib import Path
 import news_video as n
+from quiet_background import hidden_kwargs,quiet_reach
 
 STOP_CODES={'NEED_SETUP','NEED_LOGIN','UPSTREAM_BROKEN','TIMEOUT','RATE_LIMITED','PLATFORM_BLOCKED','BUSY','LOCAL_PERMISSION_DENIED'}
 
@@ -27,12 +28,12 @@ def normalize_post(item, source, now, hours=48):
                 title=body[:180],url=url,published=published,summary=body[:20000],
                 company=source['vendor'],handle=source['handle'],author=source['name'],
                 attribution=source['name']+' (@'+source['handle']+')',
-                source_type='leader_x',requires_context=bool(item.get('is_reply') or item.get('is_repost') or item.get('is_quote')),
+                source_type=source.get('type','leader_x'),requires_context=bool(item.get('is_reply') or item.get('is_repost') or item.get('is_quote') or item.get('raw',{}).get('quoted_tweet') or item.get('raw',{}).get('is_retweet')),
                 context_policy='Check reply/quote/thread context before editorial use; individual statement is not an official release.',
                 fetched_at=now.isoformat())
 
 def validate_scene(scene, evidence):
-    if scene.get('source_type')!='leader_x':raise ValueError('Leader source_type missing')
+    if scene.get('source_type') not in {'leader_x','official_x'} or scene.get('source_type')!=evidence.get('source_type','leader_x'):raise ValueError('X source type does not match evidence')
     if scene.get('author_handle','').lower()!=evidence['handle'].lower():raise ValueError('Leader author attribution missing')
     if scene.get('claim_type') not in {'announcement','preview','opinion','experience','reshare'}:
         raise ValueError('Classify leader statement before use')
@@ -58,8 +59,9 @@ def local_failure(process):
 def run_reach(executable, source, limit, timeout):
     env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
     try:
-        process=subprocess.run([executable,'twitter','tweets',source['handle'],'--limit',str(limit),'--timeout',str(timeout)],
-                               capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout+15,env=env)
+        with quiet_reach():
+            process=subprocess.run([executable,'twitter','tweets',source['handle'],'--limit',str(limit),'--timeout',str(timeout)],
+                                   capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout+15,env=env,**hidden_kwargs())
         try:result=json.loads(process.stdout.lstrip('\ufeff'))
         except (json.JSONDecodeError,ValueError):return local_failure(process)
         if not isinstance(result,dict) or not isinstance(result.get('ok'),bool):return local_failure(process)
@@ -68,11 +70,13 @@ def run_reach(executable, source, limit, timeout):
     except PermissionError:return dict(ok=False,error=dict(code='LOCAL_PERMISSION_DENIED',stage='process_start'))
     except OSError:return dict(ok=False,error=dict(code='NEED_SETUP'))
 
-def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False):
+def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope=None):
     cfg=n.config();policy=cfg.get('x_collection',{})
     if not cfg.get('x_enabled'):raise ValueError('X sources disabled')
     if not 1<=hours<=72:raise ValueError('Freshness window must be 1-72 hours')
     accounts=[s for s in registry() if s.get('enabled') and s.get('identity_checked')]
+    if scope not in {None,'hourly'}:raise ValueError('Unknown X collection scope')
+    if scope=='hourly':accounts=[s for s in accounts if s['handle'].lower()=='thsottiaux']
     if only:
         accounts=[s for s in accounts if s['handle'].lower()==only.lower().lstrip('@')]
         if not accounts:raise ValueError('Handle is not in the verified allowlist')
@@ -116,7 +120,11 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False):
                 continue
             for item in result.get('items',[]):
                 try:post=normalize_post(item,source,now,hours)
-                except (ValueError,TypeError,AttributeError):
+                except (ValueError,TypeError,AttributeError) as error:
+                    reason=str(error) if isinstance(error,ValueError) else 'Malformed content fields'
+                    known={'Wrong author','Missing or insufficient post body','Incomplete post; fetch the full original before use','Missing original publication time','Outside fresh-news window'}
+                    reason=reason if reason in known else 'Invalid source content'
+                    counts=status.setdefault('rejection_reasons',{});counts[reason]=counts.get(reason,0)+1
                     status['rejected']+=1;report['rejected_items']+=1;continue
                 existed=db.execute('SELECT id FROM items WHERE id=?',(post['id'],)).fetchone()
                 report['new_items']+=int(not existed);report['accepted_items']+=1;status['accepted']+=1

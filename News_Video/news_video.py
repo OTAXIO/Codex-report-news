@@ -154,6 +154,33 @@ def official_bridge(body, source, encoding):
     """Explicit local conversion of official page indexes; never called native RSS."""
     page = PageText(); page.feed(body.decode(encoding, errors="replace"))
     entries=[]
+    if source['id']=='workbuddy-changelog':
+        markup=body.decode(encoding,errors='replace')
+        headings=list(re.finditer(r'<h2\b[^>]*>(.*?)</h2>',markup,re.S))
+        for i,heading in enumerate(headings):
+            title=text(heading.group(1)).replace('\u200b','').strip()
+            date=re.search(r'(20\d{2}-\d{2}-\d{2})',title)
+            version=re.search(r'\b(\d+\.\d+\.\d+)\b',title)
+            if not date or not version:continue
+            end=headings[i+1].start() if i+1<len(headings) else len(markup)
+            entries.append(dict(title='WorkBuddy '+title,url=source['url'],entry_key='workbuddy:'+version.group(1)+':'+date.group(1),published=parse_date(date.group(1)),published_precision='date',summary=text(markup[heading.end():end])[:10000]))
+        if not entries:raise ValueError('WorkBuddy changelog has no dated version headings; preserve source gap')
+        return list({item['entry_key']:item for item in entries}.values())
+    if source['id']=='kimi-blog':
+        markup=body.decode(encoding,errors='replace')
+        for card in re.findall(r'<div\b[^>]*class="[^"]*card-body[^"]*"[^>]*>(.*?)</div>',markup,re.S):
+            title=re.search(r'<h[1-6]\b[^>]*>(.*?)</h[1-6]>',card,re.S)
+            date=re.search(r'>(20\d{2}-\d{2}-\d{2})<',card)
+            if not title or not date:continue
+            # Card link precedes its body; bind using the source HTML position.
+            before=markup[:markup.find(card)]
+            links=re.findall(r'href="([^"]*/blog/[^"]+)"',before)
+            if not links:continue
+            url=normalized_url(urllib.parse.urljoin(source['url'],links[-1]))
+            if urllib.parse.urlsplit(url).hostname!='www.kimi.com':continue
+            entries.append(dict(title=text(title.group(1)),url=url,published=parse_date(date.group(1)),summary='',published_precision='date'))
+        if not entries:raise ValueError('Kimi blog has no dated article cards; preserve source gap')
+        return list({item['url']:item for item in entries}.values())
     if source['id']=='glm-zcode':
         content=re.sub(r'\s+',' ',' '.join(page.parts))
         matches=list(re.finditer(r'(\d+\.\d+\.\d+) Released ([A-Z][a-z]{2} \d{1,2}, 20\d{2})',content))
@@ -221,6 +248,9 @@ def collect(kind):
         reports.append(result)
     report=dict(id=run_id,started=now.isoformat(),finished=dt.datetime.now(UTC).isoformat(),kind=kind,model_calls=0,new_items=new,sources=reports)
     db.execute("INSERT INTO runs VALUES(?,?,?,?,?)",(run_id,kind,report["started"],report["finished"],json.dumps(report,ensure_ascii=False))); db.commit();db.close()
+    if kind in {'ai','all'} and config().get('x_enabled'):
+        from leader_sources import collect as collect_x
+        report['x']=collect_x()
     dump(directory/"report.json",report)
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return report
@@ -241,14 +271,21 @@ def candidates(hours=48):
             item['event_key']=item['source_id']+':'+item['title']
         item['priority_tier']=source.get('priority_tier',2)
         item['selection_policy']=source.get('selection_policy','standard')
+        from editorial_policy import region_of
+        item['region']=region_of(item,sources,config().get('editorial',{}))
+        if source.get('published_precision')=='date' or source.get('id')=='kimi-blog':item['published_precision']='date'
+        if source.get('product'):item['product']=source['product']
+        if source.get('product_scope'):item['source_products']=source['product_scope']
         vendor=source.get('vendor',item['publisher'])
         item['preferred_vendor_order']=preferred.index(vendor) if vendor in preferred else len(preferred)
         item['source_priority']=source.get('source_priority',100)
-        if source.get('type')=='leader_x':
+        if source.get('type') in {'leader_x','official_x'}:
             evidence=load(ROOT/'data/leader-posts'/(item['id']+'.json'))
-            item.update(source_type='leader_x',company=vendor,author=source['name'],handle=source['handle'],
+            item.update(source_type=source['type'],company=vendor,author=source['name'],handle=source['handle'],
                         attribution=evidence['attribution'],requires_context=evidence['requires_context'],
                         evidence_path='data/leader-posts/'+item['id']+'.json')
+    from leader_editorial import review_candidates
+    review_candidates(rows,ROOT)
     rows.sort(key=candidate_order)
     db.close()
     from used_news import recent_records,exclude_used
@@ -256,11 +293,19 @@ def candidates(hours=48):
     payload=dict(producer="RSS + Agent Reach collector; no model calls",cutoff_utc=cutoff,generated_at=dt.datetime.now(UTC).isoformat(),items=rows,
         excluded_used_news=excluded,previously_used_news=used_context,
         dedup_policy='Exclude completed exports by item ID, canonical URL, event key or normalized source title; compare previously_used_news before selecting rewritten reports of the same event.')
+    from important_events import recap_candidates
+    payload['important_recaps']=recap_candidates(ROOT)
+    from editorial_policy import coverage
+    payload['ai_coverage']=coverage(rows,sources,config().get('editorial',{}))
+    payload['tibo_review_candidates']=review_candidates(rows,ROOT)
+    from leader_editorial import review_leader_candidates
+    payload['leader_review_candidates']=review_leader_candidates(rows,ROOT)
     dump(ROOT/"data/candidates.json",payload)
     for item in rows: print(json.dumps({k:item[k] for k in ["id","kind","publisher","published","title","url","summary"]},ensure_ascii=False))
 
 def candidate_order(item):
-    # Within a company, executives precede official feeds; Tibo is first at OpenAI.
+    # Discovery order only; leader_editorial applies verified reset exceptions
+    # and the final company-before-ordinary-leaders scene order at import.
     ai=item['kind']=='ai'
     return (0 if ai else 1,item.get('priority_tier',2) if ai else 0,
             item.get('preferred_vendor_order',99) if ai else 0,
@@ -271,7 +316,7 @@ def article(item_id):
     db=database(); row=db.execute("SELECT * FROM items WHERE id=?",(item_id,)).fetchone();db.close()
     if not row: raise ValueError("Unknown candidate")
     row=dict(row)
-    if row['source_id'].startswith('x-leader-'):
+    if row['source_id'].startswith(('x-leader-','x-official-')):
         evidence=load(ROOT/'data/leader-posts'/(item_id+'.json'))
         print(json.dumps(evidence,ensure_ascii=False,indent=2));return
     body,final,encoding=fetch(row["url"])
@@ -283,8 +328,18 @@ def article(item_id):
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
+    source_catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
+    from important_events import prepare_main_recaps
+    if cfg.get('editorial',{}).get('include_important_recaps',True):prepare_main_recaps(episode,ROOT)
+    from leader_editorial import apply_leader_identity_and_speech,prepare_main_leaders
+    apply_leader_identity_and_speech(episode,ROOT)
+    leader_audit=prepare_main_leaders(episode,ROOT)
+    tibo_audit=episode.get('tibo_audit')
+    if leader_audit:episode['leader_audit']=leader_audit
+    from layout_policy import prepare_overview
+    prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
     if episode.get('edition_slot')=='temporary':
-        from reset_alerts import validate_temporary
+        from temporary_editions import validate_temporary
         validate_temporary(episode)
     if episode.get('producer') not in cfg.get('editorial',{}).get('allowed_producers',['Codex current conversation','DeepSeek Harness','manual editor']):raise ValueError('Producer must be disclosed using an allowed producer name')
     db=database(); selected=[];selected_rows=[]
@@ -295,21 +350,41 @@ def import_editorial(path):
             row=dict(row)
             if scene.get("source_url") != row["url"]: raise ValueError("Source URL does not match collected candidate")
             if not scene.get("evidence") or not scene.get("selection_reason"): raise ValueError("Missing evidence/ranking reason")
-            if row['source_id'].startswith('x-leader-'):
+            if row['source_id'].startswith(('x-leader-','x-official-')):
                 from leader_sources import validate_scene
                 validate_scene(scene,load(ROOT/'data/leader-posts'/(scene['item_id']+'.json')))
+            if source_catalog.get(row['source_id'],{}).get('published_precision')=='date' or row['source_id']=='kimi-blog':scene['published_precision']='date'
             selected.append(scene["item_id"])
-            selected_rows.append(dict(row,**({'event_key':scene['event_key']} if scene.get('event_key') else {})))
+            if scene.get('editorial_role')=='recap':
+                from important_events import validate_recap
+                validate_recap(scene,episode,ROOT)
+            else:selected_rows.append(dict(row,**({'event_key':scene['event_key']} if scene.get('event_key') else {})))
     if len(set(selected))!=len(selected): raise ValueError("Duplicate event selection")
     db.close()
     from used_news import recent_records,exclude_used
     edition_key=episode.get('edition_key',re.sub(r'-v\d+$','',episode['id']))
     _,already_used,_=exclude_used(selected_rows,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
     if already_used:raise ValueError('News already used in another completed edition: '+', '.join(x['id'] for x in already_used))
+    selection_audit=None
+    if episode.get('edition_slot') in {'morning','noon','night'} and cfg.get('editorial',{}).get('ai_coverage'):
+        from editorial_policy import audit_selection
+        sources={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
+        if cfg.get('x_enabled'):
+            from leader_sources import registry
+            sources.update({s['id']:s for s in registry() if s.get('enabled')})
+        pool_db=database()
+        try:pool=[dict(r) for r in pool_db.execute("SELECT * FROM items WHERE kind='ai'")]
+        finally:pool_db.close()
+        pool,_,_=exclude_used(pool,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
+        selection_audit=audit_selection(episode,selected_rows,pool,sources,cfg.get('editorial',{}))
+        if selection_audit:episode['ai_coverage_audit']=selection_audit
     episode["publication_preset"]=cfg["publication_preset"]
     episode['upload_enabled']=bool(cfg.get('upload_enabled'));episode['auto_publish']=bool(cfg.get('auto_publish'))
     directory=ROOT/"episodes"/episode["id"]; directory.mkdir(parents=True,exist_ok=True)
     if (directory/'release.json').exists():raise ValueError('Published edition is archived; create a new revision ID')
+    if selection_audit:dump(directory/'ai-coverage-audit.json',selection_audit)
+    if tibo_audit:dump(directory/'tibo-audit.json',tibo_audit)
+    if leader_audit:dump(directory/'leader-audit.json',leader_audit)
     dump(directory/"episode.json",episode)
     (directory/"script.txt").write_text("\n".join(s["narration"] for s in episode["scenes"]),encoding="utf-8")
     print(directory)
@@ -318,31 +393,44 @@ def voice(episode_id):
     cfg=config(); directory=ROOT/"episodes"/episode_id
     if (directory/'release.json').exists():raise ValueError('Published edition is archived; create a new revision ID')
     episode=load(directory/'episode.json')
-    v=cfg["voice"]; profile=load(v["profile"])
+    v=cfg["voice"]
     from pronunciation import spoken_text
     display_script=(directory/'script.txt').read_text(encoding='utf-8')
     spoken_path=directory/'spoken_script.txt'
     spoken_path.write_text(spoken_text(display_script,v.get('pronunciations',{})),encoding='utf-8')
-    job=dict(project=v["engine"],gpt=profile["model"]["t2s_weights_path"],sovits=profile["model"]["vits_weights_path"],reference=v.get("reference_audio",profile["request"]["ref_audio_path"]),reference_text=v.get("reference_text",profile["request"]["prompt_text"]),reference_language="all_zh",text_file=str(directory/"script.txt"),output_file=str(directory/"narration.wav"),language=v["language"],speed=v["speed"],pause=v["pause"],cleanup=v["cleanup"],seed=42,temperature=.75)
-    dump(directory/"voice_job.json",job)
-    job['text_file']=str(spoken_path)
+    backend=v.get('backend','gpt-sovits')
+    job=dict(text_file=str(spoken_path),output_file=str(directory/'narration.wav'),pause=v['pause'],seed=42)
+    if backend=='qwen3':
+        qwen=v['qwen3'];executable=Path(qwen['python']);context=qwen.get('contextual_generation',False)
+        worker=Path(v['repository'])/'tools'/('qwen_generate_context.py' if context else 'qwen_generate_job.py')
+        job.update(model_path=qwen['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],qwen_language='Chinese',synthesis_unit='sentence',max_new_tokens=1024,cleanup='off')
+        job.update(qwen.get('sampling',{}));job['consistent_unit_seed']=qwen.get('consistent_unit_seed',False)
+        job['speech_rate']=qwen.get('speech_rate',1);job['ffmpeg_executable']=qwen.get('ffmpeg_executable')
+        job['compound_pause_max_seconds']=qwen.get('compound_pause_max_seconds',.12)
+        if context:
+            from scene_pauses import sentence_scene_ids
+            ids=sentence_scene_ids(episode)
+            job.update(context_group_sentence_counts=[ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
+        worker_cwd=v['repository']
+    elif backend=='gpt-sovits':
+        profile=load(v['profile']);executable=Path(v['engine'])/'runtime/python.exe';worker=Path(v['repository'])/'tools/generate_job.py';worker_cwd=v['engine']
+        job.update(project=v['engine'],gpt=profile['model']['t2s_weights_path'],sovits=profile['model']['vits_weights_path'],reference=v.get('reference_audio',profile['request']['ref_audio_path']),reference_text=v.get('reference_text',profile['request']['prompt_text']),reference_language='all_zh',language=v['language'],speed=v['speed'],cleanup=v['cleanup'],temperature=.75)
+    else:raise ValueError('Unknown local voice backend')
     dump(directory/'voice_job.json',job)
-    executable=Path(v["engine"])/"runtime/python.exe"
-    worker=Path(v["repository"])/"tools/generate_job.py"
     env=os.environ.copy();env.update(PYTHONIOENCODING="utf-8",PYTHONUTF8="1",PYTHONDONTWRITEBYTECODE="1")
     # Workspace-owned lock; never terminate another voice/desktop process.
     lock=ROOT/"data/voice.lock"
     with lock.open("x",encoding="utf-8") as handle: handle.write(str(os.getpid()))
     try:
         with (directory/"voice.log").open("w",encoding="utf-8") as log:
-            result=subprocess.run([str(executable),"-u","-B",str(worker),"--job",str(directory/"voice_job.json")],cwd=v["engine"],env=env,stdout=log,stderr=subprocess.STDOUT)
+            result=subprocess.run([str(executable),"-u","-B",str(worker),"--job",str(directory/"voice_job.json")],cwd=worker_cwd,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
         if result.returncode: raise RuntimeError("Voice failed; inspect "+str(directory/"voice.log"))
     finally: lock.unlink(missing_ok=True)
-    if v.get("tail_style")=="crisp":
+    if backend=='gpt-sovits' and v.get("tail_style")=="crisp":
         with (directory/"crisp.log").open("w",encoding="utf-8") as log:
             processed=subprocess.run([str(executable),str(ROOT/"crisp_tails.py"),episode_id,episode_id],env=env,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
         if processed.returncode:raise RuntimeError("Crisp release processing failed; inspect "+str(directory/"crisp.log"))
-    elif v.get("soft_release"):
+    elif backend=='gpt-sovits' and v.get("soft_release"):
         from voice_tuning import soften_file
         soften_file(directory/"narration.wav",directory/"narration.json")
     from scene_pauses import apply_scene_holds
@@ -368,10 +456,17 @@ def voice(episode_id):
 
 def doctor():
     cfg=config();v=cfg["voice"]
-    checks={"voice_worker":(Path(v["repository"])/"tools/generate_job.py").is_file(),"voice_python":(Path(v["engine"])/"runtime/python.exe").is_file(),"voice_profile":Path(v["profile"]).is_file(),"upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg["social_collection_allow_model_calls"]}
+    qwen=v.get('backend')=='qwen3';context=qwen and v['qwen3'].get('contextual_generation',False)
+    worker='qwen_generate_context.py' if context else 'qwen_generate_job.py' if qwen else 'generate_job.py'
+    python=Path(v['qwen3']['python']) if qwen else Path(v['engine'])/'runtime/python.exe'
+    checks={"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":python.is_file(),"upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
+    if not qwen:checks['voice_profile']=Path(v['profile']).is_file()
+    if context:checks.update(alignment_python=Path(v['qwen3']['alignment_python']).is_file(),alignment_weights=(Path(v['qwen3']['alignment_model'])/'model.pt').is_file())
     if cfg.get('publisher',{}).get('enabled'):
         from upload_bridge import paths
         cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())
+    if v.get('backend')=='qwen3':
+        q=v['qwen3'];checks.update(qwen_python=Path(q['python']).is_file(),qwen_worker=(Path(v['repository'])/'tools/qwen_generate_job.py').is_file(),qwen_weights=(Path(q['model_path'])/'model.safetensors').is_file(),qwen_tokenizer=(Path(q['model_path'])/'speech_tokenizer/model.safetensors').is_file())
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
 def main():

@@ -10,7 +10,7 @@ ROOT=Path(__file__).resolve().parent
 NODE=Path('C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe')
 CLI=ROOT/'node_modules/hyperframes/bin/hyperframes.mjs'
 FFMPEG=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
-def render(episode_id,allow_upload=True):
+def render(episode_id,allow_upload=True,preview=False):
     episode=ROOT/'episodes'/episode_id
     if (episode/'release.json').exists():raise ValueError('Published edition is archived; create a new revision before rendering')
     timing=json.loads((episode/'timings.json').read_text(encoding='utf-8'))
@@ -56,20 +56,61 @@ def render(episode_id,allow_upload=True):
     with (episode/'encode.log').open('w',encoding='utf-8') as log:subprocess.run(args,stdout=log,stderr=subprocess.STDOUT,check=True)
     from verify_progress_video import verify
     verify(episode_id)
+    if preview:
+        import shutil,hashlib
+        from project_paths import release_root
+        target=(release_root(ROOT)/'previews'/episode_id).resolve()
+        if not target.is_relative_to((release_root(ROOT)/'previews').resolve()):raise ValueError('Invalid preview output')
+        target.mkdir(parents=True,exist_ok=False)
+        ep=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
+        name=ep['edition_date'].replace('-','_')+'_preview_Qwen3-TTS_配音样片.mp4'
+        shutil.copy2(episode/'sample.mp4',target/name)
+        for filename in ['narration.wav','script.txt','episode.json','timings.json','captions.json','ffprobe.json','progress-validation.json']:
+            if (episode/filename).is_file():shutil.copy2(episode/filename,target/filename)
+        receipt=dict(state='preview_only',auto_publish=False,counts_toward_daily_main_limit=False,news_used_log_written=False,video_filename=name,sha256=hashlib.sha256((target/name).read_bytes()).hexdigest())
+        (target/'preview.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
+        print(target/name);return receipt
+    return complete_export(episode_id,allow_upload)
+
+
+def complete_export(episode_id,allow_upload=True):
+    """Resume validated MP4 -> used ledger -> release -> authorized publish.
+
+    Human listening approval is not a gate for an authorized news edition.
+    Technical voice/media checks still run before this function.
+    """
+    episode=ROOT/'episodes'/episode_id
+    target_file=episode/'release-target.json'
+    if target_file.exists():
+        target=Path(json.loads(target_file.read_text(encoding='utf-8'))['directory'])
+        if (target/'upload-attempt.json').exists():
+            if allow_upload:
+                from upload_bridge import recover
+                return recover(target)
+            return dict(directory=str(target),skipped='existing_upload_attempt')
     from used_news import record_export
     record_export(episode,ROOT)
     from release_manager import prepare
     ready=prepare(episode_id)
     ep=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
+    if ep.get('model_alert_id'):
+        from model_alerts import mark_release as mark_model_release
+        mark_model_release(ep['model_alert_id'],ready['directory'])
     if ep.get('alert_id'):
         from reset_alerts import mark_release
         mark_release(ep['alert_id'],ready['directory'])
+    target=Path(ready['directory'])
+    receipt=json.loads((target/'release.json').read_text(encoding='utf-8'))
+    receipt['upload_policy']='automatic' if allow_upload else 'diagnostic_hold'
+    (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     if allow_upload:
-        from upload_bridge import publish_ready
-        upload=publish_ready(ready['directory'])
+        from upload_bridge import recover
+        upload=recover(ready['directory'])
         (episode/'upload-result.json').write_text(json.dumps(upload,ensure_ascii=False,indent=2),encoding='utf-8')
         if upload.get('ok') is False:print('Automatic upload did not complete: '+upload.get('error',{}).get('code',upload.get('error_code','see upload-result.json')))
     print(Path(ready['directory'])/ready['video_filename'])
+    return ready
+
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--no-upload',action='store_true');a=p.parse_args();render(a.episode,not a.no_upload)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--no-upload',action='store_true');p.add_argument('--preview',action='store_true');p.add_argument('--resume-export',action='store_true');a=p.parse_args();complete_export(a.episode,not a.no_upload) if a.resume_export else render(a.episode,not (a.no_upload or a.preview),preview=a.preview)

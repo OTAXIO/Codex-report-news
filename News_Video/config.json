@@ -35,16 +35,45 @@
     "profile": "D:/Basement/Codex_Video/admin_retrain/recommended_profile.json",
     "cleanup": "strong",
     "speed": 1.0,
-    "pause": 0.2,
+    "pause": 0.4,
     "language": "zh",
     "reference_audio": "D:\\Basement\\Codex_Video\\Codex-report-news\\News_Video\\assets\\references\\dijiang-ready.wav",
     "reference_text": "帝江号，我已就位，该出发了。",
     "soft_release": false,
     "tail_style": "natural",
     "pronunciations": {
-      "OpenAI": "Open AI"
+      "OpenAI": "Open AI",
+      "tibo": "梯啵"
     },
-    "ai_pronunciation": "Connected English letter name sequence, no punctuation or sentence split inside AI"
+    "ai_pronunciation": "Connected English letter name sequence, no punctuation or sentence split inside AI",
+    "qwen3": {
+      "python": "D:/Basement/Codex_Video/Voice_Generate/.venv-qwen3/Scripts/python.exe",
+      "model_path": "D:/Basement/Codex_Video/Voice_Generate/models/Qwen3-TTS-12Hz-0.6B-Base",
+      "status": "user_approved_0.6b_base",
+      "voice_quality_approved": true,
+      "training_target": "0.6B_only_if_needed",
+      "attempt_1_7b_training": false,
+      "pronunciation_targets": {
+        "tibo": "tī bo: ti1, bo0; second syllable light, short, unstressed; no internal pause"
+      },
+      "sampling": {
+        "temperature": 0.8,
+        "top_p": 0.95,
+        "top_k": 50,
+        "subtalker_temperature": 0.8,
+        "subtalker_top_p": 0.95,
+        "subtalker_top_k": 50
+      },
+      "consistent_unit_seed": true,
+      "speech_rate": 1.0,
+      "ffmpeg_executable": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe",
+      "contextual_generation": true,
+      "alignment_python": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/python.exe",
+      "alignment_model": "D:\\Basement\\Codex_Video\\Voice_Generate\\models\\fa-zh",
+      "paragraph_pause": 0.6,
+      "compound_pause_max_seconds": 0.12
+    },
+    "backend": "qwen3"
   },
   "publication_preset": {
     "category_name": "News",
@@ -59,7 +88,7 @@
       "Claude",
       "科技资讯"
     ],
-    "activity_preference": "Relevant popular creation activity",
+    "activity_preference": "明日方舟终末地创作者应援计划",
     "upload_backend": "codex-upload",
     "creator_declarations": [
       "含AI生成内容",
@@ -74,13 +103,16 @@
       "Anthropic",
       "DeepSeek",
       "Qwen",
-      "Z.ai"
+      "Z.ai",
+      "Google",
+      "Kimi",
+      "MiniMax",
+      "Tencent"
     ],
     "secondary_vendors": [
-      "MiniMax",
-      "Google",
       "Meta",
-      "Mistral"
+      "Mistral",
+      "Hugging Face"
     ],
     "research_sources_policy": "review_only_for_major_broad_impact_updates; ordinary paper/tool posts are supplementary",
     "preferred_topics": [
@@ -97,6 +129,46 @@
       "Codex current conversation",
       "DeepSeek Harness",
       "manual editor"
+    ],
+    "include_important_recaps": true,
+    "ai_coverage": {
+      "target_total": 6,
+      "targets": {
+        "domestic": 3,
+        "international": 3
+      },
+      "fresh_hours": 24,
+      "maximum_items": null,
+      "shortfall_policy": "advisory only; use actual verified news count, including zero; no filler or blocking for count",
+      "advisory_only": true,
+      "enforce_minimum": false
+    },
+    "vendor_regions": {
+      "OpenAI": "international",
+      "Anthropic": "international",
+      "Google": "international",
+      "Hugging Face": "international",
+      "Meta": "international",
+      "Mistral": "international",
+      "DeepSeek": "domestic",
+      "Qwen": "domestic",
+      "Z.ai": "domestic",
+      "Kimi": "domestic",
+      "MiniMax": "domestic",
+      "Tencent": "domestic"
+    },
+    "scope": [
+      "model companies",
+      "official products and agents",
+      "practical developer and office tools"
+    ],
+    "preferred_products": [
+      "Codex",
+      "Claude Code",
+      "WorkBuddy",
+      "混元/HY",
+      "Qwen Code",
+      "ZCode"
     ]
   },
   "edition_labels": {
@@ -129,7 +201,11 @@
       "www.sotwe.com"
     ],
     "mirror_policy": "public discovery/context fallback; verify original status author/date/body before ingestion; do not bypass channel verification or rate-limit stops",
-    "collection_interval_minutes": 60
+    "collection_interval_minutes": 60,
+    "hourly_handles": [
+      "thsottiaux"
+    ],
+    "official_fetch_trigger": "before_each_episode_with_ai_rss"
   },
   "reset_alerts": {
     "enabled": true,
@@ -144,8 +220,8 @@
     "no_retroactive_republish": true,
     "publication_authorized_by_user": true,
     "upload_backend": "codex-upload",
-    "auto_upload_backend_verified": false,
-    "backend_capability_validation": "offline_dom_e2e_and_authenticated_readonly"
+    "auto_upload_backend_verified": true,
+    "backend_capability_validation": "live_general_temporary_upload_submitted; reset-specific trigger production remains separate"
   },
   "publisher": {
     "enabled": true,
@@ -155,9 +231,34 @@
     "skill_cli": "skills/codex-upload/scripts/codex_upload.py",
     "private_home": "../../.codex-upload-private",
     "browser": "chrome",
-    "validation": "offline_dom_e2e_and_authenticated_readonly",
-    "full_live_new_upload_tested": false,
-    "verify_approval_before_cleanup": true
+    "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
+    "full_live_new_upload_tested": true,
+    "verify_approval_before_cleanup": true,
+    "implementation_sha256": "50e849b331e833d2b713516624f4b9e81fc6e54f5daff1ba2d8dac1d5c26ab99",
+    "activity": {
+      "strategy": "explicit",
+      "id": 1325166,
+      "name": "明日方舟终末地创作者应援计划",
+      "required_when_available": true,
+      "fallback": "stop",
+      "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
+    }
   },
-  "workspace_directory": "../.."
+  "workspace_directory": "../..",
+  "presentation": {
+    "prefer_overview": true,
+    "overview_folio": "00",
+    "first_news_folio": "01",
+    "overview_hold_seconds": 2,
+    "reset_overview": false,
+    "cover_subtitle_enabled": false,
+    "cover_footer_no_date": true
+  },
+  "model_alerts": {
+    "enabled": true,
+    "max_age_hours": 6,
+    "semantic_review_required": true,
+    "publication_authorized_by_user": true,
+    "main_recaps": true
+  }
 }
