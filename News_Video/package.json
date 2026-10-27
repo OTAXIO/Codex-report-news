@@ -1,5 +1,6 @@
 {
 	"devDependencies": {
-		"hyperframes": "^0.8.196"
+		"hyperframes": "^0.8.196",
+		"multiplane": "0.3.13"
 	}
 }

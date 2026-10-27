@@ -1,10 +1,12 @@
+> 2026-10-27 最新主片安排：取消午间新闻，只制作北京时间06:00开始的morning早报和18:00开始的night晚报；不提前15分钟，质检通过后沿用默认设置自动投稿。不再制作、补做或投稿新的noon午报。tibo reset临时新闻及每小时30分巡检保留。历史午报成品与记录保留。
+
 > 2026-10-27 最新采集范围：小时巡检只读取 tibo @thsottiaux 并处理 reset、回查投稿；不采集社会 RSS，不读取公司或其他负责人 X。社会 RSS、公司官方 X 和其他负责人仅在视频制作前刷新。每期执行 collect --kind all（社会 RSS + AI 官方来源 + 全部启用 X），不能只复用旧社会缓存。新模型线索在制作阶段采集后按 MODEL_ALERTS 核验，已有授权与去重规则保留。
 
 # 新闻视频项目当前指令
 
 当前执行者Codex，DSH为未来可接手环境。先读[当前完整制作规则](Codex-report-news/News_Video/docs/PRODUCTION_RULES.md)、[工作流](Codex-report-news/News_Video/docs/WORKFLOW.md)、[状态](Codex-report-news/News_Video/docs/STATE.md)。2026-10-27最新用户要求已落实到项目代码，本文链接优先于历史样片和旧提示词。
 
-- 06/12/18早午晚主片，分别05:45/11:45/17:45启动；小时只采tibo，社会RSS和公司/其他负责人X在制作前刷新。
+- 早晚两期主片，分别北京时间06:00/18:00开始制作；午间新闻已取消，对齐DeepSeek API空闲时段，不再提前15分钟；小时只采tibo，社会RSS和公司/其他负责人X在制作前刷新。
 - 新鲜明确tibo reset、新模型正式发布经语义核验后自动临时投稿；主片仍有近24小时重要回顾，不能被普通去重排除。
 - 白底黑字蓝色点缀；单行内嵌字幕；来源时间到分钟。概览00、正文01，无概览也正文01。reset紧急稿默认直入。
 - Qwen3-TTS0.6B上下文生成，纠正调用diào、模型名短停顿，保留句间0.4秒/新闻间0.6秒。
@@ -13,7 +15,7 @@
 - 按相关skill制作/上传，不泄露或打包凭据、模型或字体。变更详情/接口/测试见完整规则和对应文档。
 
 
-已授权新闻不得等待人工试听确认再投稿。早报故障恢复、旧日志兼容、已开封面窗口、安全回查后单次恢复与diagnostic_hold约束见docs/PRODUCTION_RULES.md“早报故障后的自动投稿约束”；执行render_sample.py --resume-export或upload_bridge.py recover续接既有成品，禁止重置unknown或盲目二投。
+已授权新闻不得等待人工试听确认再投稿。早报故障恢复、旧日志兼容、已开封面窗口、安全回查后自动恢复（不设固定次数上限）与diagnostic_hold约束见docs/PRODUCTION_RULES.md“早报故障后的自动投稿约束”；执行render_sample.py --resume-export或upload_bridge.py recover续接既有成品，禁止重置unknown或盲目二投。
 
 
 最新：主片AI建议国内3＋国外3（非硬性指标），24小时内有效未用新事件优先，不足记录缺口，不凑旧闻，回顾单列、合格新闻仍无上限。使用candidates.ai_coverage和导入时ai_shortfall_reasons/ai-coverage-audit；GoogleAI、GoogleDeepMind、Kimi_Moonshot、MiniMax_AI均只在视频制作前读取。投稿采用字段级恢复、重复提交守卫和实现指纹；修复统一sync_upload_skill部署并验证，详见PRODUCTION_RULES.md。
@@ -43,3 +45,14 @@
 2026-10-27 用户明确要求：今后投稿标签禁用Claude（大小写变体及带#形式同样排除）。from-release自动过滤，直接manifest验证拒绝；不影响标题、文稿和新闻中的正常公司/产品名称。本次午报使用AI、人工智能、科技资讯、新闻四个通用标签，固定活动规则保持。
 
 重点回顾最终规则：按具体事件在北京时间当天主片中只报道/回顾一次，而非全局只准早报回顾。上午新临时新闻可午报首次回顾、晚报不再重复；下午新事件可晚报首次回顾。important_events结合当日主片日志/release识别同事件，temporary不消耗主片名额，草稿不记已用，修订不算新一期；导入和导出日志锁内校验。详见PRODUCTION_RULES.md当前澄清。
+
+
+音频质量最新要求：新配音须逐句本地ASR核对漏读/重复/异常长段，并在最终PCM上按真实词时间戳生成字幕，不能只按字数均分。release核对原音、文稿哈希和对齐报告；实际缺陷未修不得投稿。详见PRODUCTION_RULES.md“音频内容与字幕同步硬检查”。
+
+
+2026-10-27 用户最新指令：取消“最多自动恢复一次”限制。安全回查确认未进入最终提交、且故障已修复后可自动恢复，不设固定次数上限；每次重新回查并累计审计次数，未知提交、已提交、登录/验证码/风控仍按原规则停止，不盲目重复上传。原有失败记录和次数保留；同一未修复故障不原样反复重投，诊断后继续修复。此前日志里的次数上限与额外授权要求属于历史状态，不再作为当前阻塞。
+
+
+## Multiplane视觉扩展
+
+新增可选multiplane/editorial（A清爽编辑版）与multiplane/graphic（B强图形版），实际验收通过，用户选定后新期默认B（multiplane/graphic）；hyperframes/legacy保留。每期render-plan锁定后端/版本/模板；未指定但已在制的旧期保留旧引擎。两侧满幅蓝黑图形，不留白侧条；右侧为贯穿全高的64px完整亮蓝矩形，右下角不得留白或斜切缺口，正文安全边距保留。采集、配音、固定BGM及00:03循环、早晚安排、逐事件回顾去重、release与投稿流程不变。按对应后端使用renderer_backends.py check，技术样片强制preview/diagnostic_hold不投稿；新引擎实际截图、确定性、DOM边界、解码/导航与离线上传契约通过才启用。详情见docs/MULTIPLANE.md和RENDERER_ACCEPTANCE.md。

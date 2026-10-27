@@ -27,11 +27,11 @@ def source_publication_label(scene):
         return stamp.strftime('%Y.%m.%d %H:%M')+'（来源时区未提供）'
     return stamp.astimezone(datetime.timezone(datetime.timedelta(hours=8))).strftime('%Y.%m.%d %H:%M 北京时间')
 
-def build(episode_id):
+def build_hyperframes(episode_id,film_directory=None):
     from episode_paths import episode_directory
     cfg=read(ROOT/'config.json'); epdir=episode_directory(ROOT,episode_id)
     episode=read(epdir/'episode.json'); timing=read(epdir/'timings.json')
-    film=ROOT/'film'; assets=film/'assets'; comps=film/'compositions'
+    film=Path(film_directory) if film_directory else ROOT/'film'; assets=film/'assets'; comps=film/'compositions'
     assets.mkdir(parents=True,exist_ok=True); comps.mkdir(exist_ok=True)
     (assets/'fonts').mkdir(exist_ok=True)
     for filename in ('msyh.ttc','msyhbd.ttc'):
@@ -143,5 +143,17 @@ ul{{margin:0;padding:0;list-style:none}}li{{position:relative;margin:0 0 18px;pa
     (epdir/'scene-timings.json').write_text(json.dumps(offsets,ensure_ascii=False,indent=2),encoding='utf-8')
     (epdir/'captions.json').write_text(json.dumps(captions,ensure_ascii=False,indent=2),encoding='utf-8')
     print(film)
+def build(episode_id,renderer=None,template=None):
+    from episode_paths import episode_directory
+    from renderer_backends import select_plan
+    epdir=episode_directory(ROOT,episode_id)
+    plan=select_plan(ROOT,epdir,renderer,template)
+    if plan['backend']=='hyperframes':
+        build_hyperframes(episode_id,ROOT/plan['artifact_directory'])
+    else:
+        from renderers.multiplane import build as build_multiplane
+        build_multiplane(ROOT,epdir,plan)
+    return ROOT/plan['artifact_directory']
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('episode');build(p.parse_args().episode)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--renderer',choices=['hyperframes','multiplane']);p.add_argument('--template',choices=['editorial','graphic']);a=p.parse_args();build(a.episode,a.renderer,a.template)

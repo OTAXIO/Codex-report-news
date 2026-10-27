@@ -48,3 +48,6 @@ News_Video/assets/references/
 
 # User-provided BGM source and local provenance stay off Git.
 News_Video/assets/music/
+
+# Multiplane local jobs; episode source and render artifacts remain private.
+News_Video/out/

@@ -1,0 +1,59 @@
+# Multiplane 双渲染器与视觉系统
+
+这是V_0之后的兼容扩展，不改写V_0历史源码基线。2026-10-27实际验收通过且用户选定B后，当前默认已切换为Multiplane/graphic；hyperframes/legacy保留。实际默认值查config.rendering，实际某期查render-plan.json。
+
+## 引擎与模板
+
+- multiplane/editorial：A清爽编辑版，白底、大标题、蓝色信息层次、图文或事实图形。
+- multiplane/graphic：B强图形版，蓝黑边缘几何、拼贴卡片及更明确的切入，正文保持稳定。
+- hyperframes/legacy：旧制作方式，保留原HTML/GSAP和快照＋FFmpeg路径。
+
+新版左边14px黑色、右边64px完整亮蓝矩形贯穿全高，不加白边/白色侧条；右下角也填满，不用斜切缺口。正文仍保留安全阅读边距。底部模块、新闻分段、时钟与连续进度使用独立白底，不让边缘装饰侵入导航。路线和数字图形只使用编辑稿中明确、有source_url的diagram数据，不从标题猜坐标、数字或性能。
+
+## 使用
+
+在News_Video执行：
+
+```powershell
+python -B build_film.py EPISODE --renderer multiplane --template editorial
+python -B renderer_backends.py check EPISODE
+python -B cover_generator.py EPISODE
+python -B render_sample.py EPISODE
+```
+
+首次不指定引擎/模板时采用配置。当前默认B；想用A，把首次build参数设为--template editorial；旧方式首次build使用--renderer hyperframes。已经生成render-plan.json后不允许换引擎、模板或依赖版本，改用新episode/revision；旧在制期次已有scene-timings而无计划时保留HyperFrames，不因默认切换中途换引擎。两种引擎均输出每期独立visuals目录，不覆盖共享film。
+
+完整技术样片使用--preview，或usage_tracking=false/local_sample标记；这些标记会强制preview并阻止resume-export进入发布。技术样片不写已用新闻日志、不上传。正式稿沿用已有release/自动投稿授权，不加每期人工确认关卡。
+
+中断渲染先查render-job.json及Multiplane作业状态；使用render_sample.py EPISODE --resume-render。上游拒绝续传时保留作业，按具体inputs/environment原因修复或新建修订，不能静默启动重复作业。渲染已成功但应用层质检失败，修好验证后可复用成片重新质检；不会再渲同一片。完成后上传阶段中断仍使用既有--resume-export/recover，unknown先回查。
+
+## 数据与边界
+
+共用episode、timings、单行captions、scene-timings、progress、cover.json、soundtrack与release契约。renderer_backends负责选择、版本锁定、CLI/NDJSON、确定性和布局质检；renderers目录负责新视觉。render_sample负责后端分发、最终解码/导航检查与现有发布衔接，不复制采集、选题或投稿器。
+
+配音仍用原Qwen3-TTS。背景音乐沿用用户确认的固定增益与00:03循环，由audio_mix生成同一soundtrack.wav，三个对照版本的混音SHA一致；新引擎通过--audio加载，不用浏览器audio播放、不二次归一化。素材、字体均本地加载，镜头由同步render(t)驱动，并声明硬切。新封面按原cover.json生成16:9/4:3，保留一次大日期与简短类型说明。
+
+发布门禁保留check/progress-validation、音频审核、混音、去重与未知投稿回查；Multiplane额外要求layout-audit及render-validation。prepare在隔离环境已实际生成包并经投稿器from-release/validate_meta校验，不能把离线契约校验称为真实B站投稿。
+
+## 安装与恢复
+
+锁定npm multiplane 0.3.13；上游main的版本号与实际npm发布曾不同，不能仅按README文字猜版本。先用项目锁文件安装依赖，然后：
+
+```powershell
+python -B setup_multiplane.py --install-runtime
+python -B setup_multiplane.py
+```
+
+脚本只准备项目.cache/playwright与.tools/ffmpeg，不改系统Chrome、旧语音FFmpeg或模型。当前Node需24+。Windows FFmpeg来自imageio-ffmpeg 0.6.0的已核验wheel，保留二进制配套许可/来源；原先语音FFmpeg缺libx264，因而独立配置。Multiplane源码Apache-2.0，官方技能及许可证保存在skills/multiplane。依赖运行时、浏览器、微软字体、原音乐、模型、账号和Cookie不进Git/DSH包，换机按说明准备。
+
+新下载浏览器在此主机的用户缓存启动曾返回spawn UNKNOWN；项目本地PLAYWRIGHT_BROWSERS_PATH实测正常，因此固定使用本地缓存，不关闭系统安全设置、不读取投稿浏览器profile。
+
+## 验收与选择
+
+make_renderer_demo.py基于已有归档和试听素材构建明确标注“历史素材·视觉验收·不投稿”的同源对照。使用--suffix创建新修订，不覆盖已经完成的样片。A/B各提供完整MP4、双封面、静帧及布局/确定性报告，旧版保留同源对照；实际文件链接及性能记录见RENDERER_ACCEPTANCE.md。
+
+doctor、lint、inspect、stills、verify必须真实运行。每幕及每次字幕切换做DOM边界检查，实际MP4检查开始/稳定帧/切点/片尾、左右边缘、六段导航、音视频时长与完整解码。新布局由progress元数据提供坐标，不删除检查适配外观。帧上黑色章节刻度会切开蓝色进度，验证取填充前沿而非像素总数。
+
+同机1080p三秒代表页面：1进程9.29秒，2进程6.96秒，采用2进程；这是项目代表镜头测试，不是上游全场景benchmark。不默认使用3D/景深/颗粒，不为新闻阅读启用全片运动模糊。事实页的静止阅读区不依赖特效提升观感。
+
+明确回退使用新episode/revision，在episode.json中填写rendering_fallback={"from_backend":"multiplane","reason":"实际故障原因"}，首次build指定--renderer hyperframes，render-plan会保留原因。不得改写已固定或已归档期次。

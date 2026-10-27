@@ -6,7 +6,7 @@ from layout_policy import cover_footer
 
 ROOT=Path(__file__).parent
 BLUE='#01A1FE';BLACK='#101218'
-LABELS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
+LABELS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻','preview':'新闻样片'}
 
 def font(size,bold=True):return ImageFont.truetype('C:/Windows/Fonts/'+('msyhbd.ttc' if bold else 'msyh.ttc'),size)
 
@@ -17,7 +17,7 @@ def fitted(draw,text,initial,width,bold=True):
         if box[2]-box[0]<=width:return f
     raise ValueError('Cover text is too long; shorten the factual headline')
 
-def make(episode_id):
+def make_hyperframes(episode_id):
     out=ROOT/'episodes'/episode_id
     if (out/'release.json').exists():raise ValueError('Published edition: create a new revision')
     ep=json.loads((out/'episode.json').read_text(encoding='utf-8'))
@@ -50,5 +50,13 @@ def make(episode_id):
     cover43.resize((1200,900),Image.Resampling.LANCZOS).save(out/'cover-bilibili.jpg',quality=96,subsampling=0)
     print(out/'cover-16x9.png')
 
+def make(episode_id,renderer=None,template=None):
+    from renderer_backends import select_plan
+    out=ROOT/'episodes'/episode_id;plan=select_plan(ROOT,out,renderer,template)
+    if plan['backend']=='multiplane':
+        from renderers.multiplane_cover import make as make_multiplane_cover
+        make_multiplane_cover(ROOT,out,plan)
+    else:make_hyperframes(episode_id)
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('episode');make(p.parse_args().episode)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--renderer',choices=['hyperframes','multiplane']);p.add_argument('--template',choices=['editorial','graphic']);a=p.parse_args();make(a.episode,a.renderer,a.template)

@@ -6,7 +6,8 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
- 'soundtrack.wav','audio-mix.json',
+ 'render-plan.json','render-job.json','render-validation.json','render-assets.json','layout-audit.json',
+ 'soundtrack.wav','audio-mix.json','caption-alignment.json','audio-content-review.json',
  'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
  'narration.wav','narration_原始.wav','narration.json','timings.json','captions.json',
@@ -64,7 +65,15 @@ def prepare(episode_id,slot=None,root=ROOT):
         if not (source/required).is_file():raise ValueError('Release is incomplete: '+required)
     check=json.loads((source/'check.json').read_text(encoding='utf-8-sig'))
     if not check.get('ok'):raise ValueError('Video check has not passed')
+    plan_path=source/'render-plan.json'
+    if plan_path.exists() and json.loads(plan_path.read_text(encoding='utf-8'))['backend']=='multiplane':
+        for name in ['render-validation.json','layout-audit.json']:
+            path=source/name
+            if not path.exists() or not json.loads(path.read_text(encoding='utf-8')).get('ok'):raise ValueError('Multiplane quality check missing or failed: '+name)
     timing=json.loads((source/'timings.json').read_text(encoding='utf-8'))
+    if ep.get('audio_content_review_required'):
+        from verify_speech_content import validate_review
+        validate_review(source)
     from audio_mix import validate_release_mix
     validate_release_mix(source,ep.get('background_music_requirement'),timing['duration'])
     tested=json.loads((source/'progress-validation.json').read_text(encoding='utf-8'))
@@ -93,6 +102,7 @@ def prepare(episode_id,slot=None,root=ROOT):
         prepared_at=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).isoformat(),archive_files=files,
         duration=timing['duration'],upload_source='release only',
         counts_toward_daily_main_limit=ep.get('counts_toward_daily_main_limit',slot!='temporary'))
+    if (source/'render-plan.json').exists():receipt['rendering']=json.loads((source/'render-plan.json').read_text(encoding='utf-8'))
     (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     (source/'release-target.json').write_text(json.dumps(dict(directory=str(target),video_filename=video_name),ensure_ascii=False,indent=2),encoding='utf-8')
     from upload_bridge import prepare as prepare_upload

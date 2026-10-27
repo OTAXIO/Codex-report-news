@@ -40,7 +40,7 @@ class BridgeRecoveryChecks(unittest.TestCase):
         b.save(directory/'publication.json',{'auto_publish':True})
         return directory
 
-    def test_unknown_presubmit_recovers_once_and_does_not_require_listening(self):
+    def test_each_presubmit_recovery_rechecks_without_an_attempt_cap(self):
         import upload_bridge as b
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);directory=self.setup_release(root)
@@ -51,7 +51,8 @@ class BridgeRecoveryChecks(unittest.TestCase):
                 self.assertEqual(b.load(directory/'release.json')['automatic_recovery_attempts'],1)
                 # No subjective speech_review confirmation field was needed.
                 b.recover(directory,root)
-                self.assertEqual(publish.call_count,1)
+                self.assertEqual(publish.call_count,2)
+                self.assertEqual(b.load(directory/'release.json')['automatic_recovery_attempts'],2)
 
     def test_uncertain_submit_never_reuploads(self):
         import upload_bridge as b
@@ -59,6 +60,17 @@ class BridgeRecoveryChecks(unittest.TestCase):
             root=Path(tmp);directory=self.setup_release(root)
             with patch.object(b,'call',return_value={'ok':True,'state':'unknown'}),patch.object(b,'publish_ready') as publish:
                 b.recover(directory,root);publish.assert_not_called()
+
+    def test_same_cover_failure_requires_changed_code_or_inputs_without_a_count_cap(self):
+        import upload_bridge as b
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);directory=self.setup_release(root,'upload_failed')
+            attempt=b.load(directory/'upload-attempt.json');attempt['repair_signature']=b.repair_signature(directory,root);b.save(directory/'upload-attempt.json',attempt)
+            checked={'ok':True,'state':'failed','safe_retry_evidence':{'submit_started':False,'returned_field_error':'COVER_NOT_LOADED'}}
+            with patch.object(b,'call',return_value=checked) as recheck,patch.object(b,'publish_ready',return_value={'ok':False}) as publish:
+                self.assertEqual(b.recover(directory,root)['error']['code'],'REPAIR_REQUIRED');publish.assert_not_called();recheck.assert_called_once()
+                b.save(directory/'publication.json',{'auto_publish':True,'repair':'updated verified cover'})
+                b.recover(directory,root);publish.assert_called_once();self.assertEqual(b.load(directory/'release.json')['automatic_recovery_attempts'],1)
 
     def test_diagnostic_hold_is_not_picked_up_by_pending(self):
         import upload_bridge as b

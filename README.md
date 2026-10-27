@@ -71,3 +71,8 @@ config.json 的 workspace_directory 相对于 News_Video；release.directory 可
 
 
 背景音乐：已接入用户本地《おしんこ》，固定低音量循环到片尾，无播报闪避；预览与MP4共享混音，原曲不进Git。规则和换机准备见[BACKGROUND_MUSIC.md](News_Video/docs/BACKGROUND_MUSIC.md)。
+
+
+## 可选视频引擎
+
+新增Multiplane的A清爽编辑版和B强图形版，保留HyperFrames旧方式。当前默认与验收状态查config.rendering和[Multiplane手册](News_Video/docs/MULTIPLANE.md)。后端共用现有音频、新闻和发布契约；技术样片不投稿。V_0历史基线保留。

@@ -20,8 +20,8 @@
 
 使用说明与全部 PowerShell 步骤在 docs/WORKFLOW.md；本机路径及换机限制在 DEPENDENCIES.md。固定日期的 make_sample_editorial.py、prepare_publish_20261026.py、make_daily_cover.py、upgrade_v5.py 仅为历史样例，不能当成每日实时内容生成器。
 
-早午晚主片及小时巡检自动任务已启用，当前仍由代理承担编辑核验而非另配选题API。独立codex-upload已完成Chrome真实新稿投稿及公开核验；新的小时事件触发全链、Edge仍待实际验证。GitHub 调研在 docs/BILIBILI_UPLOAD_RESEARCH.md；不把存在上传仓库当作已验证可用。
+早晚主片及小时巡检自动任务已启用，当前仍由代理承担编辑核验而非另配选题API。独立codex-upload已完成Chrome真实新稿投稿及公开核验；新的小时事件触发全链、Edge仍待实际验证。GitHub 调研在 docs/BILIBILI_UPLOAD_RESEARCH.md；不把存在上传仓库当作已验证可用。
 
-小时巡检入口 hourly_monitor.py；tibo reset 紧急队列和独立临时稿用 reset_alerts.py，详见 docs/RESET_ALERTS.md。临时新闻不占三期，上传后端未验收时先完成 release 并通知。
+小时巡检入口 hourly_monitor.py；tibo reset 紧急队列和独立临时稿用 reset_alerts.py，详见 docs/RESET_ALERTS.md。临时新闻不占早晚两期，上传后端未验收时先完成 release 并通知。
 
 自动投稿入口与成品契约：docs/CODEX_UPLOAD.md；upload_bridge.py 负责 prepare/publish/verify/pending，render 默认调用。

@@ -2,7 +2,6 @@
   "timezone": "Asia/Shanghai",
   "main_video_ready_times": [
     "06:00",
-    "12:00",
     "18:00"
   ],
   "ai_rss_fetch_trigger": "before_each_episode",
@@ -173,14 +172,13 @@
   },
   "edition_labels": {
     "06:00": "早间新闻",
-    "12:00": "午间新闻",
     "18:00": "晚间新闻"
   },
   "release": {
     "directory": "D:/Basement/Codex_Video/release",
     "prepare_before_upload": true,
-    "folder_template": "YYYY_MM_DD_{morning|noon|night}",
-    "video_template": "YYYY_MM_DD_{slot}_{早间新闻|午间新闻|晚间新闻}.mp4",
+    "folder_template": "YYYY_MM_DD_{morning|night}",
+    "video_template": "YYYY_MM_DD_{slot}_{早间新闻|晚间新闻}.mp4",
     "cleanup_after_publication": true,
     "temporary_folder_template": "YYYY_MM_DD_temporary_HHmmss_alertid",
     "temporary_video_template": "YYYY_MM_DD_temporary_HHmmss_alertid_临时新闻.mp4"
@@ -234,7 +232,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "50e849b331e833d2b713516624f4b9e81fc6e54f5daff1ba2d8dac1d5c26ab99",
+    "implementation_sha256": "d4241d0d1c8c2683edd529adf9430351bf581882a4e6ed0cf29aabbac63a7f9c",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -242,7 +240,8 @@
       "required_when_available": true,
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
-    }
+    },
+    "validation_sha256": "b195be4dc4cf8b6e39635e95e5503d3b6ee0163b4c09474e7a61059aac450fc0"
   },
   "workspace_directory": "../..",
   "presentation": {
@@ -275,5 +274,24 @@
     "repeat_from_seconds": 3,
     "reference_voice_gap_db": 18,
     "voice_gap_measure": "active_window_median"
+  },
+  "rendering": {
+    "default_backend": "multiplane",
+    "default_template": "graphic",
+    "node_executable": "C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe",
+    "multiplane": {
+      "ffmpeg": ".tools/ffmpeg/ffmpeg.exe",
+      "workers": 2,
+      "encoder": "x264",
+      "quality": "standard"
+    },
+    "acceptance": {
+      "date": "2026-10-27",
+      "version": "0.3.13",
+      "report": "docs/RENDERER_ACCEPTANCE.md",
+      "sample_revision": "v4",
+      "solid_right_block_width": 64,
+      "user_selected_template": "B/graphic"
+    }
   }
 }

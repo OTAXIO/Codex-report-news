@@ -11,7 +11,7 @@ def region_of(row,sources,editorial):
 
 def fresh(row,now,hours):
     try:
-        stamp=dt.datetime.fromisoformat(row.get('published','').replace('Z','+00:00'))
+        stamp=dt.datetime.fromisoformat((row.get('published') or '').replace('Z','+00:00'))
         return stamp.tzinfo is not None and dt.timedelta(0)<=now-stamp<=dt.timedelta(hours=hours)
     except (ValueError,TypeError):return False
 

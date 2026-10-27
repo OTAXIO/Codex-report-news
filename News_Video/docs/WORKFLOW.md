@@ -4,13 +4,15 @@
 
 完整约束以[PRODUCTION_RULES.md](PRODUCTION_RULES.md)为准；先读STATE与config解析当前路径。
 
+制作前运行`sync_upload_skill.py --check --installed`并按既有流程doctor。缺验证或版本漂移时先按[投稿可靠性门禁](UPLOAD_RELIABILITY.md)修复、离线验证与部署；不得用真实投稿尝试验证修复。
+
 1. 以require_escalated运行 `python -B news_video.py collect --kind all`：刷新社会RSS、AI RSS/官方网页和全部启用X。`candidates --hours 48`含新事件和important_recaps。
 2. 核实原作者、原分钟时间、上下文、状态及已用日志。常规国内3+国际3，AI不限；敏感跳过。
 3. help-me-speech写editorial。`import-editorial <json>`会先补主片重要回顾（只有已公开核验temporary、近24小时），再默认补00概览，最后核验来源/授权/去重。回顾与新事件分开，不从普通去重接口放行任意重复内容。
 4. `news_video.py voice <id>`：Qwen3连续上下文+规范化读音+本地对齐；模型名静音上限约.12秒，句间.4/切页.6。标准导览口播后2秒。
 5. 填cover.json：headline_top/headline_main/highlight/image，footnote仅短类型说明如模型发布速报，无日期；不再使用subtitle。`cover_generator.py <id>`生成双封面。
 6. `build_film.py <id>`：概览00/正文01，未带概览也正文01。检查来源时间、完整单行字幕、大logo和分段导航。
-7. HyperFrames check --json、两页以上实际截图检查后`render_sample.py <id>`，自动解码/导航校验、日志、release和已授权上传。必要时--no-upload仅用于诊断，不冒充已投稿。
+7. 按render-plan运行renderer_backends.py check（旧后端仍执行HyperFrames check），检查实际静帧后`render_sample.py <id>`，自动解码/导航校验、日志、release和已授权上传。必要时--no-upload仅用于诊断，不冒充已投稿。
 8. `upload_bridge.py pending`查submitted/unknown。公开归属、标题核验成功才finalize，不重复调用publish。
 
 ## 小时巡检与临时新闻
@@ -31,14 +33,14 @@ project skills/codex-upload是生产实现。先doctor核对登录/账号；迁�
 
 ## 2026-10-27 早报故障后的自动投稿约束
 
-- 已授权的正式早午晚/临时新闻，技术质量检查通过后立即投稿；“尚未人工试听/等用户确认音色”不是额外授权关卡，不得因此停在release。明确的音频缺失、时序/解码/内容错误仍必须修复，用户明确要求暂停/审核时以用户指令为准。
+- 已授权的正式早晚/临时新闻，技术质量检查通过后立即投稿；“尚未人工试听/等用户确认音色”不是额外授权关卡，不得因此停在release。明确的音频缺失、时序/解码/内容错误仍必须修复，用户明确要求暂停/审核时以用户指令为准。
 - 用旧日志也必须可完成导出：used_news读取时补齐缺失edition_key，兼容无episode_id/video_sha256的来源关联行，不覆盖原JSONL；同片同哈希写日志幂等。日志失败保留MP4，通过render_sample.py <id> --resume-export续接，不重配音/重渲染，不跳过去重记账。
 - 已有upload-attempt的release不能重新prepare并把unknown清成ready。resume-export沿用成品与回执，交upload_bridge.py recover <release目录>；已有submitted/reviewing只核验，published直接跳过。
 - 封面制作是受支持的窗口：标题、双比例槽与图片输入同时匹配才安全关闭自动打开/残留窗口，随后加载本期定稿封面并像素读回。未知弹窗、认证/验证码仍停止，不盲点完成。
 - unknown必须先创作中心回查。只有回查成功、结构化同步字段失败、明确submit_started=false才转failed并保存safe_retry_evidence；仅“没搜到稿件”不足以重试。超时/缺提交标志/已经开始提交保持unknown，不重投。
-- 项目recover连接回查与恢复：安全确认的提交前故障最多自动恢复1次，超过上限保留release并报错；不无限循环。pending恢复submitted/reviewing/unknown，以及明确upload_policy=automatic的ready/failed；diagnostic_hold不自动上传。
+- 项目recover连接回查与恢复：安全回查确认未进入最终提交、且故障已修复后可自动恢复，不设固定次数上限；每次重新回查并累计审计次数，未知提交、已提交、登录/验证码/风控仍按原规则停止，不盲目重复上传。pending恢复submitted/reviewing/unknown，以及明确upload_policy=automatic的ready/failed；diagnostic_hold不自动上传。
 - 技术检查、成品就绪、提交、公开发布分开记录。最终按钮一次；code0+平台ID才submitted；公开账号/标题一致才published/finalize。不能以口头“继续尝试”替代调用，不能报告无回执的成功。
-- 定时目标仍06/12/18；记录实际延迟，不承诺平台审核时刻。失败先修复同一成品，不重做旧片，不因错过目标时间自动取消投稿。
+- 定时目标仍06/18；记录实际延迟，不承诺平台审核时刻。失败先修复同一成品，不重做旧片，不因错过目标时间自动取消投稿。
 
 
 ## 当前补充：AI 选题与投稿部署
@@ -117,3 +119,30 @@ important_events读取同日成功主片导出日志及release中的episode回�
 prepare_main_recaps逐事件决定插入，并移除编辑输入中本日已由其他主片用过的回顾；episode.recap_policy输出once_per_event_per_beijing_date及skipped_event_keys。validate_recap在导入时校验，used_news.record_export在写日志锁内再次逐条验证，防止先前草稿稍后导出造成重复。不同事件或真实实质新进展仍按正常选题与事实核查，不因共用公司/人名被一并排除；相同消息换标题不算新事件。跨日重新按当日记录判断，但仍受24小时时效限制。
 
 已发布视频不改。本期未发布午报按新规则重导入时，若回顾被移除，必须同步重新生成受影响的配音、字幕、时序、导览与导航，不允许只删画面留下旧口播。涉及正在运行的配音/渲染由制作会话安全衔接，不覆盖其共享素材。
+
+
+## 2026-10-27：制作启动时间对齐DeepSeek谷时
+
+用户取消午间新闻。早报和晚报自动任务在当前对话保持ACTIVE，午报任务PAUSED；morning/night分别北京时间06:00/18:00开始制作，不提前15分钟，检查通过后立即按默认设置投稿；这些是启动时刻，不能继续当成准点成片/公开发布目标。reset维持每小时30分，不受本次调整影响。
+
+已核对DeepSeek官方价格页：https://api-docs.deepseek.com/zh-cn/quick_start/pricing/ 。当前北京时间周一至周五（不含中国法定节假日）09:00–12:00、14:00–18:00为峰时，其余时间、周末与法定节假日全天为谷时。06:00/12:00/18:00均处谷时。谷时折扣仅作用于实际DeepSeek API调用；当前制作仍由Codex会话执行，本次没有变更执行模型或接入API。
+
+
+## 2026-10-27：音频内容与字幕同步硬检查
+
+本次ETH临时稿暴露：TTS异常段可被强制对齐分配给一句文稿，导致约48秒无对应口播，字幕仍显示；文件能解码、响度合格、对齐返回成功均不足以证明内容正确。不得把这些检查写成已试听或音质已完美。
+
+- 新生成配音先用既有本地ASR逐句核对实际读出的内容，查漏读、重复、异常拖长和明显噪声；不下载/更换/训练模型，不调用付费识别API。verify_speech_content.py保留逐句转录、相似度、时长、削波及原音/文稿哈希。单句异常时长、明显漏读或识别差异必须停下定位并重生成受影响语音，禁止用假时间戳、粗暴裁切或加速盖掉问题。
+- 字幕必须依据最终narration.wav的实际词时间戳生成。align_captions.py逐句逐cue对齐，保留单行文本和语义边界；不能再只按字数均匀分配时间。caption_layout校验文本、单行宽度、范围及不重叠。
+- news_video.py voice现在依次运行内容核验和字幕对齐，使用既有alignment_python及本地ASR模型；按既有权限调用，NUMBA缓存留项目.cache。需要手动诊断时用该本地Python运行 verify_speech_content.py <id>、align_captions.py <id>。缺本地模型、失败或结果有疑点必须停止相关发布步骤，不能静默跳过。
+- 新配音标记audio_content_review_required；release门禁核对报告通过、音频/文稿哈希、逐句覆盖及实际字幕时序与对齐报告一致。更换配音、改稿或重新混音后，受影响的字幕、时序、导航、画面及成片检查须重新执行。混音与MP4还要检查解码、音轨、时长和噪声风险；有疑点时做实际音频复核，不以ASR分数代替主观听感。
+- 保留原始配音、独立混音、实际识别和对齐报告以便定位。明确区分“识别/波形/时间戳已检查”和“人工试听”。不额外增加用户批准关卡；实际缺陷修复并通过检查后按原授权投稿。
+- 本次用户明确授权另发修正版BV11AxM6YEkT，旧BV1LCxT67ExZ由用户自行删除。后续自动巡检不得据此重复发布同事件；替换稿必须有用户指定原BV及修复原因，保留原事件键和修订记录，不修改或删除原稿来绕过守卫。
+
+
+2026-10-27 用户最新指令：取消“最多自动恢复一次”限制。安全回查确认未进入最终提交、且故障已修复后可自动恢复，不设固定次数上限；每次重新回查并累计审计次数，未知提交、已提交、登录/验证码/风控仍按原规则停止，不盲目重复上传。原有失败记录和次数保留；同一未修复故障不原样反复重投，诊断后继续修复。此前日志里的次数上限与额外授权要求属于历史状态，不再作为当前阻塞。
+
+
+## Multiplane视觉扩展
+
+新增可选multiplane/editorial（A清爽编辑版）与multiplane/graphic（B强图形版），实际验收通过，用户选定后新期默认B（multiplane/graphic）；hyperframes/legacy保留。每期render-plan锁定后端/版本/模板；未指定但已在制的旧期保留旧引擎。两侧满幅蓝黑图形，不留白侧条；右侧为贯穿全高的64px完整亮蓝矩形，右下角不得留白或斜切缺口，正文安全边距保留。采集、配音、固定BGM及00:03循环、早晚安排、逐事件回顾去重、release与投稿流程不变。按对应后端使用renderer_backends.py check，技术样片强制preview/diagnostic_hold不投稿；新引擎实际截图、确定性、DOM边界、解码/导航与离线上传契约通过才启用。详情见docs/MULTIPLANE.md和RENDERER_ACCEPTANCE.md。

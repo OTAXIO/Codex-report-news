@@ -328,6 +328,7 @@ def article(item_id):
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
+    episode['audio_content_review_required']=True
     if cfg.get('background_music',{}).get('enabled'):
         bgm=cfg['background_music']
         episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','reference_voice_gap_db','voice_gap_measure','music_peak_dbfs']}
@@ -410,10 +411,11 @@ def voice(episode_id):
         job.update(qwen.get('sampling',{}));job['consistent_unit_seed']=qwen.get('consistent_unit_seed',False)
         job['speech_rate']=qwen.get('speech_rate',1);job['ffmpeg_executable']=qwen.get('ffmpeg_executable')
         job['compound_pause_max_seconds']=qwen.get('compound_pause_max_seconds',.12)
+        job['context_max_new_tokens']=int(episode.get('voice_context_max_new_tokens',1024))
         if context:
             from scene_pauses import sentence_scene_ids
             ids=sentence_scene_ids(episode)
-            job.update(context_group_sentence_counts=[ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
+            job.update(context_group_sentence_counts=episode.get('voice_context_group_sentence_counts') or [ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
         worker_cwd=v['repository']
     elif backend=='gpt-sovits':
         profile=load(v['profile']);executable=Path(v['engine'])/'runtime/python.exe';worker=Path(v['repository'])/'tools/generate_job.py';worker_cwd=v['engine']
@@ -455,6 +457,12 @@ def voice(episode_id):
     if len(expected)!=len(sentences): raise RuntimeError("Voice sentence/scene mapping mismatch")
     for sentence,scene_id in zip(sentences,expected): sentence["scene_id"]=scene_id
     dump(directory/"timings.json",dict(sample_rate=rate,duration=meta["seconds"],sentences=sentences))
+    if backend=='qwen3':
+        episode['audio_content_review_required']=True;dump(directory/'episode.json',episode)
+        local_python=v['qwen3']['alignment_python']
+        quality_env=env.copy();quality_env['NUMBA_CACHE_DIR']=str(ROOT/'.cache/numba-asr')
+        for check_worker in ['verify_speech_content.py','align_captions.py']:
+            subprocess.run([local_python,'-u','-B',str(ROOT/check_worker),episode_id],env=quality_env,cwd=ROOT,check=True,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
     print(json.dumps(dict(duration=meta["seconds"],sentences=len(sentences),cleanup=job["cleanup"]),ensure_ascii=False))
 
 def doctor():

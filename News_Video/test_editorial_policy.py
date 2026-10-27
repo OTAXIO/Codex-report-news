@@ -14,6 +14,9 @@ class EditorialCoverageChecks(unittest.TestCase):
     def test_old_future_and_social_do_not_fill_ai_quota(self):
         rows=[self.row('old',age=25),self.row('future',age=-1),dict(self.row('social'),kind='social')]
         self.assertEqual(coverage(rows,self.sources,self.cfg,self.now)['available']['domestic'],0)
+    def test_missing_publication_time_is_not_fresh(self):
+        rows=[dict(self.row('missing'),published=None),dict(self.row('blank'),published='')]
+        self.assertEqual(coverage(rows,self.sources,self.cfg,self.now)['available']['domestic'],0)
     def test_unknown_vendor_and_duplicate_event_do_not_inflate_count(self):
         rows=[dict(self.row('a'),event_key='same'),dict(self.row('b'),event_key='same'),self.row('c','unverified')]
         result=coverage(rows,self.sources,self.cfg,self.now)

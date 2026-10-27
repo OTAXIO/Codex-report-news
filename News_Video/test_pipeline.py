@@ -22,7 +22,7 @@ class PipelineChecks(unittest.TestCase):
         config=n.config()
         self.assertTrue(config['upload_enabled']);self.assertEqual(config['publisher']['backend'],'codex-upload');self.assertTrue(config['publisher']['user_authorized'])
         self.assertFalse(config['social_collection_allow_model_calls'])
-        self.assertEqual(config['main_video_ready_times'],['06:00','12:00','18:00'])
+        self.assertEqual(config['main_video_ready_times'],['06:00','18:00'])
     def test_sample_timeline(self):
         directory=Path(__file__).parent/'episodes/sample-20261026'
         timing=n.load(directory/'timings.json'); captions=n.load(directory/'captions.json')

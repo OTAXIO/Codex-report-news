@@ -10,9 +10,24 @@ ROOT=Path(__file__).resolve().parent
 NODE=Path('C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe')
 CLI=ROOT/'node_modules/hyperframes/bin/hyperframes.mjs'
 FFMPEG=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
-def render(episode_id,allow_upload=True,preview=False):
+def render(episode_id,allow_upload=True,preview=False,renderer=None,template=None,resume_render=False):
     episode=ROOT/'episodes'/episode_id
     if (episode/'release.json').exists():raise ValueError('Published edition is archived; create a new revision before rendering')
+    content=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
+    if content.get('usage_tracking') is False or content.get('review_status','').startswith('local_sample'):
+        preview=True;allow_upload=False
+    from renderer_backends import select_plan
+    plan=select_plan(ROOT,episode,renderer,template)
+    import build_film
+    build_film.ROOT=ROOT
+    film=ROOT/plan['artifact_directory']
+    if not (film/'index.html').is_file():build_film.build(episode_id,plan['backend'],plan['template'] if plan['backend']=='multiplane' else None)
+    if plan['backend']=='multiplane':
+        from renderer_backends import render_multiplane
+        render_multiplane(ROOT,episode,plan,resume_render)
+        from verify_progress_video import verify
+        verify(episode_id)
+        return finish_render(episode_id,allow_upload,preview)
     timing=json.loads((episode/'timings.json').read_text(encoding='utf-8'))
     from audio_mix import ensure_soundtrack
     soundtrack=ensure_soundtrack(ROOT,episode,timing['duration'],FFMPEG)
@@ -33,7 +48,10 @@ def render(episode_id,allow_upload=True,preview=False):
         moments.append(min(b-.000001,max(midpoint,scene['start']+.21)))
     output=episode/'render-frames'; output.mkdir(exist_ok=True)
     env=os.environ.copy();env.update(HYPERFRAMES_NO_TELEMETRY='1',HYPERFRAMES_BROWSER_PATH='C:/Program Files/Google/Chrome/Application/chrome.exe',HYPERFRAMES_FONT_CACHE_DIR=str(ROOT/'.cache/fonts'))
-    command=[str(NODE),str(CLI),'snapshot',str(ROOT/'film'),'--at',','.join(f'{v:.6f}' for v in moments),'--no-end','--describe','false','--output',str(output),'--json']
+    checked=subprocess.run([str(NODE),str(CLI),'check',str(film),'--json'],env=env,capture_output=True,text=True,encoding='utf-8')
+    (episode/'check.json').write_text(checked.stdout,encoding='utf-8')
+    if checked.returncode or not json.loads(checked.stdout).get('ok'):raise RuntimeError('HyperFrames check failed')
+    command=[str(NODE),str(CLI),'snapshot',str(film),'--at',','.join(f'{v:.6f}' for v in moments),'--no-end','--describe','false','--output',str(output),'--json']
     result=subprocess.run(command,env=env,capture_output=True,text=True,encoding='utf-8')
     (episode/'snapshot-render.log').write_text(result.stderr,encoding='utf-8')
     if result.returncode:raise RuntimeError(result.stderr[-2000:])
@@ -44,7 +62,7 @@ def render(episode_id,allow_upload=True,preview=False):
     for path,(a,b) in zip(paths,spans):concat.extend([f"file '{path}'",f'duration {b-a:.9f}'])
     concat.append(f"file '{paths[-1]}'")
     manifest=episode/'render-frames.ffconcat';manifest.write_text('\n'.join(concat)+'\n',encoding='utf-8')
-    args=[str(FFMPEG),'-y','-hide_banner','-loglevel','warning','-f','concat','-safe','0','-i',str(manifest),'-i',str(episode/'narration.wav'),'-map','0:v:0','-map','1:a:0','-vf','fps=30,format=yuv420p','-c:v','h264_mf','-b:v','4M','-c:a','aac','-b:a','192k','-af','loudnorm=I=-16:TP=-1.5:LRA=11','-t',str(timing['duration']),'-movflags','+faststart',str(episode/'sample.mp4')]
+    args=[str(plan['options'].get('ffmpeg',FFMPEG)),'-y','-hide_banner','-loglevel','warning','-f','concat','-safe','0','-i',str(manifest),'-i',str(episode/'narration.wav'),'-map','0:v:0','-map','1:a:0','-vf','fps=30,format=yuv420p','-c:v',plan['options'].get('encoder','h264_mf'),'-b:v',plan['options'].get('video_bitrate','4M'),'-c:a','aac','-b:a','192k','-af','loudnorm=I=-16:TP=-1.5:LRA=11','-t',str(timing['duration']),'-movflags','+faststart',str(episode/'sample.mp4')]
     if progress:
         bar=progress['bar'];blue=progress['blue'].lstrip('#');r,g,b=(int(blue[i:i+2],16) for i in (0,2,4))
         # Actual frame time drives the final MP4 fill; snapshots alone would
@@ -63,18 +81,26 @@ def render(episode_id,allow_upload=True,preview=False):
     with (episode/'encode.log').open('w',encoding='utf-8') as log:subprocess.run(args,stdout=log,stderr=subprocess.STDOUT,check=True)
     from verify_progress_video import verify
     verify(episode_id)
+    return finish_render(episode_id,allow_upload,preview)
+
+def finish_render(episode_id,allow_upload,preview):
+    episode=ROOT/'episodes'/episode_id
     if preview:
         import shutil,hashlib
         from project_paths import release_root
         target=(release_root(ROOT)/'previews'/episode_id).resolve()
         if not target.is_relative_to((release_root(ROOT)/'previews').resolve()):raise ValueError('Invalid preview output')
-        target.mkdir(parents=True,exist_ok=False)
+        target.mkdir(parents=True,exist_ok=True)
         ep=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
-        name=ep['edition_date'].replace('-','_')+'_preview_Qwen3-TTS_配音样片.mp4'
+        plan=json.loads((episode/'render-plan.json').read_text(encoding='utf-8'))
+        name=ep['edition_date'].replace('-','_')+'_preview_'+plan['backend']+'_'+plan['template']+'.mp4'
+        if (target/name).exists():
+            old=json.loads((target/'preview.json').read_text(encoding='utf-8'))
+            if old.get('sha256')!=hashlib.sha256((target/name).read_bytes()).hexdigest():raise ValueError('Existing preview was changed; use a new revision')
         shutil.copy2(episode/'sample.mp4',target/name)
-        for filename in ['narration.wav','soundtrack.wav','audio-mix.json','script.txt','episode.json','timings.json','captions.json','ffprobe.json','progress-validation.json']:
+        for filename in ['narration.wav','soundtrack.wav','audio-mix.json','script.txt','episode.json','timings.json','captions.json','ffprobe.json','progress-validation.json','progress.json','scene-timings.json','render-plan.json','render-job.json','render-validation.json','layout-audit.json','check.json','cover-4x3.png','cover-16x9.png','cover-bilibili.jpg','cover.json','publication.json']:
             if (episode/filename).is_file():shutil.copy2(episode/filename,target/filename)
-        receipt=dict(state='preview_only',auto_publish=False,counts_toward_daily_main_limit=False,news_used_log_written=False,video_filename=name,sha256=hashlib.sha256((target/name).read_bytes()).hexdigest())
+        receipt=dict(state='preview_only',upload_policy='diagnostic_hold',auto_publish=False,renderer=plan['backend'],template=plan['template'],counts_toward_daily_main_limit=False,news_used_log_written=False,video_filename=name,sha256=hashlib.sha256((target/name).read_bytes()).hexdigest())
         (target/'preview.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
         print(target/name);return receipt
     return complete_export(episode_id,allow_upload)
@@ -87,6 +113,9 @@ def complete_export(episode_id,allow_upload=True):
     Technical voice/media checks still run before this function.
     """
     episode=ROOT/'episodes'/episode_id
+    content=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
+    if content.get('usage_tracking') is False or content.get('review_status','').startswith('local_sample'):
+        raise ValueError('Technical previews must never enter the publication workflow')
     target_file=episode/'release-target.json'
     if target_file.exists():
         target=Path(json.loads(target_file.read_text(encoding='utf-8'))['directory'])
@@ -120,4 +149,4 @@ def complete_export(episode_id,allow_upload=True):
 
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--no-upload',action='store_true');p.add_argument('--preview',action='store_true');p.add_argument('--resume-export',action='store_true');a=p.parse_args();complete_export(a.episode,not a.no_upload) if a.resume_export else render(a.episode,not (a.no_upload or a.preview),preview=a.preview)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--renderer',choices=['hyperframes','multiplane']);p.add_argument('--template',choices=['editorial','graphic']);p.add_argument('--no-upload',action='store_true');p.add_argument('--preview',action='store_true');p.add_argument('--resume-export',action='store_true');p.add_argument('--resume-render',action='store_true');a=p.parse_args();complete_export(a.episode,not a.no_upload) if a.resume_export else render(a.episode,not (a.no_upload or a.preview),preview=a.preview,renderer=a.renderer,template=a.template,resume_render=a.resume_render)

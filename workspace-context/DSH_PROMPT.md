@@ -8,7 +8,7 @@
 
 AI 公司消息每期前读官方 RSS/网页，Agent Reach 只读 X 渠道的负责人白名单改为每小时读取；tibo (@thsottiaux) 在 OpenAI/GPT 官方消息之前，其他已核实负责人在对应公司之前。官网没有新消息时，负责人新鲜推文可独立入选。推文区分个人体验、观点、预告和正式公告，保留作者/时间/原链接，检查上下文并与官网同事件合并。不要沿用旧的禁用 X 限制，详见 docs/X_SOURCES.md。社会 RSS 每小时零模型采集和本地去重。制作阶段再由当前会话选题。热门 AI 主体优先、合格 AI 消息无条数上限，国内 3 条＋国际 3 条，敏感跳过、审核后 P2。严格查已用新闻日志，不重复今天的 9 条；不同来源的同一事件也要判断，不能伪称全网热度或把旧闻写成今日新发。
 
-下一次真正制作时，producer 写 DeepSeek Harness，按用户指定日期及时段新建 episode ID。06/12/18 点分别早间/morning、午间/noon、晚间/night。先 doctor，再采集、候选、核验、help-me-speech 文稿、导入、配音、cover.json 封面、build/check/截图、render。具体命令在 WORKFLOW.md。旧日期的 make_sample_editorial、prepare_publish_20261026、upgrade_v5 等仅为历史，不是实时流水线。
+下一次真正制作时，producer 写 DeepSeek Harness，按用户指定日期及时段新建 episode ID。当前仅06:00早间/morning、18:00晚间/night整点启动，午间/noon已取消；保留历史noon读取兼容。先 doctor，再采集、候选、核验、help-me-speech 文稿、导入、配音、cover.json 封面、build/check/截图、render。具体命令在 WORKFLOW.md。旧日期的 make_sample_editorial、prepare_publish_20261026、upgrade_v5 等仅为历史，不是实时流水线。
 
 视频制作并检查通过后，先进入 release/YYYY_MM_DD_slot，文件名应含日期、时段和栏目，例如 2026_10_27_morning_早间新闻.mp4。之后只从这里上传。标题封面突出本期一条具体真实新闻，有公司 logo 或真实图片，不能泛泛写“又升级了”。双封面均不能裁掉重点。
 
@@ -123,3 +123,15 @@ tibo 发音：仅口播输入替换为 `ti bo`，按用户指定的两音节连�
 背景音乐可听性修正：以正常播报窗口中位数定固定增益（参考差18dB、目标-32LUFS、音乐峰值-24dBFS），不再用最弱尾字限制整首导致听不到。仍无ducking、后续从00:03循环；原曲本体位于项目assets/music/oshinko.flac。详见BACKGROUND_MUSIC.md，午报使用此新版。
 
 重点回顾最终规则：按具体事件在北京时间当天主片中只报道/回顾一次，而非全局只准早报回顾。上午新临时新闻可午报首次回顾、晚报不再重复；下午新事件可晚报首次回顾。important_events结合当日主片日志/release识别同事件，temporary不消耗主片名额，草稿不记已用，修订不算新一期；导入和导出日志锁内校验。详见PRODUCTION_RULES.md当前澄清。
+
+
+## 2026-10-27：制作启动时间对齐DeepSeek谷时
+
+用户取消提前15分钟制作。三期自动任务在当前对话保持ACTIVE，morning/noon/night分别北京时间06:00/12:00/18:00开始制作，检查通过后立即按默认设置投稿；这些是启动时刻，不能继续当成准点成片/公开发布目标。reset维持每小时30分，不受本次调整影响。
+
+已核对DeepSeek官方价格页：https://api-docs.deepseek.com/zh-cn/quick_start/pricing/ 。当前北京时间周一至周五（不含中国法定节假日）09:00–12:00、14:00–18:00为峰时，其余时间、周末与法定节假日全天为谷时。06:00/12:00/18:00均处谷时。谷时折扣仅作用于实际DeepSeek API调用；当前制作仍由Codex会话执行，本次没有变更执行模型或接入API。
+
+
+## Multiplane视觉扩展
+
+新增可选multiplane/editorial（A清爽编辑版）与multiplane/graphic（B强图形版），实际验收通过，用户选定后新期默认B（multiplane/graphic）；hyperframes/legacy保留。每期render-plan锁定后端/版本/模板；未指定但已在制的旧期保留旧引擎。两侧满幅蓝黑图形，不留白侧条；右侧为贯穿全高的64px完整亮蓝矩形，右下角不得留白或斜切缺口，正文安全边距保留。采集、配音、固定BGM及00:03循环、早晚安排、逐事件回顾去重、release与投稿流程不变。按对应后端使用renderer_backends.py check，技术样片强制preview/diagnostic_hold不投稿；新引擎实际截图、确定性、DOM边界、解码/导航与离线上传契约通过才启用。详情见docs/MULTIPLANE.md和RENDERER_ACCEPTANCE.md。

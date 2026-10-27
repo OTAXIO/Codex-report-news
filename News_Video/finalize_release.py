@@ -5,6 +5,7 @@ from project_paths import release_root
 
 ROOT=Path(__file__).resolve().parent
 FINAL_NAMES={
+ 'render-plan.json','render-job.json','render-validation.json','render-assets.json','layout-audit.json',
  'soundtrack.wav','audio-mix.json',
  'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',

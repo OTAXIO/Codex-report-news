@@ -40,6 +40,33 @@
       "height": 460,
       "sha256": "5f3c51a8db5f7def76927e4dd371d232265766fa907c04e98bba1e8dec515447",
       "usage": "Editorial organization identification; no endorsement"
+    },
+    {
+      "id": "google",
+      "path": "assets/logos/google-source.png",
+      "source": "https://www.gstatic.com/images/branding/product/2x/googleg_96dp.png",
+      "width": 192,
+      "height": 192,
+      "sha256": "125b8e9ce086a9e9611a37bfceb78883ff7a30e4d2651908b7d8bdcb3642a6ac",
+      "usage": "Official-site favicon identifying the company in a sourced news report; no endorsement."
+    },
+    {
+      "id": "minimax",
+      "path": "assets/logos/minimax-source.png",
+      "source": "https://www.minimax.io/assets/logo/minimax-horizontal-brand-black.webp",
+      "width": 349,
+      "height": 128,
+      "sha256": "b4d463421d8c467c77feafb3f7092cabd95cfcfea6bf1aa804b410118c826c23",
+      "usage": "Official-site favicon identifying the company in a sourced news report; no endorsement."
+    },
+    {
+      "id": "tencent",
+      "path": "assets/logos/tencent-source.png",
+      "source": "https://hunyuan-blog-web-prod-1258344703.cos.ap-guangzhou.myqcloud.com/favicon.png",
+      "width": 60,
+      "height": 60,
+      "sha256": "d42c09bc6f08bb8435f3549c88467590aa73b0ce8cf38a1513398bc8dcb7b971",
+      "usage": "Official-site favicon identifying the company in a sourced news report; no endorsement."
     }
   ]
 }

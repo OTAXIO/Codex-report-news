@@ -10,7 +10,7 @@ description: 按当前项目规则采集、核验并制作新闻视频，生成�
 ## 采集与编辑
 
 - 小时巡检只读取tibo、核验reset并回查投稿；社会RSS、公司官方X、其他负责人只在视频制作前读取，每期以既定权限运行news_video.py collect --kind all。
-- 主片目标北京时间06/12/18点，05:45/11:45/17:45启动。按日期与时段唯一去重；迁移锁、voice、film、投稿共享资源串行，reset优先。
+- 主片仅morning早间与night晚间两期，北京时间06:00与18:00开始制作，不提前15分钟；noon午间已取消，不补做。按日期与时段唯一去重；迁移锁、voice、film、投稿共享资源串行，reset优先。
 - 使用[help-me-speech](../help-me-speech/SKILL.md)，核实原始作者、时间、正文与上下文。AI国内3＋国外3只是建议，不凑数不生造；公司、产品与Agent均可入选。
 - 使用leader_editorial逐条记录负责人候选真实include/skip/defer原因。tibo主片最多1页；核实reset在公司前，普通发言在公司后社会新闻前；其他人每人最多2页。画面身份、姓名主语、原时间必须准确。
 - 主片用important_events保留近24小时已公开临时新闻的重要回顾，单列并明确原时间；不得将回顾冒充新发生。临时稿分别遵循RESET_ALERTS.md / MODEL_ALERTS.md，不混无关消息。
@@ -20,14 +20,14 @@ description: 按当前项目规则采集、核验并制作新闻视频，生成�
 - 当前Qwen3-TTS0.6B参考克隆，按Voice_Generate/docs/SPEECH_POLICY.md，不训练或改权重。人工试听不新增授权关卡；实际音频错误须修。
 - 00导览采用完整主语标题＋一句事实，通常3—4项两列；只口播“这是本视频的导览。”并留2秒。正文01起；reset默认无导览。
 - 白底黑字、#01A1FE边缘点缀，真实logo/配图、单行字幕、来源原时间、两模块与逐条导航。双封面只保留一次大日期，删无关说明和重复小日期。
-- HyperFrames check、实际截图、MP4解码及导航通过后先准备带日期和时段的release，公开内容不含内部计划或审核话术。
+- 按render-plan调用renderer_backends.py check（Multiplane读取../multiplane/SKILL.md，旧后端使用HyperFrames），实际截图、MP4解码及导航通过后先准备带日期和时段的release，公开内容不含内部计划或审核话术。
 
 ## 投稿与恢复
 
-- 按[codex-upload](../codex-upload/SKILL.md)与[上传契约](../../docs/CODEX_UPLOAD.md)，从config.json解析生产入口。制作前检查sync_upload_skill.py --check --installed与生产doctor，指纹漂移不能继续用旧副本。
+- 按[codex-upload](../codex-upload/SKILL.md)与[上传契约](../../docs/CODEX_UPLOAD.md)，从config.json解析生产入口。制作前检查sync_upload_skill.py --check --installed与生产doctor，指纹漂移或缺完整验证证据不能继续投稿；修改投稿器须先经validate.py实际隔离Chrome与Python零跳过验证，再同步部署，见docs/UPLOAD_RELIABILITY.md。
 - 默认科技数码、实际News合集、AI生成＋自制原创禁止转载、公开可见；固定明日方舟终末地创作者应援计划，topic_id=1325166、strategy=explicit、fallback=stop，不可用不换其他活动。
 - render自动投稿后不得再publish。中断使用render_sample.py <id> --resume-export或upload_bridge.py recover <release>续接；不重配音重渲染，不prepare重置unknown。
-- 字段只在同表单有限修复。unknown先回查，安全恢复须有同步字段错误、submit_started=false、成功创作中心回查证据；最多一次恢复。最终提交一次，真实POST code0＋aid/BV才submitted，公开账号/标题核验后才published/finalize。
+- 字段只在同表单有限修复。unknown先回查，安全恢复须有同步字段错误、submit_started=false、成功创作中心回查证据；自动恢复不设固定次数上限，每次必须重新回查。最终提交一次，真实POST code0＋aid/BV才submitted，公开账号/标题核验后才published/finalize。
 - diagnostic_hold不上传，已发布不改不重传。失败保留成品并报告真实阻塞。凭据、profile、模型及微软字体不进Git/交接包。
 
 
@@ -38,3 +38,13 @@ description: 按当前项目规则采集、核验并制作新闻视频，生成�
 背景音乐可听性修正：以正常播报窗口中位数定固定增益（参考差18dB、目标-32LUFS、音乐峰值-24dBFS），不再用最弱尾字限制整首导致听不到。仍无ducking、后续从00:03循环；原曲本体位于项目assets/music/oshinko.flac。详见BACKGROUND_MUSIC.md，午报使用此新版。
 
 重点回顾最终规则：按具体事件在北京时间当天主片中只报道/回顾一次，而非全局只准早报回顾。上午新临时新闻可午报首次回顾、晚报不再重复；下午新事件可晚报首次回顾。important_events结合当日主片日志/release识别同事件，temporary不消耗主片名额，草稿不记已用，修订不算新一期；导入和导出日志锁内校验。详见PRODUCTION_RULES.md当前澄清。
+
+新配音必须通过verify_speech_content逐句本地ASR/异常时长/削波核验，再用align_captions按最终PCM时间戳生成单行字幕。release对新标记检查报告及哈希，不能用强制对齐成功或解码成功替代实际音频内容核验。见PRODUCTION_RULES.md音频检查。
+
+
+2026-10-27 用户最新指令：取消“最多自动恢复一次”限制。安全回查确认未进入最终提交、且故障已修复后可自动恢复，不设固定次数上限；每次重新回查并累计审计次数，未知提交、已提交、登录/验证码/风控仍按原规则停止，不盲目重复上传。原有失败记录和次数保留；同一未修复故障不原样反复重投，诊断后继续修复。此前日志里的次数上限与额外授权要求属于历史状态，不再作为当前阻塞。
+
+
+## Multiplane视觉扩展
+
+新增可选multiplane/editorial（A清爽编辑版）与multiplane/graphic（B强图形版），实际验收通过，用户选定后新期默认B（multiplane/graphic）；hyperframes/legacy保留。每期render-plan锁定后端/版本/模板；未指定但已在制的旧期保留旧引擎。两侧满幅蓝黑图形，不留白侧条；右侧为贯穿全高的64px完整亮蓝矩形，右下角不得留白或斜切缺口，正文安全边距保留。采集、配音、固定BGM及00:03循环、早晚安排、逐事件回顾去重、release与投稿流程不变。按对应后端使用renderer_backends.py check，技术样片强制preview/diagnostic_hold不投稿；新引擎实际截图、确定性、DOM边界、解码/导航与离线上传契约通过才启用。详情见docs/MULTIPLANE.md和RENDERER_ACCEPTANCE.md。

@@ -111,6 +111,14 @@ def cues(text,max_width=24):
     return output
 
 def sentence_captions(sentence):
+    if 'aligned_cues' in sentence:
+        result=sentence['aligned_cues'];display=normalize(sentence['text'])[0]
+        if not result or re.sub(r'\s+','',''.join(c['text'] for c in result))!=re.sub(r'\s+','',display):raise ValueError('Aligned caption text differs from narration')
+        previous=sentence['start']
+        for cue in result:
+            if not previous-.001<=cue['start']<cue['end']<=sentence['end']+.001 or width(cue['text'])>24:raise ValueError('Invalid aligned caption timing or width')
+            previous=cue['end']
+        return result
     pieces=cues(sentence['text']);total=sum(x['weight'] for x in pieces);offset=0;output=[]
     for piece in pieces:
         start=sentence['start']+(sentence['end']-sentence['start'])*offset/total;offset+=piece['weight']

@@ -20,8 +20,13 @@ def build_progress(episode,offsets,duration,blue):
     for i,c in enumerate(chapters):
         x=192+1536*c['start']/duration;w=1536*(c['end']-c['start'])/duration
         label=html.escape(c['label'])
-        labels.append(f'<span class="chapter" data-layout-allow-occlusion="true" style="left:{x:.4f}px;width:{w:.4f}px">{label}</span>')
-        labels.append(f'<div id="active-{c["id"]}" class="chapter current clip" data-start="{c["start"]:.6f}" data-duration="{c["end"]-c["start"]:.6f}" data-track-index="5" style="left:{x:.4f}px;width:{w:.4f}px"><span>{label}</span></div>')
+        # Short chapters (especially the overview) must not paint their label
+        # highlight into the neighbouring chapter's time segment.
+        units=sum(1 if ord(ch)>127 else .6 for ch in c['label'])
+        font_size=min(18,w/max(1,units))
+        style=f'left:{x:.4f}px;width:{w:.4f}px;font-size:{font_size:.4f}px'
+        labels.append(f'<span class="chapter" data-layout-allow-occlusion="true" style="{style}">{label}</span>')
+        labels.append(f'<div id="active-{c["id"]}" class="chapter current clip" data-start="{c["start"]:.6f}" data-duration="{c["end"]-c["start"]:.6f}" data-track-index="5" style="{style}"><span>{label}</span></div>')
         if i:markers.append(f'<i class="marker" style="left:{x:.4f}px"></i>')
     modules=[];module_html=[]
     social=next((i for i,s in enumerate(episode['scenes']) if s['section'].startswith(('国内','国际'))),None)

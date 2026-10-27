@@ -164,3 +164,8 @@ important_events读取同日成功主片导出日志及release中的episode回�
 prepare_main_recaps逐事件决定插入，并移除编辑输入中本日已由其他主片用过的回顾；episode.recap_policy输出once_per_event_per_beijing_date及skipped_event_keys。validate_recap在导入时校验，used_news.record_export在写日志锁内再次逐条验证，防止先前草稿稍后导出造成重复。不同事件或真实实质新进展仍按正常选题与事实核查，不因共用公司/人名被一并排除；相同消息换标题不算新事件。跨日重新按当日记录判断，但仍受24小时时效限制。
 
 已发布视频不改。本期未发布午报按新规则重导入时，若回顾被移除，必须同步重新生成受影响的配音、字幕、时序、导览与导航，不允许只删画面留下旧口播。涉及正在运行的配音/渲染由制作会话安全衔接，不覆盖其共享素材。
+
+
+## Multiplane视觉扩展
+
+新增可选multiplane/editorial（A清爽编辑版）与multiplane/graphic（B强图形版），实际验收通过，用户选定后新期默认B（multiplane/graphic）；hyperframes/legacy保留。每期render-plan锁定后端/版本/模板；未指定但已在制的旧期保留旧引擎。两侧满幅蓝黑图形，不留白侧条；右侧为贯穿全高的64px完整亮蓝矩形，右下角不得留白或斜切缺口，正文安全边距保留。采集、配音、固定BGM及00:03循环、早晚安排、逐事件回顾去重、release与投稿流程不变。按对应后端使用renderer_backends.py check，技术样片强制preview/diagnostic_hold不投稿；新引擎实际截图、确定性、DOM边界、解码/导航与离线上传契约通过才启用。详情见docs/MULTIPLANE.md和RENDERER_ACCEPTANCE.md。
