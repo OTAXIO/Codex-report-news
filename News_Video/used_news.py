@@ -89,6 +89,10 @@ def record_export(directory,root=ROOT,now=None):
         lock_handle.close()
         try:
             records=recent_records(root,days=7,now=now)
+            if any(s.get('editorial_role')=='recap' for s in episode['scenes']):
+                from important_events import validate_recap
+                for scene in episode['scenes']:
+                    if scene.get('editorial_role')=='recap':validate_recap(scene,episode,root)
             record=next((r for r in records if r.get('episode_id')==episode['id'] and r.get('video_sha256')==sha),None)
             if record is None:
                 same=any(r['edition_key']==edition_key for r in records)
