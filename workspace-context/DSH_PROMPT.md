@@ -112,3 +112,10 @@ tibo 发音：仅口播输入替换为 `ti bo`，按用户指定的两音节连�
 
 
 当前负责人规则：正常、新鲜且有信息价值的推文优先考虑（包括观点/体验）；主片tibo已核实reset在公司前、普通发言在公司后社会新闻前，tibo最多1页，其他负责人每人最多2页。画面强调已核实身份；口播可省职位但必须有姓名主语＋原帖北京时间＋具体内容，不能用采集时间或编造分钟。近24小时未用负责人候选须入选或用tibo_consideration/leader_consideration记录真实skip/defer原因；leader_editorial.py在导入配音前落实身份、主语时间、排序和页数，输出审计到release。规则细节见PRODUCTION_RULES.md和X_PRESENTATION.md；不改已发布稿、不改小时采集范围、不把reset关键词当已核实公告。
+
+
+背景音乐当前要求：后续主片/临时新闻使用本地assets/music/oshinko.flac《おしんこ》，全片固定低音量循环到片尾；不用播报ducking，不在停顿时抬高。audio_mix.py统一生成soundtrack.wav供预览和渲染复用，原配音独立保留、实测报告随release。目标音乐显著低于播报，必要时全曲统一降低；原曲不进Git/交接ZIP，缺源或哈希错误停止。详见docs/BACKGROUND_MUSIC.md；既往成品不重做。
+
+背景音乐循环：首遍从头，第二遍起每轮从00:03开始，开头3秒只播放一次；config.background_music.repeat_from_seconds=3。
+
+今天（2026-10-27）午间新闻开始使用本次背景音乐流程：首次从头、后续从00:03循环，固定低音量，无播报闪避；新稿背景音乐需求经release门禁核对再上传。

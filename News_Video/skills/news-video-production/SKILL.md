@@ -29,3 +29,8 @@ description: 按当前项目规则采集、核验并制作新闻视频，生成�
 - render自动投稿后不得再publish。中断使用render_sample.py <id> --resume-export或upload_bridge.py recover <release>续接；不重配音重渲染，不prepare重置unknown。
 - 字段只在同表单有限修复。unknown先回查，安全恢复须有同步字段错误、submit_started=false、成功创作中心回查证据；最多一次恢复。最终提交一次，真实POST code0＋aid/BV才submitted，公开账号/标题核验后才published/finalize。
 - diagnostic_hold不上传，已发布不改不重传。失败保留成品并报告真实阻塞。凭据、profile、模型及微软字体不进Git/交接包。
+
+
+背景音乐当前要求：后续主片/临时新闻使用本地assets/music/oshinko.flac《おしんこ》，全片固定低音量循环到片尾；不用播报ducking，不在停顿时抬高。audio_mix.py统一生成soundtrack.wav供预览和渲染复用，原配音独立保留、实测报告随release。目标音乐显著低于播报，必要时全曲统一降低；原曲不进Git/交接ZIP，缺源或哈希错误停止。详见docs/BACKGROUND_MUSIC.md；既往成品不重做。
+
+背景音乐循环：首遍从头，第二遍起每轮从00:03开始，开头3秒只播放一次；config.background_music.repeat_from_seconds=3。

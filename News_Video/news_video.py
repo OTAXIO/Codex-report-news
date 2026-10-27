@@ -328,6 +328,9 @@ def article(item_id):
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
+    if cfg.get('background_music',{}).get('enabled'):
+        bgm=cfg['background_music']
+        episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','minimum_voice_gap_db','music_peak_dbfs']}
     source_catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
     from important_events import prepare_main_recaps
     if cfg.get('editorial',{}).get('include_important_recaps',True):prepare_main_recaps(episode,ROOT)
@@ -462,6 +465,11 @@ def doctor():
     checks={"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":python.is_file(),"upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
     if not qwen:checks['voice_profile']=Path(v['profile']).is_file()
     if context:checks.update(alignment_python=Path(v['qwen3']['alignment_python']).is_file(),alignment_weights=(Path(v['qwen3']['alignment_model'])/'model.pt').is_file())
+    if cfg.get('background_music',{}).get('enabled'):
+        from audio_mix import digest
+        bgm=cfg['background_music'];path=(ROOT/bgm['file']).resolve()
+        checks['background_music_file']=path.is_file()
+        checks['background_music_hash']=path.is_file() and (not bgm.get('sha256') or digest(path)==bgm['sha256'])
     if cfg.get('publisher',{}).get('enabled'):
         from upload_bridge import paths
         cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())

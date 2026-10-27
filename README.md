@@ -68,3 +68,6 @@ config.json 的 workspace_directory 相对于 News_Video；release.directory 可
 - [语音项目](https://github.com/OTAXIO/Voice_Generate)：Qwen3-TTS入口、停顿和读音规则，模型/参考音频不随Git分发。
 
 详见[完整手册](News_Video/docs/V_0/README.md)、[生产规则](News_Video/docs/PRODUCTION_RULES.md)、[工作流](News_Video/docs/WORKFLOW.md)、[当前状态](News_Video/docs/STATE.md)。Git中的配置是本机生产示例；换机必须检查路径、授权、登录、模型与去重基线，不能仅克隆后直接投稿。
+
+
+背景音乐：已接入用户本地《おしんこ》，固定低音量循环到片尾，无播报闪避；预览与MP4共享混音，原曲不进Git。规则和换机准备见[BACKGROUND_MUSIC.md](News_Video/docs/BACKGROUND_MUSIC.md)。

@@ -260,5 +260,19 @@
     "semantic_review_required": true,
     "publication_authorized_by_user": true,
     "main_recaps": true
+  },
+  "background_music": {
+    "enabled": true,
+    "title": "おしんこ",
+    "file": "assets/music/oshinko.flac",
+    "sha256": "c23453e509f1f112c50e300b2fabf224a8d4dc70d89567d6f9cfbd4bff014ea2",
+    "loop_to_video_end": true,
+    "target_lufs": -36,
+    "minimum_voice_gap_db": 20,
+    "music_peak_dbfs": -30,
+    "source": "User-supplied local FLAC; not distributed with Git or handoff",
+    "ducking": false,
+    "gain_mode": "constant",
+    "repeat_from_seconds": 3
   }
 }

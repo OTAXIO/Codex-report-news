@@ -18,6 +18,7 @@ def build(date='2026-10-26'):
         path=Path(path)
         if not path.is_file():return
         arc=arc or path.relative_to(WORK).as_posix()
+        if 'assets/music' in arc.replace('\\','/'):return  # User-supplied music is local-only.
         forbidden={'.env','cookies.json','node_modules','browser-profile','private','__pycache__','audit'}
         if any(part.lower() in forbidden for part in Path(arc).parts):raise ValueError('Private or generated path selected: '+arc)
         files[arc]=path

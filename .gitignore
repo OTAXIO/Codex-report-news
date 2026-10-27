@@ -45,3 +45,6 @@ News_Video/docs/*.json
 News_Video/docs/*.log
 News_Video/docs/**/history/
 News_Video/assets/references/
+
+# User-provided BGM source and local provenance stay off Git.
+News_Video/assets/music/

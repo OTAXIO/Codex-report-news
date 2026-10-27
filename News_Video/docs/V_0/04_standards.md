@@ -139,3 +139,17 @@ layout_policy.prepare_overview在配音前生成：完整title代替short_title�
 代码入口：leader_editorial.py生成负责人候选审核清单、屏幕身份和口播原时间引导，并在主片导入时执行页数/顺序/遗漏审核；news_video.py在概览、分句和配音之前调用。每个近24小时未用负责人候选要么入选，要么记录真实skip/defer原因，防止采到却无声漏掉；这是编辑核查记录，不是强制播出配额。tibo_consideration与leader_consideration按候选item_id记录decision/reason，审核输出tibo-audit.json、leader-audit.json并保留到release。reset关键词不等于重置宣布，仍需原文、上下文及真实语义核验，不允许伪造审核字段。
 
 每小时仍采tibo与已核验公司/产品官方X，其他负责人每期前读取，不额外扩大小时搜索；身份/账号未经核实的不凭名字加入。导览仍只播固定提示并留2秒，正文负责人场景适用上述主语规则。模型、语速、句间停顿与既有发布成品不在此次调整范围。
+
+
+## 2026-10-27：固定低音量循环背景音乐
+
+后续制作所有主片和临时新闻使用用户提供的《おしんこ》FLAC作为背景音乐。原文件已复制至本地assets/music/oshinko.flac（94.366667秒），config.background_music记录SHA256与混音参数；不依赖Downloads原文件继续存在。原始音乐及本地来源记录不进入Git或DSH交接ZIP，换机按docs/BACKGROUND_MUSIC.md准备同一文件并验哈希。
+
+用户最终要求：全片使用固定低增益，不随播报或停顿升降，不开启ducking/sidechain；仅整片起止约0.35秒淡入淡出。循环播放到视频结束，严格裁到timings.duration，不因一首结束而提前停音/停片。配音优先，保持音色、语速、句间与概览停顿；不重训、不压尾字。
+
+实现audio_mix.py：配音基准-16 LUFS，音乐初始目标-36 LUFS（不是音量百分比），分析200ms有效播报窗口，必要时把整条音乐统一再降低，使这些窗口音乐RMS至少比配音低20dB，并限制音乐峰值不高于-30dBFS。检测阈值、实测差值与恒定增益写入audio-mix.json；静音间隔不自动抬高音乐。不以数值检测冒充主观听感已获用户确认。
+
+build_film和render_sample共用同一soundtrack.wav；后者不再对混音整体二次loudnorm，避免重新抬高背景。纯配音narration.wav独立保留，release保留soundtrack.wav/audio-mix.json便于复核。doctor检查音乐文件/哈希；启用时素材缺失、哈希不符、无有效配音或混音不达标均报错，不默默换曲或生成只有音乐的新闻。缓存绑定原配音/原曲哈希、时长与参数。resume-export仅续传已有成品，不借本次功能修改已发布或已导出的旧视频。
+
+
+循环起点补充：首次完整播放原曲；从第二遍开始每次从原音频00:03起播放到曲尾，前3秒只播一次。audio_mix.loop_music按48kHz采样帧拼接，循环体为[3秒,原曲结束)，最后按视频时长裁切，不每轮重新淡入淡出。repeat_from_seconds=3；换曲后偏移超出曲长则报错。固定低音量、无播报闪避不变。

@@ -142,3 +142,15 @@ layout_policy.py导览使用完整主语标题、已核验一句事实和板块�
 早报tibo遗漏已查本地证据：03:24原帖、03:27首次入库，05:40期前采集仍接受6条tibo；未在早报editorial入选、未有逐条排除原因，不是X读取失败。最新归档有requires_context=true，不能将采集成功说成上下文已审核可播。证据data/source-probes/20261027-morning-tibo-omission.json。已发布早报SHA256重新核对一致，未重做或重投。
 
 104项新闻回归通过，包含真实隔离SQL→import-editorial→负责人原时间/身份/排序/审计产出，以及原始时间替换错误编辑时间、不伪造缺失分钟、reset语义与页数限制。两套隔离film通过HyperFrames check（ok=true）和真实截图人工检查；新版概览与负责人身份均无重叠或截断。概览整期仍有原进度/来源小字及轨道密度警告，不宣称零警告。预览位于.cache/overview-review-20261027与.cache/leader-review-20261027；后者是静音排版fixture，未完成上下文核验，不是待发布成品。此次未合成新语音、未渲染新MP4、未投稿、未修改共享生产film或模型。V_0文档、Notion与DSH交接同步更新。
+
+
+## 2026-10-27：固定低音量背景音乐
+
+用户提供《おしんこ》FLAC（94.366667秒），本地复制assets/music/oshinko.flac，配置绑定SHA256。最终要求明确不用播报闪避：音乐全期恒定低增益，循环到timings.duration，仅首尾淡入淡出。audio_mix.py统一供build_film/render_sample使用，原配音保留，混音不再整体二次loudnorm；audio-mix.json/soundtrack.wav随release保存。doctor核对文件/哈希，缺源/不符/无有效配音拒绝混音。原曲排除Git和交接包。
+
+108项新闻回归通过，包含真实FFmpeg短曲循环/缺源/缓存、恒定增益在响句/轻句/静音间不改变、配音时序不变、峰值与间隔限制。真实用户原曲＋既有配音完成100秒循环混音，200ms有效播报窗口最小音量差20.5dB，音乐峰值-46.56dBFS，PCM时长100秒。另生成20秒本地MP4试听并解码通过：.cache/bgm-review-20261027/低音量背景音乐试听_20秒.mp4。此为既有画面的隔离混音样段，未重新制作或投稿早报、未修改已发布成品或模型，不将技术检测称为用户听感确认。制作规则、skill、V_0手册、Notion与DSH指令已同步。
+
+
+2026-10-27午报应用：用户要求本次音频制作流用于今天午间新闻。当前尚无本日noon工作期次或release；之后import-editorial会为新稿固化background_music_requirement（曲目哈希、00:03循环起点、固定低增益、音量限制），release准备阶段必须验证audio-mix.json与soundtrack.wav、时长和输出哈希相符，不允许缺少BGM或错误循环的新版午报放行。旧已导出稿无此标记时仍可按原流程续传，不重做旧稿。
+
+最终补充验收：109项新闻回归全部通过；采样帧序列确认首遍0秒开始、后续均从3秒开始，真实FFmpeg短曲多次循环、固定增益、缓存、缺源停止与release错误循环拒绝均覆盖。真实100秒混音报告intro_play_count=1、repeat_from_seconds=3、ducking=false，时长100秒。

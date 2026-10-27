@@ -14,6 +14,8 @@ def render(episode_id,allow_upload=True,preview=False):
     episode=ROOT/'episodes'/episode_id
     if (episode/'release.json').exists():raise ValueError('Published edition is archived; create a new revision before rendering')
     timing=json.loads((episode/'timings.json').read_text(encoding='utf-8'))
+    from audio_mix import ensure_soundtrack
+    soundtrack=ensure_soundtrack(ROOT,episode,timing['duration'],FFMPEG)
     captions=json.loads((episode/'captions.json').read_text(encoding='utf-8'))
     scenes=json.loads((episode/'scene-timings.json').read_text(encoding='utf-8'))
     # Held cards: every caption and scene boundary is retained; entrance motion
@@ -53,6 +55,11 @@ def render(episode_id,allow_upload=True,preview=False):
         index=args.index('-vf');del args[index:index+2]
         args[args.index('0:v:0')]='[video]'
         args[args.index('-map'):args.index('-map')]=['-filter_complex',graph]
+    args[args.index(str(episode/'narration.wav'))]=str(soundtrack)
+    if soundtrack.name=='soundtrack.wav':
+        # Already normalized speech + quiet constant-gain music; a second loudnorm
+        # would lift the music in pauses and undo the speech-first balance.
+        index=args.index('-af');del args[index:index+2]
     with (episode/'encode.log').open('w',encoding='utf-8') as log:subprocess.run(args,stdout=log,stderr=subprocess.STDOUT,check=True)
     from verify_progress_video import verify
     verify(episode_id)
@@ -65,7 +72,7 @@ def render(episode_id,allow_upload=True,preview=False):
         ep=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
         name=ep['edition_date'].replace('-','_')+'_preview_Qwen3-TTS_配音样片.mp4'
         shutil.copy2(episode/'sample.mp4',target/name)
-        for filename in ['narration.wav','script.txt','episode.json','timings.json','captions.json','ffprobe.json','progress-validation.json']:
+        for filename in ['narration.wav','soundtrack.wav','audio-mix.json','script.txt','episode.json','timings.json','captions.json','ffprobe.json','progress-validation.json']:
             if (episode/filename).is_file():shutil.copy2(episode/filename,target/filename)
         receipt=dict(state='preview_only',auto_publish=False,counts_toward_daily_main_limit=False,news_used_log_written=False,video_filename=name,sha256=hashlib.sha256((target/name).read_bytes()).hexdigest())
         (target/'preview.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')

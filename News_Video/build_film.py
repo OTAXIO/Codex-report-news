@@ -38,7 +38,9 @@ def build(episode_id):
         target=assets/'fonts'/filename
         if not target.exists():shutil.copyfile(Path('C:/Windows/Fonts')/filename,target)
     shutil.copyfile(ROOT/'node_modules/hyperframes/dist/vendor/npm/gsap@3.15.0/dist/gsap.min.js',assets/'gsap.min.js')
-    shutil.copyfile(epdir/'narration.wav',assets/'narration.wav')
+    from audio_mix import ensure_soundtrack
+    soundtrack=ensure_soundtrack(ROOT,epdir,timing['duration'])
+    shutil.copyfile(soundtrack,assets/'narration.wav')
     duration=timing['duration']; hosts=[]; offsets=[]; captions=[]
     folios=folio_numbers(episode['scenes'])
     for index,scene in enumerate(episode['scenes']):
