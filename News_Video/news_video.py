@@ -330,7 +330,7 @@ def import_editorial(path):
     cfg=config(); episode=load(path)
     if cfg.get('background_music',{}).get('enabled'):
         bgm=cfg['background_music']
-        episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','minimum_voice_gap_db','music_peak_dbfs']}
+        episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','reference_voice_gap_db','voice_gap_measure','music_peak_dbfs']}
     source_catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
     from important_events import prepare_main_recaps
     if cfg.get('editorial',{}).get('include_important_recaps',True):prepare_main_recaps(episode,ROOT)

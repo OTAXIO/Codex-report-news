@@ -139,7 +139,7 @@ layout_policy.prepare_overview在配音前生成：完整title代替short_title�
 
 用户最终要求：全片使用固定低增益，不随播报或停顿升降，不开启ducking/sidechain；仅整片起止约0.35秒淡入淡出。循环播放到视频结束，严格裁到timings.duration，不因一首结束而提前停音/停片。配音优先，保持音色、语速、句间与概览停顿；不重训、不压尾字。
 
-实现audio_mix.py：配音基准-16 LUFS，音乐初始目标-36 LUFS（不是音量百分比），分析200ms有效播报窗口，必要时把整条音乐统一再降低，使这些窗口音乐RMS至少比配音低20dB，并限制音乐峰值不高于-30dBFS。检测阈值、实测差值与恒定增益写入audio-mix.json；静音间隔不自动抬高音乐。不以数值检测冒充主观听感已获用户确认。
+实现audio_mix.py：配音基准-16 LUFS，音乐初始目标-32 LUFS（不是音量百分比），分析200ms正常播报窗口，以窗口音量比的中位数作为整期参考，音乐至少低于代表播报18dB，音乐峰值上限-24dBFS；不再用最轻尾字控制整条音乐。检测阈值、实测差值与恒定增益写入audio-mix.json；静音间隔不自动抬高音乐。不以数值检测冒充主观听感已获用户确认。
 
 build_film和render_sample共用同一soundtrack.wav；后者不再对混音整体二次loudnorm，避免重新抬高背景。纯配音narration.wav独立保留，release保留soundtrack.wav/audio-mix.json便于复核。doctor检查音乐文件/哈希；启用时素材缺失、哈希不符、无有效配音或混音不达标均报错，不默默换曲或生成只有音乐的新闻。缓存绑定原配音/原曲哈希、时长与参数。resume-export仅续传已有成品，不借本次功能修改已发布或已导出的旧视频。
 
@@ -148,3 +148,6 @@ build_film和render_sample共用同一soundtrack.wav；后者不再对混音整�
 
 
 2026-10-27午报应用：用户要求本次音频制作流用于今天午间新闻。当前尚无本日noon工作期次或release；之后import-editorial会为新稿固化background_music_requirement（曲目哈希、00:03循环起点、固定低增益、音量限制），release准备阶段必须验证audio-mix.json与soundtrack.wav、时长和输出哈希相符，不允许缺少BGM或错误循环的新版午报放行。旧已导出稿无此标记时仍可按原流程续传，不重做旧稿。
+
+
+2026-10-27可听性修正：旧的“所有200ms窗口至少20dB差值”会因一个很轻尾音把全曲额外压低，用户反馈听不到，现已废止。以active_window_median正常播报代表值校验18dB差距，最低窗口差仅记录诊断、不再触发全曲压低。固定增益、无ducking、首遍从头/后续00:03循环保持。原曲实际保存在项目assets/music/oshinko.flac，不依赖Downloads，原曲不进公开Git。

@@ -154,3 +154,8 @@ layout_policy.py导览使用完整主语标题、已核验一句事实和板块�
 2026-10-27午报应用：用户要求本次音频制作流用于今天午间新闻。当前尚无本日noon工作期次或release；之后import-editorial会为新稿固化background_music_requirement（曲目哈希、00:03循环起点、固定低增益、音量限制），release准备阶段必须验证audio-mix.json与soundtrack.wav、时长和输出哈希相符，不允许缺少BGM或错误循环的新版午报放行。旧已导出稿无此标记时仍可按原流程续传，不重做旧稿。
 
 最终补充验收：109项新闻回归全部通过；采样帧序列确认首遍0秒开始、后续均从3秒开始，真实FFmpeg短曲多次循环、固定增益、缓存、缺源停止与release错误循环拒绝均覆盖。真实100秒混音报告intro_play_count=1、repeat_from_seconds=3、ducking=false，时长100秒。
+
+
+## 2026-10-27：用户反馈BGM听不到后的修正
+
+根因：最轻200ms窗口把整首音乐额外压低24.57dB，旧峰值仅-46.56dBFS。现改为正常播报窗口中位数参考，不按极轻尾音压整曲；配置参考18dB差、目标-32LUFS、峰值-24dBFS，保持固定增益、无ducking、首遍从头后续3秒。真实100秒新版参考差22.01dB、音乐峰值-24dBFS，比旧试听提高22.56dB；新20秒MP4解码通过。不将此声称为用户听感确认。原曲已稳定复制在assets/music/oshinko.flac，SHA核对，未公开上传原音乐。当前尚无本日noon工作期次/release；新导入午报将固化最新要求。

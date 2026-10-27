@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 SAMPLE_RATE=48000
-MIX_VERSION=3
+MIX_VERSION=4
 
 def digest(path):
     result=hashlib.sha256()
@@ -33,22 +33,24 @@ def loop_music(audio,frames,repeat_from_seconds=0):
     return np.concatenate([audio,np.tile(tail,(repeats,1))[:remaining]])
 
 def speech_first_mix(voice,music,policy):
-    """Choose one conservative music gain for the whole programme, no ducking.
+    """Choose one fixed gain against representative speech, never ducking.
 
-    Measured 200ms speech windows constrain a single constant gain. Pauses never
-    turn the music up, and quiet sentences never trigger a gain change. Only the
-    programme's opening/closing fades vary the music level.
+    Use the median active-window ratio, not the single quietest syllable. A
+    minimum-window policy silences the whole music bed due to a weak tail.
+    Pauses never turn music up; only the opening/closing fades vary the gain.
     """
     size=len(voice);window=9600
     if size!=len(music) or not size:raise ValueError('Stem lengths must match')
-    gap=float(policy.get('minimum_voice_gap_db',20))
-    gate=10**(-40/20);gain=1.;active=[]
+    gap=float(policy.get('reference_voice_gap_db',18))
+    gate=10**(-35/20);caps=[];active=[]
     for start in range(0,size,window):
         end=min(start+window,size)
         vr=float(np.sqrt(np.mean(voice[start:end]**2)))
         mr=float(np.sqrt(np.mean(music[start:end]**2)))
         speaking=vr>=gate;active.append((start,end,vr,speaking))
-        if speaking:gain=min(gain,vr/(10**((gap+.5)/20)*max(mr,1e-12)))
+        if speaking:caps.append(vr/(10**((gap+.5)/20)*max(mr,1e-12)))
+    if not caps:raise ValueError('No audible narration; refuse a music-only news export')
+    gain=min(1.,float(np.median(caps)))
     music=music*gain
     envelope=np.ones(size)
     fade=min(int(.35*SAMPLE_RATE),size//2)
@@ -56,7 +58,7 @@ def speech_first_mix(voice,music,policy):
         envelope[:fade]*=np.linspace(0,1,fade)
         envelope[-fade:]*=np.linspace(1,0,fade)
     music=music*envelope[:,None]
-    peak_cap=10**(float(policy.get('music_peak_dbfs',-30))/20)
+    peak_cap=10**(float(policy.get('music_peak_dbfs',-24))/20)
     peak=float(np.max(np.abs(music)))
     if peak>peak_cap:
         gain*=peak_cap/peak;music*=peak_cap/peak
@@ -70,13 +72,15 @@ def speech_first_mix(voice,music,policy):
             mr=float(np.sqrt(np.mean(music[start:end]**2)))
             if mr>1e-12:gaps.append(20*math.log10(vr/mr))
     report=dict(gain_mode='constant',ducking=False,constant_music_gain=gain,
-                analysis_window_ms=200,voice_activity_gate_dbfs=-40,
+                voice_gap_measure='active_window_median',
+                reference_measured_voice_gap_db=float(np.median(gaps)) if gaps else None,
+                analysis_window_ms=200,voice_activity_gate_dbfs=-35,
                 active_voice_windows=sum(x[3] for x in active),
                 minimum_measured_voice_gap_db=min(gaps) if gaps else None,
                 music_peak_dbfs=20*math.log10(max(float(np.max(np.abs(music))),1e-12)),
                 final_peak_dbfs=20*math.log10(max(float(np.max(np.abs(mixed))),1e-12)),headroom_gain=headroom)
     if not report['active_voice_windows']:raise ValueError('No audible narration; refuse a music-only news export')
-    if gaps and min(gaps)<gap-.01:raise ValueError('Background music masks speech; mix rejected')
+    if gaps and np.median(gaps)<gap-.01:raise ValueError('Background music masks speech; mix rejected')
     return mixed,music,report
 
 def ensure_soundtrack(root,episode,duration,ffmpeg=None):
@@ -88,8 +92,8 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
     receipt=episode/'release.json'
     if receipt.exists() and json.loads(receipt.read_text(encoding='utf-8')).get('published'):
         raise ValueError('Published soundtrack is immutable; use a new edition')
-    target=float(policy.get('target_lufs',-36));gap=float(policy.get('minimum_voice_gap_db',20))
-    if not -50<=target<=-30 or not math.isfinite(gap) or gap<18 or not -60<=float(policy.get('music_peak_dbfs',-30))<=-24:
+    target=float(policy.get('target_lufs',-32));gap=float(policy.get('reference_voice_gap_db',18))
+    if not -50<=target<=-30 or not math.isfinite(gap) or gap<16 or not -60<=float(policy.get('music_peak_dbfs',-24))<=-24:
         raise ValueError('Unsafe background music levels; retain speech-first limits')
     if not math.isfinite(duration) or duration<=0:raise ValueError('Invalid soundtrack duration')
     source=(root/policy['file']).resolve()
@@ -132,7 +136,7 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
                 narration_sha256=identity['narration_sha256'],duration=len(mixed)/SAMPLE_RATE,
                 loop_to_video_end=True,intro_play_count=1,repeat_from_seconds=repeat_from,
                 source_duration_seconds=source_frames/SAMPLE_RATE,voice_target_lufs=-16,music_target_lufs=target,
-                minimum_required_voice_gap_db=gap,**levels,soundtrack_sha256=digest(output))
+                required_reference_voice_gap_db=gap,**levels,soundtrack_sha256=digest(output))
     report_path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     return output
 
@@ -147,5 +151,9 @@ def validate_release_mix(episode,requirement,duration):
     if any(report.get(k)!=v for k,v in expected.items()):raise ValueError('Background music does not match the edition requirements')
     if abs(report.get('duration',0)-duration)>.001 or report.get('soundtrack_sha256')!=digest(soundtrack):
         raise ValueError('Soundtrack duration or hash mismatch')
-    if report.get('minimum_measured_voice_gap_db',0)<requirement.get('minimum_voice_gap_db',20)-.01 or report.get('music_peak_dbfs',0)>requirement.get('music_peak_dbfs',-30)+.01:
+    measure=requirement.get('voice_gap_measure','worst_window')
+    metric='reference_measured_voice_gap_db' if measure=='active_window_median' else 'minimum_measured_voice_gap_db'
+    if measure=='active_window_median' and report.get('voice_gap_measure')!=measure:raise ValueError('Wrong speech reference for music validation')
+    required=requirement.get('reference_voice_gap_db',requirement.get('minimum_voice_gap_db',20))
+    if report.get(metric,0)<required-.01 or report.get('music_peak_dbfs',0)>requirement.get('music_peak_dbfs',-24)+.01:
         raise ValueError('Background music speech-priority check failed')
