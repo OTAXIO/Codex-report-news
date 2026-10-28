@@ -31,8 +31,27 @@ def compact_report(report):
                 new_alerts=report.get('resets',{}).get('new_alerts',[]),
                 pending=report.get('resets',{}).get('pending',[]),source_errors=errors)
 
+
+def compact_with_change(report,root=None):
+    """Persist only the action signature so unchanged hourly failures stay quiet."""
+    root=root or n.ROOT
+    brief=compact_report(report)
+    signal={k:brief[k] for k in ('source_ok','stopped','reason','requires_user_resolution','error_fingerprint','pending','source_errors')}
+    # New alerts enter pending; do not notify again when new_alerts clears on
+    # the following hour while the same review item remains queued.
+    signature=hashlib.sha256(json.dumps(signal,sort_keys=True,ensure_ascii=False).encode()).hexdigest()[:20]
+    path=root/'data/hourly-monitor-signal.json'
+    previous=n.load(path) if path.is_file() else {}
+    brief['changed']=previous.get('signature')!=signature
+    actionable_stop=brief['stopped'] and brief['reason'] not in {'BUSY','COOLDOWN'}
+    actionable_error=any(e.get('error_code') not in {'BUSY','COOLDOWN'} for e in brief['source_errors'])
+    brief['notification_worthy']=brief['changed'] and bool(actionable_stop or actionable_error or brief['pending'] or brief['new_alerts'])
+    path.parent.mkdir(parents=True,exist_ok=True)
+    n.dump(path,dict(signature=signature,updated_at=report.get('finished')))
+    return brief
+
 if __name__=='__main__':
     p=argparse.ArgumentParser();p.add_argument('--leaders-only',action='store_true');p.add_argument('--handle')
     p.add_argument('--compact',action='store_true',help='Print only source health, new IDs and pending work; retain the full local report')
     a=p.parse_args();report=run(a.leaders_only,a.handle)
-    print(json.dumps(compact_report(report) if a.compact else report,ensure_ascii=False,indent=None if a.compact else 2))
+    print(json.dumps(compact_with_change(report) if a.compact else report,ensure_ascii=False,indent=None if a.compact else 2))

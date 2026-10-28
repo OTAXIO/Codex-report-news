@@ -140,5 +140,26 @@ class WorkflowRegressions(unittest.TestCase):
         self.assertEqual(compact['pending'],['alert-id'])
         self.assertTrue(compact['error_fingerprint'])
 
+    def test_hourly_stop_notifies_once_until_signal_changes(self):
+        report={'finished':'2026-10-28T00:00:00+00:00',
+                'leaders':{'stopped':True,'reason':'NEED_LOGIN','sources':[]},
+                'resets':{'pending':[],'new_alerts':[]}}
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            first=hourly_monitor.compact_with_change(report,root)
+            second=hourly_monitor.compact_with_change(report,root)
+            report['resets']['pending']=['new-reset']
+            third=hourly_monitor.compact_with_change(report,root)
+        self.assertTrue(first['notification_worthy'])
+        self.assertFalse(second['notification_worthy'])
+        self.assertTrue(third['notification_worthy'])
+
+    def test_hourly_busy_does_not_notify_without_pending(self):
+        report={'finished':'2026-10-28T00:00:00+00:00',
+                'leaders':{'stopped':True,'reason':'BUSY','sources':[]},
+                'resets':{'pending':[],'new_alerts':[]}}
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertFalse(hourly_monitor.compact_with_change(report,Path(tmp))['notification_worthy'])
+
 
 if __name__=='__main__':unittest.main()

@@ -149,8 +149,9 @@ def pending(root=ROOT):
         except Exception as error:
             # A broken receipt must not be treated as an unsent draft, nor
             # prevent reconciliation of unrelated releases.
+            fingerprint=hashlib.sha256((str(path.parent)+':'+type(error).__name__).encode()).hexdigest()[:16]
             out.append(dict(directory=str(path.parent),result=dict(ok=False,state='needs_repair',
-                error=dict(code='RELEASE_RECOVERY_ERROR',type=type(error).__name__))))
+                error=dict(code='RELEASE_RECOVERY_ERROR',type=type(error).__name__,fingerprint=fingerprint))))
     return out
 
 if __name__=='__main__':
