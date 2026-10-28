@@ -8,6 +8,8 @@
 
 导出时 `release_manager.prepare(..., create_upload_manifest=False)` 先跑实际时长、音轨、音频内容、导航、画面报告等门禁并准备 release。质量失败不写已用日志。通过后 `used_news.record_export` 按原事件/期次逻辑记账；`attach_used_record` 将记录和哈希加入 release manifest，随后才创建投稿契约并允许自动上传。中断可用 `--resume-export` 幂等恢复；投稿桥在缺记账证明时拒绝提交。已提交/unknown先回查，绝不重置成未投。
 
+release 文件复制中断但尚无回执时，`.prepare-owner.json` 标记本期 ID 和输入文件集合；同一期可续接复制。所有权不符或输入集合变化则停止，不接管未知目录。成功准备后移除标记。隔离测试注入复制失败并在同一期恢复通过。
+
 `upload_bridge.pending` 对每个 release 独立处理；损坏回执或单项回查失败记录 `RELEASE_RECOVERY_ERROR`，继续处理其他稿件。小时简报显式返回 `stopped/reason/retry_after_utc/requires_user_resolution/error_fingerprint` 和待办ID；完整采集报告留本地。同一错误签名由任务说明约束静默，不把登录/冷却/资源忙当无新闻。
 
 视觉构建新增输入指纹：稿件、时间、字幕、声音、配图/logo、配置、渲染模板和相关代码变化时重建本期 shot；渲染中断恢复若输入变化则停止，要求新修订。封面仍独立采用旧Pillow配置；渲染后端和模板继续由原 `render-plan.json` 固定。release/finalize 的文件清单共用 `release_manager.FINAL_NAMES`。

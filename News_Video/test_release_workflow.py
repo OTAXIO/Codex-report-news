@@ -1,5 +1,6 @@
 import json,tempfile,unittest
 from pathlib import Path
+from unittest.mock import patch
 from release_manager import naming,prepare,digest
 
 class ReleaseWorkflowChecks(unittest.TestCase):
@@ -10,6 +11,8 @@ class ReleaseWorkflowChecks(unittest.TestCase):
             for name,value in [('episode.json',ep),('publication.json',{'title':'真实新闻标题','tags':['AI','OpenAI']}),('check.json',{'ok':True}),('timings.json',{'duration':3}),('progress-validation.json',[{'item':'intro'}])]:
                 (source/name).write_text(json.dumps(value),encoding='utf-8')
             for name in ['sample.mp4','cover-4x3.png','cover-16x9.png','script.txt']:(source/name).write_bytes(b'local fixture')
+            with patch('release_manager.shutil.copy2',side_effect=OSError('interrupted copy')):
+                with self.assertRaisesRegex(OSError,'interrupted copy'):prepare('edition',root=root)
             r=prepare('edition',root=root)
             self.assertFalse(r['published']);self.assertEqual(r['state'],'ready_for_upload')
             self.assertEqual(r['video_filename'],'2026_10_26_night_晚间新闻.mp4')

@@ -87,9 +87,17 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     if old and old.get('published'):raise ValueError('Published release is immutable; prepare a new revision directory explicitly')
     if old and ((target/'upload-attempt.json').exists() or old.get('state') in {'unknown','uploading','submitting','submitted','reviewing'}):
         raise ValueError('Existing upload attempt must be recovered/verified; do not reset release via prepare')
-    if target.exists() and any(target.iterdir()) and (not old or old.get('episode_id')!=episode_id):
+    marker=target/'.prepare-owner.json'
+    source_names=sorted(name for name in FINAL_NAMES if (source/name).is_file())
+    if target.exists() and any(target.iterdir()) and not old:
+        owner=json.loads(marker.read_text(encoding='utf-8')) if marker.is_file() else {}
+        if owner.get('episode_id')!=episode_id or owner.get('source_names')!=source_names:
+            raise ValueError('Release folder belongs to another edition/revision or its partial inputs changed')
+    elif old and old.get('episode_id')!=episode_id:
         raise ValueError('Release folder belongs to another edition/revision')
-    target.mkdir(parents=True,exist_ok=True);files=[]
+    target.mkdir(parents=True,exist_ok=True)
+    marker.write_text(json.dumps(dict(episode_id=episode_id,source_names=source_names),ensure_ascii=False),encoding='utf-8')
+    files=[]
     for name in sorted(FINAL_NAMES):
         path=source/name
         if not path.is_file():continue
@@ -113,6 +121,7 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     if create_upload_manifest:
         from upload_bridge import prepare as prepare_upload
         prepare_upload(target,root)
+    marker.unlink(missing_ok=True)
     return receipt
 
 
