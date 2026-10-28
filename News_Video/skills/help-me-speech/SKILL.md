@@ -1,9 +1,15 @@
 ---
 name: help-me-speech
-description: 根据 PPT 生成个人化演讲稿；先确认风格、时长、听众与目标，再组织逐页主线，核对人称、贡献和时间。
+description: 为项目新闻视频编写来源可核验的中文口播；也保留原有PPT演讲稿模式。
 ---
 
-# PPT 演讲稿
+# 新闻口播（news 模式）
+
+新闻项目调用本 skill 时使用 news 模式。已确认的风格、受众、时长、读音和停顿由 [当前执行入口](../../docs/CURRENT_RUNBOOK.md)、`episode.json` 与 `Voice_Generate/docs/SPEECH_POLICY.md` 给出，不重复提问，也不读取下方课程 PPT 参考资料。
+
+逐事件从原文和已核实来源写“发生什么→具体事实或用途→适用范围/限制”；保留作者、原发布时间与观点/预告/公告的区别。X 消息的口播须有姓名主语、北京时间原分钟与内容；reset 保留完整原文并忠实解释，不扩大到账范围。导览只口播既定短句；不朗读目录或审查过程。公司和产品命名、数字、多音字按项目语音政策，新闻间自然衔接，句间停顿由现有语音流水线负责。稿件落盘前核对来源和文稿，避免先配音后改事实。
+
+# PPT 演讲稿（ppt 模式）
 
 读[共享边界](../help-me-shared/references/core.md)和[演讲流程](../help-me-shared/references/speech.md)。
 

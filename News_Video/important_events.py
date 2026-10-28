@@ -105,7 +105,9 @@ def prepare_main_recaps(ep,root=None):
         scene=dict(event['scene']);scene.update(id='recap-'+event['episode_id'],section='AI 动态',title='重点回顾｜'+scene['title'],short_title='回顾 '+scene.get('short_title',scene['title']),editorial_role='recap',recap_of=event['url'],event_key=event['event_key'])
         scene['narration']='回顾此前的重要动态。据当时的原始消息，'+scene['narration']
         scene['selection_reason']='Important verified temporary event also included in scheduled main edition as a recap'
-        index=next((i for i,s in enumerate(ep['scenes']) if s.get('section','').startswith(('国内','国际'))),len(ep['scenes']))
+        # Recaps are AI items. Keep them before the first game scene, while
+        # allowing an existing reset-first block to retain its placement.
+        index=next((i for i,s in enumerate(ep['scenes']) if s.get('game') or s.get('section','').startswith(('游戏','国内','国际'))),len(ep['scenes']))
         ep['scenes'].insert(index,scene)
         existing.update(identity)
 

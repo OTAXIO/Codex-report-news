@@ -243,7 +243,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "40a9dfbe739268b66de8784b157e8f55d8500892aa6301e17926de5a050a493c"
+    "validation_sha256": "b58df0cb7c2c51cdcc8263abee56f52d9d952011bba05d1c5126ee32eaa954d8"
   },
   "workspace_directory": "../..",
   "presentation": {

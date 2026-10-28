@@ -1,11 +1,33 @@
 """Build editable, offline HyperFrames scenes with burned-in captions."""
-import argparse, html, json, re, shutil, datetime
+import argparse, html, json, re, shutil, datetime, hashlib
 from pathlib import Path
 from progress_overlay import build_progress
 from layout_policy import folio_numbers,is_overview
 from caption_layout import sentence_captions,tokens,width
 ROOT=Path(__file__).parent
 def read(path): return json.loads(path.read_text(encoding='utf-8'))
+
+def input_fingerprint(episode_id,plan):
+    """Hash the local inputs which can change visible frames or scene timing."""
+    from episode_paths import episode_directory
+    epdir=episode_directory(ROOT,episode_id)
+    episode=read(epdir/'episode.json')
+    files=[epdir/name for name in ('episode.json','timings.json','captions.json','render-plan.json','soundtrack.wav')]
+    files += [ROOT/name for name in ('config.json','build_film.py','progress_overlay.py','layout_policy.py','caption_layout.py','production_policy.py')]
+    if plan['backend']=='multiplane':
+        files += [ROOT/name for name in ('renderers/multiplane.py','renderers/news-shot.js','renderers/news-shot.css')]
+    for scene in episode['scenes']:
+        for key in ('logo','image'):
+            if scene.get(key):files.append((ROOT/scene[key]).resolve())
+    records=[]
+    for file in sorted(set(files),key=str):
+        if not file.is_file():continue
+        h=hashlib.sha256()
+        with file.open('rb') as stream:
+            for chunk in iter(lambda:stream.read(1024*1024),b''):h.update(chunk)
+        records.append((str(file.resolve()),h.hexdigest()))
+    return hashlib.sha256(json.dumps(records,ensure_ascii=False).encode()).hexdigest()
+
 def esc(value): return html.escape(str(value),quote=True)
 def overview_markup(value):
     parts=re.split(r'(?<=[，。；！？])',str(value))
@@ -153,6 +175,8 @@ def build(episode_id,renderer=None,template=None):
     else:
         from renderers.multiplane import build as build_multiplane
         build_multiplane(ROOT,epdir,plan)
+    (epdir/'visual-build.json').write_text(json.dumps(dict(input_sha256=input_fingerprint(episode_id,plan),
+        backend=plan['backend'],template=plan['template']),ensure_ascii=False,indent=2),encoding='utf-8')
     return ROOT/plan['artifact_directory']
 
 if __name__=='__main__':

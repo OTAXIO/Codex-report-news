@@ -21,7 +21,13 @@ def render(episode_id,allow_upload=True,preview=False,renderer=None,template=Non
     import build_film
     build_film.ROOT=ROOT
     film=ROOT/plan['artifact_directory']
-    if not (film/'index.html').is_file():build_film.build(episode_id,plan['backend'],plan['template'] if plan['backend']=='multiplane' else None)
+    stamp=episode/'visual-build.json'
+    previous=json.loads(stamp.read_text(encoding='utf-8')) if stamp.is_file() else {}
+    current=build_film.input_fingerprint(episode_id,plan)
+    if not (film/'index.html').is_file() or previous.get('input_sha256')!=current:
+        if resume_render and (episode/'render-job.json').exists():
+            raise ValueError('Visual inputs changed during a pinned render; start a new revision')
+        build_film.build(episode_id,plan['backend'],plan['template'] if plan['backend']=='multiplane' else None)
     if plan['backend']=='multiplane':
         from renderer_backends import render_multiplane
         render_multiplane(ROOT,episode,plan,resume_render)
@@ -126,10 +132,15 @@ def complete_export(episode_id,allow_upload=True):
             return dict(directory=str(target),skipped='existing_upload_attempt')
     from production_policy import validate_video
     validate_video(ROOT,episode/"sample.mp4")
+    from release_manager import prepare,attach_used_record
+    ready=prepare(episode_id,create_upload_manifest=False)
+    # A failed quality gate leaves no used-news entry. A prepared release is
+    # held from automatic upload until the ledger proof is attached.
     from used_news import record_export
     record_export(episode,ROOT)
-    from release_manager import prepare
-    ready=prepare(episode_id)
+    attach_used_record(ready['directory'],episode)
+    from upload_bridge import prepare as prepare_upload
+    prepare_upload(ready['directory'],ROOT)
     ep=json.loads((episode/'episode.json').read_text(encoding='utf-8'))
     if ep.get('model_alert_id'):
         from model_alerts import mark_release as mark_model_release

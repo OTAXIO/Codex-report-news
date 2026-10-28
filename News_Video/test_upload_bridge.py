@@ -12,6 +12,7 @@ class UploadBridgeChecks(unittest.TestCase):
         b.save(self.release/'publication.json',dict(title='Verified title',auto_publish=True))
         b.save(self.release/'episode.json',dict(id='edition',edition_slot='night'))
         b.save(self.release/'upload.codex.json',dict(schema_version=1))
+        b.save(self.release/'used-news-record.json',dict(episode_id='edition'))
     def tearDown(self):self.tmp.cleanup()
     def test_submitted_is_not_published_and_does_not_submit_twice(self):
         with patch.object(b,'call',return_value=dict(ok=True,state='submitted',key='a'*64,receipt=dict(aid=123,bvid='BV1aaaaaaaaa'))) as call:

@@ -12,6 +12,8 @@ reset心跳按`Codex-report-news/News_Video/docs/HOURLY_MONITOR_PROMPT.md`执行
 
 # 新闻视频项目入口
 
+常规制作先读 `Codex-report-news/News_Video/docs/CURRENT_RUNBOOK.md`；详细制作、上传、语音及历史状态按需查对应文档。小时巡检仍只用 `docs/HOURLY_MONITOR_PROMPT.md` 轻量入口。本段覆盖下文“每次都预读完整 PROJECT_PROMPT/WORKFLOW/STATE”的旧要求。
+
 本项目当前由 Codex 制作并协助发布，DSH 仅是未来可接手的执行环境。先读 `PROJECT_PROMPT.md`，再读 `Codex-report-news/News_Video/docs/WORKFLOW.md` 与 `Codex-report-news/News_Video/docs/STATE.md`。这些文档包含用户今天确认的最新规则，优先于旧样片、旧提示词和历史记录。
 
 制作遵循 `Codex-report-news/News_Video/skills/news-video-production/SKILL.md`；文稿遵循项目内 `help-me-speech`。不要把内部计划、核验措辞、提示词或思考过程写进公开画面和口播。

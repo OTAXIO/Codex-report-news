@@ -6,6 +6,10 @@
 
 # 制作与上传执行流程
 
+常规运行先用 [CURRENT_RUNBOOK](CURRENT_RUNBOOK.md) 和项目制作skill；本文件保留命令、异常恢复及历史兼容细节，按当前阶段查阅。候选可用 `news_video.py candidates --compact --limit 12 --cursor 0` 分页，入选再用 `article ID --compact` 与完整归档核验。质检通过后 `render_sample.complete_export` 先建立 release，再写已用日志并附入包，之后才允许生成投稿契约和自动提交；若中断，用 `--resume-export` 续接同一期。
+
+统一阶段入口：`python -B production_flow.py status <episode_id>`；`plan` 为只读规划，`advance` 运行当前确定性步骤，`resume` 恢复已有任务。无ID执行 `advance` 只采集和输出紧凑候选，停在语义选题。实现与回归证据见 [工作流优化记录](WORKFLOW_OPTIMIZATION.md)。
+
 完整约束以[PRODUCTION_RULES.md](PRODUCTION_RULES.md)为准；先读STATE与config解析当前路径。
 
 制作前运行`sync_upload_skill.py --check --installed`并按既有流程doctor。缺验证或版本漂移时先按[投稿可靠性门禁](UPLOAD_RELIABILITY.md)修复、离线验证与部署；不得用真实投稿尝试验证修复。

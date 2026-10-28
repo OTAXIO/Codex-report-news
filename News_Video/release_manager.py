@@ -6,7 +6,7 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
- 'render-plan.json','render-job.json','render-validation.json','render-assets.json','layout-audit.json',
+ 'render-plan.json','render-job.json','render-validation.json','render-assets.json','visual-build.json','layout-audit.json',
  'soundtrack.wav','audio-mix.json','caption-alignment.json','audio-content-review.json',
  'game-coverage-audit.json','original-post.json','leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
@@ -53,7 +53,7 @@ def release_target(root,ep,slot):
             name=Path(name).stem+'_'+suffix+'.mp4'
     return target,name
 
-def prepare(episode_id,slot=None,root=ROOT):
+def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     if not re.fullmatch(r'[a-z0-9][a-z0-9_-]{0,95}',episode_id):raise ValueError('Use a safe lowercase episode ID')
     root=Path(root).resolve();source=(root/'episodes'/episode_id).resolve()
     if not source.is_relative_to(root/'episodes'):raise ValueError('Invalid episode path')
@@ -110,8 +110,30 @@ def prepare(episode_id,slot=None,root=ROOT):
     if (source/'render-plan.json').exists():receipt['rendering']=json.loads((source/'render-plan.json').read_text(encoding='utf-8'))
     (target/'release.json').write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
     (source/'release-target.json').write_text(json.dumps(dict(directory=str(target),video_filename=video_name),ensure_ascii=False,indent=2),encoding='utf-8')
-    from upload_bridge import prepare as prepare_upload
-    prepare_upload(target,root)
+    if create_upload_manifest:
+        from upload_bridge import prepare as prepare_upload
+        prepare_upload(target,root)
+    return receipt
+
+
+def attach_used_record(directory,source):
+    """Commit the export ledger proof to a prepared release before upload."""
+    directory=Path(directory);source=Path(source)
+    path=source/'used-news-record.json'
+    if not path.is_file():raise ValueError('Validated export has no used-news record')
+    receipt_path=directory/'release.json'
+    receipt=json.loads(receipt_path.read_text(encoding='utf-8'))
+    if receipt.get('state')!='ready_for_upload' or (directory/'upload-attempt.json').exists():
+        raise ValueError('Cannot attach an export record after upload started')
+    destination=directory/path.name;tmp=destination.with_name(destination.name+'.preparing')
+    shutil.copy2(path,tmp)
+    if digest(tmp)!=digest(path):raise ValueError('Used-news record copy hash mismatch')
+    tmp.replace(destination)
+    receipt['archive_files']=[x for x in receipt['archive_files'] if x['file']!=path.name]
+    receipt['archive_files'].append(dict(file=path.name,bytes=destination.stat().st_size,sha256=digest(destination)))
+    tmp_receipt=receipt_path.with_name('release.json.preparing')
+    tmp_receipt.write_text(json.dumps(receipt,ensure_ascii=False,indent=2),encoding='utf-8')
+    tmp_receipt.replace(receipt_path)
     return receipt
 
 def migrate_video_name(directory):

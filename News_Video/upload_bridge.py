@@ -58,6 +58,8 @@ def publish_ready(directory,root=ROOT):
     from production_policy import validate_video,tags
     from episode_paths import release_movie
     validate_video(root,release_movie(directory))
+    if not (directory/'used-news-record.json').is_file():
+        return dict(ok=False,error=dict(code='EXPORT_LEDGER_REQUIRED',message='Resume the validated export before uploading'))
     pub['tags']=tags(pub.get('tags',[]));save(directory/'publication.json',pub)
     (directory/'tags.txt').write_text('\n'.join(pub['tags'])+'\n',encoding='utf-8')
     # Refresh authorized defaults even for an already prepared, unsubmitted release.
@@ -137,12 +139,18 @@ def recover(directory,root=ROOT):
 
 def pending(root=ROOT):
     root=Path(root).resolve();out=[]
-    for path in release_root(root).rglob('release.json'):
-        receipt=load(path)
-        if receipt.get('published'):continue
-        state=receipt.get('state')
-        if state in {'submitted','reviewing','unknown'} or (state in {'ready_for_upload','upload_failed'} and receipt.get('upload_policy')=='automatic'):
-            out.append(dict(directory=str(path.parent),result=recover(path.parent,root)))
+    for path in sorted(release_root(root).rglob('release.json')):
+        try:
+            receipt=load(path)
+            if receipt.get('published'):continue
+            state=receipt.get('state')
+            if state in {'submitted','reviewing','unknown'} or (state in {'ready_for_upload','upload_failed'} and receipt.get('upload_policy')=='automatic'):
+                out.append(dict(directory=str(path.parent),result=recover(path.parent,root)))
+        except Exception as error:
+            # A broken receipt must not be treated as an unsent draft, nor
+            # prevent reconciliation of unrelated releases.
+            out.append(dict(directory=str(path.parent),result=dict(ok=False,state='needs_repair',
+                error=dict(code='RELEASE_RECOVERY_ERROR',type=type(error).__name__))))
     return out
 
 if __name__=='__main__':

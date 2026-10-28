@@ -2,7 +2,9 @@
 
 当前项目版本：**V_0**。先读 [项目手册](docs/V_0/README.md) 和 [当前制作规则](docs/PRODUCTION_RULES.md)。
 
-# AI 与国内外新闻视频项目
+# 新闻视频项目
+
+常规运行先读 [当前执行入口](docs/CURRENT_RUNBOOK.md)；详细规则和历史状态按需展开。
 
 先读根目录 PROJECT_PROMPT.md，以及 docs/REQUIREMENTS.md、WORKFLOW.md、STATE.md。当前由 Codex 制作和协助发布，DSH 的交接入口在 ../../handoff/START_HERE.md。
 
@@ -11,6 +13,7 @@
 常用入口：
 
 - news_video.py：doctor、collect、candidates、import-editorial、voice。
+- production_flow.py：plan/status/advance/resume，给出紧凑阶段并复用现有确定性命令；编辑与视觉判断仍由制作会话完成。
 - leader_sources.py：每小时通过 Agent Reach 只读读取白名单负责人推文；tibo 先于 OpenAI 官方，其他负责人先于对应公司，支持仅有负责人新消息的选题。详见 docs/X_SOURCES.md。
 - cover_generator.py <episode>：读取每期 cover.json 生成双比例事实封面。
 - build_film.py <episode>：可编辑 HTML、单行字幕及两大模块导航。

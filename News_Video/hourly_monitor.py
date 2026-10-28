@@ -1,5 +1,5 @@
 """Hourly source cache + reset queue. No model, TTS, render or upload API calls."""
-import argparse,datetime as dt,json
+import argparse,datetime as dt,hashlib,json
 import news_video as n
 import leader_sources,reset_alerts
 
@@ -16,11 +16,18 @@ def run(leaders_only=False,handle=None):
 
 def compact_report(report):
     """Expose action/stop signals; keep collection detail in the existing log."""
-    sources=report.get('leaders',{}).get('sources',[])
+    leaders=report.get('leaders',{})
+    sources=leaders.get('sources',[])
     errors=[{k:s[k] for k in ('handle','error_code','error_stage') if k in s}
             for s in sources if not s.get('ok')]
-    return dict(source_ok=bool(sources) and not errors,
-                new_items=report.get('leaders',{}).get('new_items',0),
+    reason=leaders.get('reason')
+    signature=hashlib.sha256(json.dumps(dict(reason=reason,errors=errors),sort_keys=True).encode()).hexdigest()[:16] if reason or errors else None
+    return dict(source_ok=bool(sources) and not errors and not leaders.get('stopped'),
+                stopped=bool(leaders.get('stopped')),reason=reason,
+                requires_user_resolution=bool(leaders.get('requires_user_resolution')),
+                retry_after_utc=leaders.get('retry_after_utc'),error_fingerprint=signature,
+                full_report='data/hourly-monitor-last.json',
+                new_items=leaders.get('new_items',0),
                 new_alerts=report.get('resets',{}).get('new_alerts',[]),
                 pending=report.get('resets',{}).get('pending',[]),source_errors=errors)
 

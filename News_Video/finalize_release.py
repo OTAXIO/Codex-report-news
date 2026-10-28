@@ -2,18 +2,9 @@
 import argparse,datetime as dt,hashlib,json,os,subprocess,zipfile
 from pathlib import Path
 from project_paths import release_root
+from release_manager import FINAL_NAMES
 
 ROOT=Path(__file__).resolve().parent
-FINAL_NAMES={
- 'render-plan.json','render-job.json','render-validation.json','render-assets.json','layout-audit.json',
- 'soundtrack.wav','audio-mix.json',
- 'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
- 'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
- 'narration.wav','narration_原始.wav','narration.json','timings.json','captions.json',
- 'scene-timings.json','progress.json','used-news-record.json','SPEECH_REVIEW.md',
- 'check.json','ffprobe.json','progress-validation.json','verification-result.json',
- 'transition-preview.png','delivery-manifest.json','voice_job.json','inference.yaml','cover.json','reset-alert.json'}
-
 def sha(path):
     h=hashlib.sha256()
     with Path(path).open('rb') as f:
@@ -52,10 +43,14 @@ def finalize(episode_id,slot,published=False,dry_run=False,publication_evidence=
                 cleanup.add(p)
     for p in ROOT.glob('data-'+episode_id+'*'):
         if p.is_file() and p.suffix in {'.json','.jsonl','.log'}:cleanup.add(p)
-    for p in cleanup:safe(p,ROOT)
-    retained=[p for p in ROOT.glob('*.py')]+[ROOT/x for x in ['config.json','sources.json','package.json','data/news.sqlite3']]
-    for folder in [ROOT/'assets',ROOT/'logs',ROOT/'data/articles',ROOT/'data/collections',ROOT/'data/source-probes']:
-        if folder.exists():retained.extend(p for p in folder.rglob('*') if p.is_file())
+    for p in cleanup:
+        safe(p,ROOT)
+        if not (p.is_relative_to(source) or (p.parent==ROOT and p.name.startswith('data-'+episode_id))):
+            raise ValueError('Cleanup set crosses this episode boundary: '+str(p))
+    # Shared caches, logs and SQLite may change during hourly collection; the
+    # cleanup set cannot touch them, so hashing their entire history is both
+    # slow and a false concurrency failure. Keep a small configuration audit.
+    retained=[ROOT/x for x in ['config.json','sources.json','leader_sources.json','package.json']]
     protected={str(p.relative_to(ROOT)):sha(p) for p in retained if p.is_file()}
     summary=dict(episode_id=episode_id,directory=str(target),final_files=len(final),cleanup_files=len(cleanup),cleanup_bytes=sum(p.stat().st_size for p in cleanup),protected_files=len(protected))
     if dry_run:return summary

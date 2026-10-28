@@ -10,6 +10,8 @@
 
 # 新闻视频项目当前指令
 
+常规制作以 `Codex-report-news/News_Video/docs/CURRENT_RUNBOOK.md` 为当前短入口；本文件后续追加的历史条目只在不与短入口冲突时参考。定时任务按短入口和当前项目skill执行，异常才展开完整规则/WORKFLOW/STATE。
+
 当前执行者Codex，DSH为未来可接手环境。先读[当前完整制作规则](Codex-report-news/News_Video/docs/PRODUCTION_RULES.md)、[工作流](Codex-report-news/News_Video/docs/WORKFLOW.md)、[状态](Codex-report-news/News_Video/docs/STATE.md)。2026-10-27最新用户要求已落实到项目代码，本文链接优先于历史样片和旧提示词。
 
 - 早晚两期主片，分别北京时间06:00/18:00开始制作；午间新闻已取消，对齐DeepSeek API空闲时段，不再提前15分钟；小时只采tibo，社会RSS和公司/其他负责人X在制作前刷新。

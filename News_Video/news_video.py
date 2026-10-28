@@ -263,7 +263,8 @@ def collect(kind):
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return report
 
-def candidates(hours=48):
+def candidates(hours=48,compact=False,limit=12,cursor=0):
+    if limit<1 or limit>50 or cursor<0:raise ValueError('Use limit 1-50 and a nonnegative cursor')
     cutoff=(dt.datetime.now(UTC)-dt.timedelta(hours=hours)).isoformat()
     db=database()
     rows=[dict(row) for row in db.execute("SELECT * FROM items WHERE published>=? ORDER BY kind,published DESC",(cutoff,))]
@@ -315,25 +316,38 @@ def candidates(hours=48):
     from leader_editorial import review_leader_candidates
     payload['leader_review_candidates']=review_leader_candidates(rows,ROOT)
     dump(ROOT/"data/candidates.json",payload)
-    for item in rows: print(json.dumps({k:item[k] for k in ["id","kind","publisher","published","title","url","summary"]},ensure_ascii=False))
+    if compact:
+        selected=rows[cursor:cursor+limit]
+        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path') if item.get(k) is not None} for item in selected]
+        print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
+                              items=brief,excluded_used_count=len(excluded),full_file='data/candidates.json',
+                              note='Open full local evidence before final factual claims; compact list omits summaries.'),ensure_ascii=False))
+    else:
+        for item in rows: print(json.dumps({k:item[k] for k in ["id","kind","publisher","published","title","url","summary"]},ensure_ascii=False))
 
 def candidate_order(item):
     # Discovery order only; leader_editorial applies verified reset exceptions
     # and the final company-before-ordinary-leaders scene order at import.
     ai=item['kind']=='ai'
     if item['kind']=='games':return (1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
-    return (0 if ai else 1,item.get('priority_tier',2) if ai else 0,
+    prerelease=bool(re.search(r'/(?:releases/tag)/[^/]*(?:alpha|beta|nightly|preview)',item.get('url',''),re.I))
+    return (0 if ai else 1,int(prerelease) if ai else 0,item.get('priority_tier',2) if ai else 0,
             item.get('preferred_vendor_order',99) if ai else 0,
             item.get('source_priority',100) if ai else 0,
             -dt.datetime.fromisoformat(item['published']).timestamp())
 
-def article(item_id):
+def article(item_id,compact=False,max_chars=8000):
+    if max_chars<500 or max_chars>60000:raise ValueError('Use max_chars 500-60000')
     db=database(); row=db.execute("SELECT * FROM items WHERE id=?",(item_id,)).fetchone();db.close()
     if not row: raise ValueError("Unknown candidate")
     row=dict(row)
     if row['source_id'].startswith(('x-leader-','x-official-')):
         evidence=load(ROOT/'data/leader-posts'/(item_id+'.json'))
-        print(json.dumps(evidence,ensure_ascii=False,indent=2));return
+        if compact:
+            print(json.dumps(dict(item_id=item_id,source_type=evidence.get('source_type'),published=evidence.get('published'),
+                                  original_text=evidence.get('original_text'),evidence_path='data/leader-posts/'+item_id+'.json'),ensure_ascii=False))
+        else:print(json.dumps(evidence,ensure_ascii=False,indent=2))
+        return
     body,final,encoding=fetch(row["url"])
     page=PageText(); page.feed(body.decode(encoding,errors="replace"))
     content=re.sub(r"[ \t]+"," "," ".join(page.parts))
@@ -343,7 +357,12 @@ def article(item_id):
         from game_sources import article as game_article
         data=game_article(ROOT,item_id,dict(load(game_path),**data),body.decode(encoding,errors="replace"))
     dump(ROOT/"data/articles"/(item_id+".json"),data)
-    print(json.dumps(data,ensure_ascii=False,indent=2))
+    if compact:
+        brief={k:data.get(k) for k in ('item_id','title','url','metadata','fetched_at','images') if k in data}
+        brief.update(text=data['text'][:max_chars],text_chars=len(data['text']),truncated=len(data['text'])>max_chars,
+                     full_file='data/articles/'+item_id+'.json')
+        print(json.dumps(brief,ensure_ascii=False))
+    else:print(json.dumps(data,ensure_ascii=False,indent=2))
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
@@ -529,15 +548,15 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest="cmd",required=True)
     sub.add_parser("doctor")
     p=sub.add_parser("collect");p.add_argument("--kind",choices=["social","games","ai","all"],required=True)
-    p=sub.add_parser("candidates");p.add_argument("--hours",type=int,default=48)
-    p=sub.add_parser("article");p.add_argument("id")
+    p=sub.add_parser("candidates");p.add_argument("--hours",type=int,default=48);p.add_argument("--compact",action="store_true");p.add_argument("--limit",type=int,default=12);p.add_argument("--cursor",type=int,default=0)
+    p=sub.add_parser("article");p.add_argument("id");p.add_argument("--compact",action="store_true");p.add_argument("--max-chars",type=int,default=8000)
     p=sub.add_parser("import-editorial");p.add_argument("path")
     p=sub.add_parser("voice");p.add_argument("episode")
     args=parser.parse_args()
     if args.cmd=="doctor": return 0 if doctor() else 1
     if args.cmd=="collect":collect(args.kind)
-    elif args.cmd=="candidates":candidates(args.hours)
-    elif args.cmd=="article":article(args.id)
+    elif args.cmd=="candidates":candidates(args.hours,args.compact,args.limit,args.cursor)
+    elif args.cmd=="article":article(args.id,args.compact,args.max_chars)
     elif args.cmd=="import-editorial":import_editorial(args.path)
     elif args.cmd=="voice":voice(args.episode)
     return 0

@@ -38,6 +38,7 @@ class BridgeRecoveryChecks(unittest.TestCase):
         b.save(directory/'release.json',{'state':state,'upload_policy':'automatic','published':False})
         b.save(directory/'upload-attempt.json',{'key':'a'*64})
         b.save(directory/'publication.json',{'auto_publish':True})
+        b.save(directory/'used-news-record.json',{'episode_id':'edition'})
         return directory
 
     def test_each_presubmit_recovery_rechecks_without_an_attempt_cap(self):
