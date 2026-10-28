@@ -55,6 +55,11 @@ def publish_ready(directory,root=ROOT):
     if receipt.get('state') in {'unknown','uploading','submitting'}:return dict(ok=False,error=dict(code='RECONCILE_REQUIRED'))
     pub=load(directory/'publication.json')
     if not cfg.get('enabled') or not cfg.get('auto_submit') or pub.get('auto_publish') is False:return dict(ok=True,skipped='automatic_upload_disabled_for_this_release')
+    from production_policy import validate_video,tags
+    from episode_paths import release_movie
+    validate_video(root,release_movie(directory))
+    pub['tags']=tags(pub.get('tags',[]));save(directory/'publication.json',pub)
+    (directory/'tags.txt').write_text('\n'.join(pub['tags'])+'\n',encoding='utf-8')
     # Refresh authorized defaults even for an already prepared, unsubmitted release.
     # State guards above prevent changing submitted/unknown attempts.
     prepare(directory,root)

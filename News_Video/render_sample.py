@@ -124,6 +124,8 @@ def complete_export(episode_id,allow_upload=True):
                 from upload_bridge import recover
                 return recover(target)
             return dict(directory=str(target),skipped='existing_upload_attempt')
+    from production_policy import validate_video
+    validate_video(ROOT,episode/"sample.mp4")
     from used_news import record_export
     record_export(episode,ROOT)
     from release_manager import prepare

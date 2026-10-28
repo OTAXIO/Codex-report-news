@@ -19,6 +19,10 @@ def plan(directory,root=ROOT):
     from release_manager import digest
     recorded=next((x for x in receipt.get('archive_files',[]) if x['file']==video.name),None)
     if not recorded or digest(video)!=recorded['sha256']:raise ValueError('Release video hash not verified')
+    from production_policy import validate_video,tags as fixed_tags
+    validate_video(root,video)
+    pub['tags']=fixed_tags(pub.get('tags',[]))
+    (directory/'publication.json').write_text(json.dumps(pub,ensure_ascii=False,indent=2),encoding='utf-8')
     tags=pub.get('tags',[])
     if len(tags)>10 or len(set(tags))!=len(tags) or any(not isinstance(x,str) or not 1<=len(x)<=20 for x in tags):raise ValueError('Invalid upload tags')
     if not 1<=len(pub['title'])<=80 or len(pub.get('description',''))>2000:raise ValueError('Upload title/description too long')

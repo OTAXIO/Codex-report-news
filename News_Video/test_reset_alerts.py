@@ -24,7 +24,7 @@ class ResetAlertChecks(unittest.TestCase):
 
     def review(self):
         return dict(is_reset_announcement=True,context_verified=True,announcement_status='planned',summary='tibo 预告今天重置 Codex 额度。',
-                    narration='tibo 表示，今天将重置 Codex 使用额度。',title='tibo：今天重置 Codex 额度',quote='We will reset Codex usage limits today.',reset_event_key='codex-reset-test')
+                    narration='tibo 于北京时间十二点十分表示，今天计划重置 Codex 使用额度。这里的消息来自他本人发布的推文，属于对今天重置安排的预告，而不是已经完成重置的确认。原帖没有列出适用账号、具体额度数量或准确生效时间，因此不能据此认定所有用户已经获得新的额度。具体情况需要结合后续官方消息确认，本条只介绍这一次推文明确表达的信息。',title='tibo：今天重置 Codex 额度',quote='We will reset Codex usage limits today.',reset_event_key='codex-reset-test')
 
     def test_existing_posts_baseline_then_new_tibo_only_and_idempotent(self):
         self.post(1);self.assertTrue(r.scan(self.now)['initialized'])

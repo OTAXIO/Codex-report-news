@@ -21,3 +21,11 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 #stage:before{content:'';position:absolute;left:0;top:0;width:14px;height:1080px;background:#101218}
 .edge-band,.graphic .edge-band{right:0;top:0;width:64px;height:1080px;transform:none;background:#01A1FE}
 .edge-band:before,.graphic .edge-band:before{content:none}
+/* Three fact rows must leave the source footer clear at 1080p. */
+.facts{gap:18px}.facts article{padding-top:14px}.facts h2{font-size:32px;margin-bottom:8px}.facts p,.has-media .facts p{font-size:27px;line-height:1.4}
+
+/* Full original X text: upright, readable, never ellipsized. */
+.original .identity{top:320px}.original .facts{top:390px;width:1580px;gap:22px}.original .facts p{font-size:28px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}.original .facts h2{font-size:27px}.original .facts article{padding-top:12px}.original .keep{white-space:normal}
+
+/* Official event posters retain their full image rather than cropped captions. */
+.game.has-media .facts{width:760px}.game .source{width:760px}.game .photo{left:940px;top:350px;width:880px;height:460px}.game .photo img{object-fit:contain}

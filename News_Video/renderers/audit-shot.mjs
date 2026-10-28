@@ -25,6 +25,7 @@ try{
       const title=root.querySelector('h1');const notes=[];
       if(facts&&title.getBoundingClientRect().bottom>facts.getBoundingClientRect().top-8)notes.push('headline_overlaps_facts');
       if(facts&&source&&facts.getBoundingClientRect().bottom>source.getBoundingClientRect().top-10)notes.push('facts_overlap_source');
+      for(const n of root.querySelectorAll('.facts p'))if(n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1)notes.push('fact_text_overflow');
       for(const n of root.querySelectorAll('h1,.facts,.overview-grid,.source,.brand,.photo,.route,.metrics,.identity')){
         const b=n.getBoundingClientRect();if(b.left<90||b.right>1840||b.top<95||b.bottom>821)notes.push('outside_reading_area:'+n.className);
       }

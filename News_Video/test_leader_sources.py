@@ -6,6 +6,15 @@ import news_video as n
 import leader_sources as x
 
 class LeaderChecks(unittest.TestCase):
+    def test_hourly_compact_cannot_hide_stop_errors_or_reset_work(self):
+        import hourly_monitor as monitor
+        report=dict(leaders=dict(sources=[dict(handle='thsottiaux',ok=False,error_code='NEED_LOGIN',error_stage='reading')]),
+                    resets=dict(new_alerts=['new-reset'],pending=['new-reset','existing-draft']))
+        result=monitor.compact_report(report)
+        self.assertFalse(result['source_ok']);self.assertEqual(result['source_errors'][0]['error_code'],'NEED_LOGIN')
+        self.assertEqual(result['pending'],['new-reset','existing-draft']);self.assertEqual(result['new_alerts'],['new-reset'])
+        self.assertFalse(monitor.compact_report(dict(leaders=dict(sources=[])))['source_ok'])
+
     def test_hidden_process_flags_are_forwarded_without_changing_result(self):
         envelope=dict(ok=True,items=[])
         process=subprocess.CompletedProcess([],0,json.dumps(envelope),'')

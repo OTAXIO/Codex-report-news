@@ -1,3 +1,7 @@
+> 2026-10-28 当前内容升级：新主片仅AI动态＋游戏资讯，移除社会新闻。游戏只看明日方舟国服/英文国际服与明日方舟：终末地，推荐2＋2但无上限、无最低配额；更新优先，其次活动，官方RSS/官网优先、官方X补充。所有正式MP4实际时长必须>30.0秒（目标≥31秒），release和上传前实际ffprobe核验；不足修内容，不靠空白/重复/降速凑时长。tibo reset完整原文保留并分页，详细中文播报，必要时超过2页；仍无导览、正文01、单一事件。新片固定标签“明日方舟”“终末地”，预留活动名额。已发布视频不重做不重传。完整接口与验收见docs/AI_GAMES_PRODUCTION.md。
+
+> 2026-10-28 最新活动规则：早报morning使用“明日方舟终末地创作者应援计划”（1325166）；晚报night使用“明日方舟创作者应援计划”（8314）。按edition_slot与用户配置activity_by_slot选择，strategy=explicit、fallback=stop；精确活动搜索及图标读回要求不变。临时新闻沿用原终末地活动，已发布稿件不修改。本规则覆盖历史“所有新闻统一终末地”活动要求。
+
 > 2026-10-27 最新采集范围：小时巡检只读取 tibo @thsottiaux 并处理 reset、回查投稿；不采集社会 RSS，不读取公司或其他负责人 X。社会 RSS、公司官方 X 和其他负责人仅在视频制作前刷新。每期执行 collect --kind all（社会 RSS + AI 官方来源 + 全部启用 X），不能只复用旧社会缓存。新模型线索在制作阶段采集后按 MODEL_ALERTS 核验，已有授权与去重规则保留。
 
 # 制作与上传执行流程
@@ -6,8 +10,10 @@
 
 制作前运行`sync_upload_skill.py --check --installed`并按既有流程doctor。缺验证或版本漂移时先按[投稿可靠性门禁](UPLOAD_RELIABILITY.md)修复、离线验证与部署；不得用真实投稿尝试验证修复。
 
-1. 以require_escalated运行 `python -B news_video.py collect --kind all`：刷新社会RSS、AI RSS/官方网页和全部启用X。`candidates --hours 48`含新事件和important_recaps。
-2. 核实原作者、原分钟时间、上下文、状态及已用日志。常规国内3+国际3，AI不限；敏感跳过。
+封面执行[2026-10-28早报修复后的要求](UPLOAD_RELIABILITY.md#2026-10-28-早报修复后的执行要求)：等待原生双比例画布完整挂载，目标图按实际裁切尺寸栅格化后比较，保持原阈值与保存重开读回。晚报复用已验证生产实现；发生封面故障只修复并安全恢复同一release，不重做已合格成片，不跳过门禁。
+
+1. 以require_escalated运行 `python -B news_video.py collect --kind all`：刷新AI RSS/官方网页、两款游戏官方公告和全部启用X（AI与游戏）。`candidates --hours 48`含新事件和important_recaps。
+2. 核实原作者、原分钟时间、上下文、状态及已用日志。AI数量不设上限；游戏2＋2为推荐，可更多或不足，更新优先，官方图片核验后下载；不选社会新闻，敏感跳过。
 3. help-me-speech写editorial。`import-editorial <json>`会先补主片重要回顾（只有已公开核验temporary、近24小时），再默认补00概览，最后核验来源/授权/去重。回顾与新事件分开，不从普通去重接口放行任意重复内容。
 4. `news_video.py voice <id>`：Qwen3连续上下文+规范化读音+本地对齐；模型名静音上限约.12秒，句间.4/切页.6。标准导览口播后2秒。
 5. 填cover.json：headline_top/headline_main/highlight/image，footnote仅短类型说明如模型发布速报，无日期；不再使用subtitle。`cover_generator.py <id>`生成双封面。
@@ -17,7 +23,7 @@
 
 ## 小时巡检与临时新闻
 
-`hourly_monitor.py`基线→仅tibo X→reset扫描，不请求社会RSS和公司X，不扫描新模型队列。0模型API、无大范围搜索。关键词只入needs_review队列，不直接发视频。小时任务指令保存在HOURLY_MONITOR_PROMPT.md并同步应用自动化。
+日常轻量入口：以require_escalated执行`python -B hourly_monitor.py --compact`和`python -B upload_bridge.py pending`。前者仍执行基线→仅tibo X→reset扫描，完整报告保存在data/hourly-monitor-last.json，终端只输出源状态、新线索/待办ID和错误码。无待办或实质变化立即静默结束，不预读整套制作/状态文档，不查源码或重复验收环境。仅有待办才读对应核验/制作/投稿规则。0模型API，不采社会RSS、公司X或新模型队列。小时提示以HOURLY_MONITOR_PROMPT.md为准；细节维护在专项文档，不再追加到小时提示。
 
 - reset：按RESET_ALERTS.md核实；`reset_alerts.py draft <id> <review.json>`。
 - 新模型：按MODEL_ALERTS.md核实；`model_alerts.py draft <id> <review.json>`。

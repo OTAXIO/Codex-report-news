@@ -46,7 +46,7 @@ def scan(now=None):
             reason='possible_reset_statement'
             if NON_ANNOUNCEMENT.search(post['summary']):reason='ambiguous_or_non_announcement'
             alert=dict(id=key,item_id=key,status='needs_review',reason=reason,created_at=now.isoformat(),
-                source_url=post['url'],published=post['published'],author=post['author'],text=post['summary'],
+                source_url=post['url'],published=post['published'],author=post['author'],text=post.get('original_text',post['summary']),
                 edition_type='temporary',counts_toward_daily_main_limit=False,
                 review_requirements=['Verify original context and affirmative reset announcement','No inferred account entitlement, scope or effective time'])
             n.dump(queue,alert);new.append(key)
@@ -77,9 +77,16 @@ def validate_temporary(ep):
     scenes=ep.get('scenes',[])
     if ep.get('edition_type')!='temporary' or ep.get('counts_toward_daily_main_limit') is not False:
         raise ValueError('Temporary news must be separate from the three daily main editions')
-    if len(scenes)!=1 or scenes[0].get('author_handle')!='thsottiaux' or scenes[0].get('source_type')!='leader_x':
+    if not scenes or any(s.get('author_handle')!='thsottiaux' or s.get('source_type')!='leader_x' for s in scenes):
         raise ValueError('Reset temporary news shows one Tibo post only; no intro or other news')
-    if scenes[0].get('section')!='临时新闻' or ep.get('footer_tag')!='临时新闻':raise ValueError('Use the 临时新闻 label')
+    if any(s.get('section')!='临时新闻' for s in scenes) or ep.get('footer_tag')!='临时新闻':raise ValueError('Use the 临时新闻 label')
+    if ep.get('production_policy_version',0)>=2:
+        if not ep.get('original_post_text') or ''.join(s.get('original_text_page','') for s in scenes)!=ep['original_post_text']:raise ValueError('Full original post must be preserved without truncation')
+        original=n.ROOT/'data/leader-posts'/(scenes[0]['item_id']+'.json')
+        if not original.is_file():raise ValueError('Missing original post evidence')
+        post=n.load(original)
+        if ep['original_post_text']!=post.get('original_text',post['summary']):raise ValueError('Displayed full post differs from archived original evidence')
+        if len({s.get('item_id') for s in scenes})!=1 or len({s.get('event_key') for s in scenes})!=1:raise ValueError('Reset pages must refer to exactly one post and event')
 
 def draft(alert_id,review_path,now=None):
     """A model/editor checks facts; a keyword match alone never publishes."""
@@ -102,6 +109,8 @@ def draft(alert_id,review_path,now=None):
             other=n.load(other_path)
             if other['id']!=alert_id and other.get('reset_event_key')==review['reset_event_key'] and other.get('status') not in {'dismissed'}:
                 raise ValueError('This reset event already has a temporary edition')
+        from reset_layout import detailed_pages,context_groups
+        pages=detailed_pages(alert['text'],review)
         ep_id='reset-'+now.strftime('%Y%m%d-%H%M%S')+'-'+alert_id
         scene=dict(id='reset-message',section='临时新闻',title=review['title'],short_title='reset 消息',
             facts=[dict(title='tibo 推文原文',detail=quote),dict(title='消息概括',detail=review['summary'])],
@@ -110,18 +119,29 @@ def draft(alert_id,review_path,now=None):
             claim_type='preview' if review['announcement_status']=='planned' else 'announcement',attribution_checked=True,
             context_evidence=review.get('context_evidence',''),selection_reason='User-authorized Tibo reset temporary news',
             evidence=quote,event_key=review['reset_event_key'],show_source=True)
+        scenes=[]
+        for i,(original,narration) in enumerate(pages):
+            current=dict(scene,id=f'reset-message-{i+1}',narration=narration,original_text_page=original,
+                facts=[dict(title=f'tibo 推文全文（{i+1}/{len(pages)}）',detail=original)])
+            if i==len(pages)-1:current['facts'].append(dict(title='中文说明',detail=review['summary']))
+            scenes.append(current)
         ep=dict(id=ep_id,producer=review.get('producer','Codex current conversation'),edition_date=now.date().isoformat(),
             edition_slot='temporary',edition_type='temporary',edition_timestamp=now.isoformat(),alert_id=alert_id,
             counts_toward_daily_main_limit=False,title=review['title']+'｜'+now.strftime('%m.%d')+' 临时新闻',
-            footer_tag='临时新闻',scenes=[scene])
+            footer_tag='临时新闻',production_policy_version=2,original_post_text=alert['text'],scenes=scenes,
+            voice_context_group_sentence_counts=context_groups(scenes),normalize_context_pauses=True,
+            voice_scene_pause_seconds=n.config().get('voice',{}).get('qwen3',{}).get('paragraph_pause',.6))
         validate_temporary(ep)
         incoming=n.ROOT/'data'/f'{ep_id}-editorial.json';n.dump(incoming,ep);n.import_editorial(incoming)
         out=n.ROOT/'episodes'/ep_id
         n.dump(out/'cover.json',dict(headline_top='tibo 发文',headline_main='重置消息',highlight='reset',
             subtitle=review.get('cover_subtitle','原始推文信息'),image='assets/logos/openai.png',image_label='tibo 推文',footnote='原文及中文概括'))
-        description=review['summary']+'\n\n原始推文：\n'+alert['source_url']+'\n发布时间：'+alert['published']+'\n\n内容由 AI 辅助整理和配音，字幕已内嵌。'
+        description=review['summary']+'\n\n推文全文：\n'+alert['text']+'\n\n原始推文：\n'+alert['source_url']+'\n发布时间：'+alert['published']+'\n\n内容由 AI 辅助整理和配音，字幕已内嵌。'
         pub=dict(title=ep['title'],description=description,tags=['AI','OpenAI','临时新闻'],original=True,ai_generated=True,
             category_requested='News',zone_requested='科技数码',auto_publish=bool(n.config().get('auto_publish')))
+        from production_policy import tags
+        pub['tags']=tags(pub['tags'])
+        if len(pub['description'])>2000:pub['description']=review['summary']+'\n完整原文见视频及原帖：'+alert['source_url']
         n.dump(out/'publication.json',pub);(out/'description.txt').write_text(description,encoding='utf-8')
         alert.update(status='drafted',episode_id=ep_id,reset_event_key=review['reset_event_key'],review=review)
         n.dump(path,alert);n.dump(out/'reset-alert.json',alert)

@@ -3,6 +3,17 @@ from pathlib import Path
 from scene_pauses import apply_scene_holds
 
 class SceneHoldChecks(unittest.TestCase):
+    def test_short_context_groups_keep_original_sentence_and_scene_pauses(self):
+        rate=1000;speech=b'\x01\0'*100
+        ep=dict(normalize_context_pauses=True,voice_scene_pause_seconds=.6,scenes=[dict(id='one',narration='甲。乙。'),dict(id='two',narration='丙。')])
+        meta=dict(sentences=[dict(processed_samples=100,pause_after_samples=600),dict(processed_samples=100,pause_after_samples=600),dict(processed_samples=100)])
+        with tempfile.TemporaryDirectory() as folder:
+            p=Path(folder)/'voice.wav'
+            with wave.open(str(p),'wb') as w:w.setparams((1,2,rate,0,'NONE','not compressed'));w.writeframes(speech+b'\0'*1200+speech+b'\0'*1200+speech)
+            result=apply_scene_holds(p,meta,ep,.4)
+            self.assertEqual([s.get('pause_after_samples') for s in result['sentences'][:2]],[400,600])
+            with wave.open(str(p),'rb') as w:self.assertEqual(w.readframes(w.getnframes()),speech+b'\0'*800+speech+b'\0'*1200+speech)
+
     def test_hold_is_exact_preserves_speech_and_is_idempotent(self):
         rate=1000;intro=b'\x01\0'*500;body=b'\x02\0'*700
         meta={'seconds':1.4,'sentences':[{'sentence':'导览。','processed_samples':500},{'sentence':'正文。','processed_samples':700}]}

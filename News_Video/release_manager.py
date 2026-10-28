@@ -8,7 +8,7 @@ SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','te
 FINAL_NAMES={
  'render-plan.json','render-job.json','render-validation.json','render-assets.json','layout-audit.json',
  'soundtrack.wav','audio-mix.json','caption-alignment.json','audio-content-review.json',
- 'leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
+ 'game-coverage-audit.json','original-post.json','leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
  'description.txt','script.txt','spoken_script.txt','publication.json','episode.json',
  'narration.wav','narration_原始.wav','narration.json','timings.json','captions.json',
  'scene-timings.json','progress.json','used-news-record.json','SPEECH_REVIEW.md',
@@ -63,6 +63,11 @@ def prepare(episode_id,slot=None,root=ROOT):
     target,video_name=release_target(root,ep,slot)
     for required in ['sample.mp4','cover-4x3.png','cover-16x9.png','script.txt','publication.json','check.json','progress-validation.json']:
         if not (source/required).is_file():raise ValueError('Release is incomplete: '+required)
+    from production_policy import validate_video,tags
+    validate_video(root,source/'sample.mp4')
+    publication=json.loads((source/'publication.json').read_text(encoding='utf-8'))
+    publication['tags']=tags(publication.get('tags',[]))
+    (source/'publication.json').write_text(json.dumps(publication,ensure_ascii=False,indent=2),encoding='utf-8')
     check=json.loads((source/'check.json').read_text(encoding='utf-8-sig'))
     if not check.get('ok'):raise ValueError('Video check has not passed')
     plan_path=source/'render-plan.json'

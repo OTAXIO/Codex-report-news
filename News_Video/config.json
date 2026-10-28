@@ -5,11 +5,11 @@
     "18:00"
   ],
   "ai_rss_fetch_trigger": "before_each_episode",
-  "social_rss_collection_interval_minutes": 60,
+  "social_rss_collection_interval_minutes": null,
   "social_collection_allow_model_calls": false,
   "ai_item_limit": null,
-  "social_domestic_count": 3,
-  "social_international_count": 3,
+  "social_domestic_count": 0,
+  "social_international_count": 0,
   "upload_enabled": true,
   "auto_publish": true,
   "x_enabled": true,
@@ -81,6 +81,8 @@
     "other_fields": "Reuse confirmed defaults; only ask when required data is actually missing",
     "zone_name": "科技",
     "tags": [
+      "明日方舟",
+      "终末地",
       "AI",
       "OpenAI",
       "千问",
@@ -232,7 +234,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "d4241d0d1c8c2683edd529adf9430351bf581882a4e6ed0cf29aabbac63a7f9c",
+    "implementation_sha256": "b7f323fbfb7407f9cc9ad7f6851b77ec79971ec38a31738e4317d1d3bd3a0253",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -241,7 +243,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "b195be4dc4cf8b6e39635e95e5503d3b6ee0163b4c09474e7a61059aac450fc0"
+    "validation_sha256": "40a9dfbe739268b66de8784b157e8f55d8500892aa6301e17926de5a050a493c"
   },
   "workspace_directory": "../..",
   "presentation": {
@@ -298,5 +300,42 @@
     "backend": "hyperframes",
     "style": "legacy",
     "independent_of_video_renderer": true
+  },
+  "main_content_groups": [
+    "ai",
+    "games"
+  ],
+  "production": {
+    "minimum_duration_exclusive_seconds": 30,
+    "target_minimum_seconds": 31,
+    "required_tags": [
+      "明日方舟",
+      "终末地"
+    ]
+  },
+  "game_news": {
+    "games": [
+      "arknights",
+      "endfield"
+    ],
+    "targets": {
+      "arknights_cn": 1,
+      "arknights_global": 1,
+      "endfield_update": 1,
+      "endfield_event": 1
+    },
+    "maximum_items": null,
+    "enforce_minimum": false,
+    "priority": [
+      "update",
+      "event",
+      "other"
+    ],
+    "sources": [
+      "official_rss",
+      "official_page",
+      "official_x"
+    ],
+    "collect_trigger": "before_each_episode"
   }
 }

@@ -130,7 +130,9 @@ def parse_feed(body, source):
         if not title or not link: continue
         try: link = normalized_url(link)
         except ValueError: continue
-        output.append(dict(title=text(title), url=link, published=parse_date(date), summary=text(summary)[:10000]))
+        images=[urllib.parse.urljoin(link,u) for u in re.findall(r'<img[^>]+src=[\"\x27]([^\"\x27]+)',summary,re.I)]
+        images += [node.attrib.get('url') for node in entry.iter() if node.tag.split('}')[-1] in {'content','thumbnail','enclosure'} and node.attrib.get('url') and ('image' in node.attrib.get('type','image'))]
+        output.append(dict(title=text(title), url=link, published=parse_date(date), summary=text(summary)[:10000],images=list(dict.fromkeys(images))))
     return output
 
 class PageText(HTMLParser):
@@ -212,14 +214,17 @@ def official_bridge(body, source, encoding):
 
 def collect(kind):
     config(); now=dt.datetime.now(UTC); run_id=now.strftime("%Y%m%dT%H%M%S")+"_"+kind
-    sources=[s for s in load(ROOT/"sources.json") if kind=="all" or s["group"]==kind]
+    sources=[s for s in load(ROOT/"sources.json") if s.get("enabled",True) and (kind!="all" or s["group"] in config().get("main_content_groups",["ai","social"])) and (kind=="all" or s["group"]==kind)]
     directory=ROOT/"data/collections"/run_id; directory.mkdir(parents=True,exist_ok=True)
     def one(source):
         result=dict(source_id=source["id"],source_type=source["type"],model_calls=0)
         try:
             body,final,encoding=fetch(source["url"])
             (directory/(source["id"]+".source")).write_bytes(body)
-            entries=parse_feed(body,source) if source["type"]=="rss" else official_bridge(body,source,encoding)
+            if source["type"]=="official_game_page":
+                from game_sources import parse,decode
+                entries=parse(decode(body,encoding),source)
+            else:entries=parse_feed(body,source) if source["type"]=="rss" else official_bridge(body,source,encoding)
             result.update(ok=True, final_url=final, items=entries, count=len(entries))
             if source["type"]=="official_page":
                 rss=ET.Element("rss",version="2.0"); channel=ET.SubElement(rss,"channel")
@@ -237,6 +242,9 @@ def collect(kind):
     for source,result in results:
         for item in result.pop("items"):
             key=hashlib.sha256(item.get('entry_key',item["url"]).encode()).hexdigest()[:20]
+            if source["group"]=="games":
+                from game_sources import archive
+                archive(ROOT,key,item,source)
             existed=db.execute("SELECT id FROM items WHERE id=?",(key,)).fetchone()
             new+=int(not existed)
             db.execute('''INSERT INTO items VALUES(?,?,?,?,?,?,?,?,?,?,?)
@@ -248,9 +256,9 @@ def collect(kind):
         reports.append(result)
     report=dict(id=run_id,started=now.isoformat(),finished=dt.datetime.now(UTC).isoformat(),kind=kind,model_calls=0,new_items=new,sources=reports)
     db.execute("INSERT INTO runs VALUES(?,?,?,?,?)",(run_id,kind,report["started"],report["finished"],json.dumps(report,ensure_ascii=False))); db.commit();db.close()
-    if kind in {'ai','all'} and config().get('x_enabled'):
+    if kind in {'ai','games','all'} and config().get('x_enabled'):
         from leader_sources import collect as collect_x
-        report['x']=collect_x()
+        report['x']=collect_x(scope='games' if kind=='games' else 'ai' if kind=='ai' else None)
     dump(directory/"report.json",report)
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return report
@@ -264,7 +272,11 @@ def candidates(hours=48):
         from leader_sources import registry
         sources.update({s['id']:s for s in registry() if s.get('enabled')})
     preferred=config().get('editorial',{}).get('preferred_vendors',[])
+    rows=[row for row in rows if row["kind"] in config().get("main_content_groups",["ai","social"])]
     for item in rows:
+        game_path=ROOT/"data/game-items"/(item["id"]+".json")
+        if game_path.exists():
+            game=load(game_path);item.update({k:game[k] for k in ["game","game_region","game_topic","images","source_type"] if k in game})
         item["observed_sources"]=[r[0] for r in db.execute("SELECT source_id FROM observations WHERE item_id=?",(item["id"],))]
         source=sources.get(item['source_id'],{})
         if source.get('type')=='official_page' and item['url']==source.get('url'):
@@ -297,6 +309,8 @@ def candidates(hours=48):
     payload['important_recaps']=recap_candidates(ROOT)
     from editorial_policy import coverage
     payload['ai_coverage']=coverage(rows,sources,config().get('editorial',{}))
+    from game_sources import coverage as game_coverage
+    payload['game_coverage']=game_coverage(rows)
     payload['tibo_review_candidates']=review_candidates(rows,ROOT)
     from leader_editorial import review_leader_candidates
     payload['leader_review_candidates']=review_leader_candidates(rows,ROOT)
@@ -307,6 +321,7 @@ def candidate_order(item):
     # Discovery order only; leader_editorial applies verified reset exceptions
     # and the final company-before-ordinary-leaders scene order at import.
     ai=item['kind']=='ai'
+    if item['kind']=='games':return (1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
     return (0 if ai else 1,item.get('priority_tier',2) if ai else 0,
             item.get('preferred_vendor_order',99) if ai else 0,
             item.get('source_priority',100) if ai else 0,
@@ -323,12 +338,19 @@ def article(item_id):
     page=PageText(); page.feed(body.decode(encoding,errors="replace"))
     content=re.sub(r"[ \t]+"," "," ".join(page.parts))
     data=dict(item_id=item_id,title=row["title"],url=final,metadata=page.metadata,text=content[:60000],fetched_at=dt.datetime.now(UTC).isoformat())
+    game_path=ROOT/"data/game-items"/(item_id+".json")
+    if game_path.exists():
+        from game_sources import article as game_article
+        data=game_article(ROOT,item_id,dict(load(game_path),**data),body.decode(encoding,errors="replace"))
     dump(ROOT/"data/articles"/(item_id+".json"),data)
     print(json.dumps(data,ensure_ascii=False,indent=2))
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
     episode['audio_content_review_required']=True
+    episode['production_policy_version']=2
+    from production_policy import validate_content
+    validate_content(episode)
     if cfg.get('background_music',{}).get('enabled'):
         bgm=cfg['background_music']
         episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','reference_voice_gap_db','voice_gap_measure','music_peak_dbfs']}
@@ -352,6 +374,13 @@ def import_editorial(path):
             row=db.execute("SELECT * FROM items WHERE id=?",(scene["item_id"],)).fetchone()
             if not row: raise ValueError("Editorial refers to unknown collected candidate")
             row=dict(row)
+            if row["kind"]=="social":raise ValueError("Social stories removed from new editions")
+            if row["kind"]=="games":
+                record=load(ROOT/"data/game-items"/(row["id"]+".json"))
+                if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
+            if scene.get("image") and row["kind"]=="games":
+                article_path=ROOT/"data/articles"/(row["id"]+".json")
+                if not article_path.exists() or not any(x.get("file")==scene["image"] and x.get("source_url")==scene.get("image_source_url") for x in load(article_path).get("related_images",[])):raise ValueError("Game picture must match the inspected official article and recorded source URL")
             if scene.get("source_url") != row["url"]: raise ValueError("Source URL does not match collected candidate")
             if not scene.get("evidence") or not scene.get("selection_reason"): raise ValueError("Missing evidence/ranking reason")
             if row['source_id'].startswith(('x-leader-','x-official-')):
@@ -363,7 +392,10 @@ def import_editorial(path):
                 from important_events import validate_recap
                 validate_recap(scene,episode,ROOT)
             else:selected_rows.append(dict(row,**({'event_key':scene['event_key']} if scene.get('event_key') else {})))
-    if len(set(selected))!=len(selected): raise ValueError("Duplicate event selection")
+    if len(set(selected))!=len(selected) and not episode.get("alert_id"):
+        for repeated in {item for item in selected if selected.count(item)>1}:
+            pages=[sc for sc in episode["scenes"] if sc.get("item_id")==repeated]
+            if any(not sc.get("game") or not isinstance(sc.get("page_number"),int) for sc in pages) or len({sc.get("event_key") for sc in pages})!=1 or len({sc["page_number"] for sc in pages})!=len(pages):raise ValueError("Duplicate event selection")
     db.close()
     from used_news import recent_records,exclude_used
     edition_key=episode.get('edition_key',re.sub(r'-v\d+$','',episode['id']))
@@ -382,11 +414,18 @@ def import_editorial(path):
         pool,_,_=exclude_used(pool,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
         selection_audit=audit_selection(episode,selected_rows,pool,sources,cfg.get('editorial',{}))
         if selection_audit:episode['ai_coverage_audit']=selection_audit
+    validate_content(episode)
     episode["publication_preset"]=cfg["publication_preset"]
     episode['upload_enabled']=bool(cfg.get('upload_enabled'));episode['auto_publish']=bool(cfg.get('auto_publish'))
     directory=ROOT/"episodes"/episode["id"]; directory.mkdir(parents=True,exist_ok=True)
     if (directory/'release.json').exists():raise ValueError('Published edition is archived; create a new revision ID')
     if selection_audit:dump(directory/'ai-coverage-audit.json',selection_audit)
+    from game_sources import coverage as game_coverage
+    game_rows=[]
+    for sc in episode['scenes']:
+        if sc.get('game'):game_rows.append(dict(sc,kind='games',url=sc['source_url']))
+    dump(directory/'game-coverage-audit.json',game_coverage(game_rows))
+    if episode.get('original_post_text'):dump(directory/'original-post.json',dict(text=episode['original_post_text'],source_url=episode['scenes'][0]['source_url'],published=episode['scenes'][0]['published']))
     if tibo_audit:dump(directory/'tibo-audit.json',tibo_audit)
     if leader_audit:dump(directory/'leader-audit.json',leader_audit)
     dump(directory/"episode.json",episode)
@@ -458,7 +497,8 @@ def voice(episode_id):
     for sentence,scene_id in zip(sentences,expected): sentence["scene_id"]=scene_id
     dump(directory/"timings.json",dict(sample_rate=rate,duration=meta["seconds"],sentences=sentences))
     if backend=='qwen3':
-        episode['audio_content_review_required']=True;dump(directory/'episode.json',episode)
+        episode['audio_content_review_required']=True
+        dump(directory/'episode.json',episode)
         local_python=v['qwen3']['alignment_python']
         quality_env=env.copy();quality_env['NUMBA_CACHE_DIR']=str(ROOT/'.cache/numba-asr')
         for check_worker in ['verify_speech_content.py','align_captions.py']:
@@ -488,7 +528,7 @@ def doctor():
 def main():
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest="cmd",required=True)
     sub.add_parser("doctor")
-    p=sub.add_parser("collect");p.add_argument("--kind",choices=["social","ai","all"],required=True)
+    p=sub.add_parser("collect");p.add_argument("--kind",choices=["social","games","ai","all"],required=True)
     p=sub.add_parser("candidates");p.add_argument("--hours",type=int,default=48)
     p=sub.add_parser("article");p.add_argument("id")
     p=sub.add_parser("import-editorial");p.add_argument("path")

@@ -12,7 +12,8 @@ def apply_scene_holds(path, meta, episode, default_pause):
     ids=sentence_scene_ids(episode)
     if len(ids)!=len(meta['sentences']):raise ValueError('Sentence/scene mismatch before hold insertion')
     holds={s['id']:s['hold_after_seconds'] for s in episode['scenes'] if 'hold_after_seconds' in s}
-    if not holds:return meta
+    normalize=episode.get('normalize_context_pauses',False)
+    if not holds and not normalize:return meta
     with wave.open(str(path),'rb') as source:
         params=source.getparams();data=source.readframes(source.getnframes())
     if params.sampwidth!=2 or params.comptype!='NONE':raise ValueError('Scene holds require PCM16 narration')
@@ -22,7 +23,7 @@ def apply_scene_holds(path, meta, episode, default_pause):
         samples=entry['processed_samples'];chunks.append(data[cursor*stride:(cursor+samples)*stride]);cursor+=samples
         if i+1==len(ids):break
         old=int(entry.get('pause_after_samples',round(default_pause*rate)))
-        desired=round(holds[sid]*rate) if sid!=ids[i+1] and sid in holds else old
+        desired=round(holds[sid]*rate) if sid!=ids[i+1] and sid in holds else (round((episode.get('voice_scene_pause_seconds',.6) if sid!=ids[i+1] else default_pause)*rate) if normalize else old)
         if desired<0:raise ValueError('Negative scene hold')
         gap=data[cursor*stride:(cursor+old)*stride]
         chunks.append(gap[:desired*stride] if desired<=old else gap+b'\0'*((desired-old)*stride))

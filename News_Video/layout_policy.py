@@ -11,6 +11,7 @@ def folio_numbers(scenes):
 
 def overview_group(scene):
     section=scene.get('section','')
+    if scene.get('game') or section.startswith('游戏'):return '游戏资讯'
     if section.startswith('国内'):return '国内新闻'
     if section.startswith('国际'):return '国际新闻'
     if section.startswith('AI') or scene.get('source_type') in {'leader_x','official_x'}:return 'AI 动态'

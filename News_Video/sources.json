@@ -90,7 +90,8 @@
     "group": "social",
     "publisher": "中国新闻网",
     "url": "https://www.chinanews.com.cn/rss/scroll-news.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "cns-society",
@@ -98,7 +99,8 @@
     "group": "social",
     "publisher": "中国新闻网",
     "url": "https://www.chinanews.com.cn/rss/society.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "cns-culture",
@@ -106,7 +108,8 @@
     "group": "social",
     "publisher": "中国新闻网",
     "url": "https://www.chinanews.com.cn/rss/cul.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "cns-world",
@@ -114,7 +117,8 @@
     "group": "social",
     "publisher": "中国新闻网",
     "url": "https://www.chinanews.com.cn/rss/world.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "bbc-zh",
@@ -122,7 +126,8 @@
     "group": "social",
     "publisher": "BBC",
     "url": "https://feeds.bbci.co.uk/zhongwen/simp/rss.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "guardian",
@@ -130,7 +135,8 @@
     "group": "social",
     "publisher": "The Guardian",
     "url": "https://www.theguardian.com/world/rss",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "un-zh",
@@ -138,7 +144,8 @@
     "group": "social",
     "publisher": "UN News",
     "url": "https://news.un.org/feed/subscribe/zh/news/all/rss.xml",
-    "type": "rss"
+    "type": "rss",
+    "enabled": false
   },
   {
     "id": "qwen-code-releases",
@@ -244,5 +251,61 @@
     "group": "ai",
     "priority_tier": 1,
     "selection_policy": "official_model_updates; empty feed is a valid coverage gap"
+  },
+  {
+    "id": "arknights-cn",
+    "name": "明日方舟国服",
+    "publisher": "明日方舟国服",
+    "group": "games",
+    "type": "official_game_page",
+    "url": "https://ak.hypergryph.com/news",
+    "article_base": "https://ak.hypergryph.com/news",
+    "game": "arknights",
+    "game_region": "cn",
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false
+  },
+  {
+    "id": "arknights-global",
+    "name": "Arknights 英文国际服（美服资讯）",
+    "publisher": "Arknights 英文国际服（美服资讯）",
+    "group": "games",
+    "type": "official_game_page",
+    "url": "https://arknights.global/api/resource/news/list?index=1&size=30&type=latest",
+    "article_base": "https://arknights.global/news",
+    "game": "arknights",
+    "game_region": "global",
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false
+  },
+  {
+    "id": "endfield-cn",
+    "name": "明日方舟：终末地国服",
+    "publisher": "明日方舟：终末地国服",
+    "group": "games",
+    "type": "official_game_page",
+    "url": "https://endfield.hypergryph.com/zh-cn/news",
+    "article_base": "https://endfield.hypergryph.com/zh-cn/news",
+    "game": "endfield",
+    "game_region": "cn",
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false
+  },
+  {
+    "id": "endfield-global",
+    "name": "Arknights: Endfield 国际",
+    "publisher": "Arknights: Endfield 国际",
+    "group": "games",
+    "type": "official_game_page",
+    "url": "https://endfield.gryphline.com/en-us/news",
+    "article_base": "https://endfield.gryphline.com/en-us/news",
+    "game": "endfield",
+    "game_region": "global",
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false
   }
 ]

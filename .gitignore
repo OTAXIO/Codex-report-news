@@ -51,3 +51,6 @@ News_Video/assets/music/
 
 # Multiplane local jobs; episode source and render artifacts remain private.
 News_Video/out/
+
+# Downloaded official game media is local production material.
+News_Video/assets/game-news/

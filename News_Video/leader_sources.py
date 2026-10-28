@@ -24,9 +24,9 @@ def normalize_post(item, source, now, hours=48):
     if not now-dt.timedelta(hours=hours)<=stamp<=now+dt.timedelta(minutes=15):
         raise ValueError('Outside fresh-news window')
     key=hashlib.sha256(url.encode()).hexdigest()[:20]
-    return dict(id=key,source_id=source['id'],publisher=source['name'],kind='ai',
-                title=body[:180],url=url,published=published,summary=body[:20000],
-                company=source['vendor'],handle=source['handle'],author=source['name'],
+    return dict(id=key,source_id=source['id'],publisher=source['name'],kind=source.get('group','ai'),
+                title=body[:180],url=url,published=published,summary=body,original_text=item.get('text',''),
+                game=source.get('game'),game_region=source.get('game_region'),company=source['vendor'],handle=source['handle'],author=source['name'],
                 attribution=source['name']+' (@'+source['handle']+')',
                 source_type=source.get('type','leader_x'),requires_context=bool(item.get('is_reply') or item.get('is_repost') or item.get('is_quote') or item.get('raw',{}).get('quoted_tweet') or item.get('raw',{}).get('is_retweet')),
                 context_policy='Check reply/quote/thread context before editorial use; individual statement is not an official release.',
@@ -75,7 +75,8 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
     if not cfg.get('x_enabled'):raise ValueError('X sources disabled')
     if not 1<=hours<=72:raise ValueError('Freshness window must be 1-72 hours')
     accounts=[s for s in registry() if s.get('enabled') and s.get('identity_checked')]
-    if scope not in {None,'hourly'}:raise ValueError('Unknown X collection scope')
+    if scope not in {None,'hourly','ai','games'}:raise ValueError('Unknown X collection scope')
+    if scope in {'ai','games'}:accounts=[s for s in accounts if s.get('group','ai')==scope]
     if scope=='hourly':accounts=[s for s in accounts if s['handle'].lower()=='thsottiaux']
     if only:
         accounts=[s for s in accounts if s['handle'].lower()==only.lower().lstrip('@')]
@@ -130,9 +131,12 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
                 report['new_items']+=int(not existed);report['accepted_items']+=1;status['accepted']+=1
                 db.execute('''INSERT INTO items VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET
                     last_seen=excluded.last_seen,title=excluded.title,summary=excluded.summary,content_hash=excluded.content_hash''',
-                    (post['id'],source['id'],post['publisher'],'ai',post['title'],post['url'],post['published'],post['summary'],now.isoformat(),now.isoformat(),hashlib.sha256(post['summary'].encode()).hexdigest()))
+                    (post['id'],source['id'],post['publisher'],post['kind'],post['title'],post['url'],post['published'],post['summary'],now.isoformat(),now.isoformat(),hashlib.sha256(post['summary'].encode()).hexdigest()))
                 db.execute('INSERT OR REPLACE INTO observations VALUES(?,?,?)',(post['id'],source['id'],now.isoformat()))
                 n.dump(n.ROOT/'data/leader-posts'/(post['id']+'.json'),post)
+                if post['kind']=='games':
+                    from game_sources import archive,topic
+                    post['game_topic']=topic(post['summary']);archive(n.ROOT,post['id'],post,source)
             report['sources'].append(status)
         report['finished']=dt.datetime.now(n.UTC).isoformat()
         db.execute('INSERT INTO runs VALUES(?,?,?,?,?)',(run_id,'leaders',report['started'],report['finished'],json.dumps(report,ensure_ascii=False)))

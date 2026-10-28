@@ -32,7 +32,7 @@ def build(root,episode,plan):
         start=parts[0]['start'];last=parts[-1]['end']
         end=next((p['start'] for p in timing['sentences'] if p['start']>=last and p['scene_id']!=s['id']),timing['duration'])
         offsets.append(dict(id=s['id'],start=start,end=end))
-        mode='overview' if is_overview(s) else 'leader' if s.get('source_type')=='leader_x' or s.get('speaker_identity') else 'brief' if s.get('scene_type')=='temporary_news' or ep.get('edition_slot')=='temporary' else 'product' if s.get('logo') else 'social'
+        mode='overview' if is_overview(s) else 'game' if s.get('game') else 'leader' if s.get('source_type')=='leader_x' or s.get('speaker_identity') else 'brief' if s.get('scene_type')=='temporary_news' or ep.get('edition_slot')=='temporary' else 'product' if s.get('logo') else 'social'
         scene=dict(id=s['id'],start=start,end=end,mode=mode,section=group(s),title=s['title'])
         scenes.append(scene)
         logo='';picture='';diagram=''
@@ -55,12 +55,13 @@ def build(root,episode,plan):
         for f in s.get('facts',[]):
             f=f if isinstance(f,dict) else dict(title=f,detail='')
             facts.append(f)
+        if s.get('original_text_page'):mode='original';scene['mode']=mode
         if mode=='overview':
             if len(facts)>4:raise ValueError('Upgrade the overview to at most four complete highlights before rendering')
             body='<p class="lead">'+text(s.get('lead','本期我们一起了解这些重点动态。'))+'</p><div class="overview-grid">'+''.join(
                 f'<article><div class="category">{text(f.get("category","重点新闻"))}</div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for f in facts)+'</div>'
         else:
-            identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode=='leader' else '')
+            identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
             body=identity+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')
@@ -69,11 +70,8 @@ def build(root,episode,plan):
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]
     for c in captions:
         if '\n' in c['text']:raise ValueError('Only single-line captions are supported')
-    social=next((s['start'] for s in scenes if s['section'].startswith(('国内','国际'))),None)
-    modules=([dict(id='ai',label='AI 动态',start=0,end=social)] if social not in (0,None) else [])
-    if social is None:modules=[dict(id='ai',label='AI 动态',start=0,end=timing['duration'])]
-    else:modules.append(dict(id='news',label='国内外重点新闻',start=social,end=timing['duration']))
-    if ep.get('edition_slot')=='temporary':modules=[dict(id='temporary',label='临时新闻',start=0,end=timing['duration'])]
+    from production_policy import modules as module_ranges
+    modules=[dict(id=key,label=label,start=start,end=end) for key,label,start,end in module_ranges(ep,offsets,timing['duration'])]
     spec=dict(duration=timing['duration'],chapters=chapters,modules=modules,blue='#01A1FE',full_bleed_edges=True,right_block_width=64,
               bar=dict(x=96,y=1030,width=1728,height=8),chapter_highlight_y=991,module_highlight_y=942,
               chapter_bounds=[dict(x=96+1728*c['start']/timing['duration'],width=1728*(c['end']-c['start'])/timing['duration']) for c in chapters])

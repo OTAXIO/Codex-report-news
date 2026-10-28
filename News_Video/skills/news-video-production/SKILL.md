@@ -3,6 +3,8 @@ name: news-video-production
 description: 按当前项目规则采集、核验并制作新闻视频，生成本地语音、单行字幕、双封面与release，调用已授权投稿及回查恢复。
 ---
 
+> 2026-10-28 当前内容升级：新主片仅AI动态＋游戏资讯，移除社会新闻。游戏只看明日方舟国服/英文国际服与明日方舟：终末地，推荐2＋2但无上限、无最低配额；更新优先，其次活动，官方RSS/官网优先、官方X补充。所有正式MP4实际时长必须>30.0秒（目标≥31秒），release和上传前实际ffprobe核验；不足修内容，不靠空白/重复/降速凑时长。tibo reset完整原文保留并分页，详细中文播报，必要时超过2页；仍无导览、正文01、单一事件。新片固定标签“明日方舟”“终末地”，预留活动名额。已发布视频不重做不重传。完整接口与验收见docs/AI_GAMES_PRODUCTION.md。
+
 # 新闻视频制作
 
 先读工作区AGENTS.md、PROJECT_PROMPT.md，以及[完整规则](../../docs/PRODUCTION_RULES.md)、[工作流](../../docs/WORKFLOW.md)、[状态](../../docs/STATE.md)。按当前规则执行，不从历史样片推断要求。
@@ -25,7 +27,7 @@ description: 按当前项目规则采集、核验并制作新闻视频，生成�
 ## 投稿与恢复
 
 - 按[codex-upload](../codex-upload/SKILL.md)与[上传契约](../../docs/CODEX_UPLOAD.md)，从config.json解析生产入口。制作前检查sync_upload_skill.py --check --installed与生产doctor，指纹漂移或缺完整验证证据不能继续投稿；修改投稿器须先经validate.py实际隔离Chrome与Python零跳过验证，再同步部署，见docs/UPLOAD_RELIABILITY.md。
-- 默认科技数码、实际News合集、AI生成＋自制原创禁止转载、公开可见；固定明日方舟终末地创作者应援计划，topic_id=1325166、strategy=explicit、fallback=stop，不可用不换其他活动。
+- 默认科技数码、实际News合集、AI生成＋自制原创禁止转载、公开可见；活动按edition_slot选择：morning明日方舟终末地创作者应援计划（1325166），night明日方舟创作者应援计划（8314）；temporary沿用原终末地活动。strategy=explicit、fallback=stop，不可用不换其他活动。
 - render自动投稿后不得再publish。中断使用render_sample.py <id> --resume-export或upload_bridge.py recover <release>续接；不重配音重渲染，不prepare重置unknown。
 - 字段只在同表单有限修复。unknown先回查，安全恢复须有同步字段错误、submit_started=false、成功创作中心回查证据；自动恢复不设固定次数上限，每次必须重新回查。最终提交一次，真实POST code0＋aid/BV才submitted，公开账号/标题核验后才published/finalize。
 - diagnostic_hold不上传，已发布不改不重传。失败保留成品并报告真实阻塞。凭据、profile、模型及微软字体不进Git/交接包。
@@ -69,3 +71,6 @@ B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并
 用户反馈BGM仍偏小，后续新制作采用约+3dB版本：音乐初始目标-29LUFS（原-32）、峰值上限-21dBFS（原-24）、正常播报窗口中位参考差至少16dB（原18）。按audio_mix一次选择恒定增益，实际每期仍受播报优先与峰值约束，不承诺每期恰好+3dB。配音基准-16LUFS不变；无ducking、不随播报/停顿升降，首遍从00:00、后续每轮00:03到曲尾，前3秒只出现一次。此条覆盖历史“停止提高音量”和旧数值要求。
 
 真实原曲与既有新闻配音完成100秒新旧对照：音乐峰值-24→-21dBFS，实际提高3dB；新版正常播报参考差约19.02dB，恒定增益、无ducking及3秒循环检查通过。数值检查不等于用户主观听感认可。仅后续新片使用；既有release的恢复按原成品继续，已发布视频不重混、不重做、不重传。混音由audio_mix统一生成，预览和成片复用soundtrack.wav，不二次整体归一化，release按本期固化参数/哈希核验。
+
+
+2026-10-28 用户补充：游戏官方图片提高占比，采用接近右半幅的大图窗口（1080p为880×460），完整保留海报内容不强行裁切；左侧要点与来源独立列，字幕与导航区域留空。图片不压字，三条长要点放不下应分页，不能缩小到难读。只用于新片，已发布不重做。

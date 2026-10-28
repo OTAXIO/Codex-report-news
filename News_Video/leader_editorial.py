@@ -74,7 +74,7 @@ def prepare_main_tibo(ep,root,now=None):
                 raise ValueError('Tibo reset placement requires verified affirmative reset semantics, exact quote and accurate status')
         rest=[s for s in ep['scenes'] if not is_tibo(s)]
         if kind=='reset':index=next((i for i,s in enumerate(rest) if not is_overview(s)),len(rest));placement='before_company_news'
-        else:index=next((i for i,s in enumerate(rest) if s.get('section','').startswith(('国内','国际'))),len(rest));placement='after_company_news'
+        else:index=next((i for i,s in enumerate(rest) if (s.get('game') or s.get('section','').startswith(('游戏','国内','国际')))),len(rest));placement='after_company_news'
         scene['section']='AI 动态';scene['tibo_message_type']=kind
         rest.insert(index,scene);ep['scenes']=rest
     return dict(max_pages=1,placement=placement,reviewed_posts=audit,no_fresh_unused_posts=not items)
@@ -170,7 +170,7 @@ def prepare_main_leaders(ep,root,now=None):
         handle=s.get('author_handle','').lower();counts[handle]=counts.get(handle,0)+1
         if counts[handle]>2:raise ValueError('A leader may occupy at most two news pages; summarize rather than add pages')
     rest=[s for s in ep['scenes'] if s not in regular]
-    index=next((i for i,s in enumerate(rest) if s.get('section','').startswith(('国内','国际'))),len(rest))
+    index=next((i for i,s in enumerate(rest) if (s.get('game') or s.get('section','').startswith(('游戏','国内','国际')))),len(rest))
     ep['scenes']=rest[:index]+regular+rest[index:]
     ep['tibo_audit']=tibo
     return dict(policy='Prefer normal interesting leader statements; separate personal views from company announcements',reviewed_posts=audit,tibo=tibo)

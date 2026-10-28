@@ -3,6 +3,8 @@ import html,json,math
 def group(scene):
     section=scene['section']
     if scene['id']=='intro':return '开场'
+    if scene.get('game'):return '游戏资讯 / '+{'arknights':'明日方舟','endfield':'明日方舟：终末地'}[scene['game']]+' · '+(scene.get('scope_label','官方公告') if scene['game']=='endfield' else {'cn':'国服','global':'英文国际服'}.get(scene.get('game_region'),'适用范围见公告'))
+    if section.startswith('游戏'):return '游戏资讯'
     if section.startswith('AI'):return 'AI 动态'
     if section.startswith('国内'):return '国内新闻'
     if section.startswith('国际'):return '国际新闻'
@@ -29,11 +31,8 @@ def build_progress(episode,offsets,duration,blue):
         labels.append(f'<div id="active-{c["id"]}" class="chapter current clip" data-start="{c["start"]:.6f}" data-duration="{c["end"]-c["start"]:.6f}" data-track-index="5" style="{style}"><span>{label}</span></div>')
         if i:markers.append(f'<i class="marker" style="left:{x:.4f}px"></i>')
     modules=[];module_html=[]
-    social=next((i for i,s in enumerate(episode['scenes']) if s['section'].startswith(('国内','国际'))),None)
-    ranges=([('ai','AI 动态',0,offsets[social]['start'])] if social not in (None,0) else [])
-    if social is None:ranges=[('ai','AI 动态',0,duration)]
-    elif social is not None:ranges.append(('news','国内外重点新闻',offsets[social]['start'],duration))
-    if episode.get('edition_slot')=='temporary':ranges=[('temporary','临时新闻',0,duration)]
+    from production_policy import modules as module_ranges
+    ranges=module_ranges(episode,offsets,duration)
     for mid,label,start,end in ranges:
         x=192+1536*start/duration;w=1536*(end-start)/duration
         modules.append(dict(id=mid,label=label,start=start,end=end))

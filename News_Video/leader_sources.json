@@ -290,6 +290,40 @@
       "selection_policy": "verified_meaningful_model_product_agent_updates; no filler",
       "collection_trigger": "hourly_and_before_episode",
       "model_release_alerts": false
+    },
+    {
+      "id": "x-official-arknightsen",
+      "handle": "ArknightsEN",
+      "name": "Arknights EN",
+      "vendor": "Arknights EN",
+      "type": "official_x",
+      "group": "games",
+      "game": "arknights",
+      "game_region": "global",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://ark-us-static-online.yo-star.com/announce/Android/announcement/13.html",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "collection_trigger": "before_episode_only",
+      "model_release_alerts": false
+    },
+    {
+      "id": "x-official-akendfield",
+      "handle": "AKEndfield",
+      "name": "Arknights: Endfield",
+      "vendor": "Arknights: Endfield",
+      "type": "official_x",
+      "group": "games",
+      "game": "endfield",
+      "game_region": "global",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://endfield.gryphline.com/en-us/news official client asset https://web-static.hg-cdn.com/endfield/official-v4/_next/static/chunks/app/%5Blang%5D/(main)/layout-e59e4a1dd14e7244.js explicitly links twitter.com/AKEndfield; verified 2026-10-28",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "collection_trigger": "before_episode_only",
+      "model_release_alerts": false
     }
   ],
   "pending_company_leaders": [
