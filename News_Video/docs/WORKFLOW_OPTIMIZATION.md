@@ -26,6 +26,8 @@
 
 真实数据到手后按24/72小时同龄窗口分层比较主片、reset、模型临时稿；记录曝光和点击的分子分母/口径、3秒及30秒留存、平均观看秒数/比例、总时长、模块到达和流量来源。缺失值保持空值；平台无随机A/B时只称观察性比较。一次只变一个主要因素，不重传旧视频、刷量、用无关标签或去掉AI声明。
 
+只读导入入口 `python -B audience_metrics.py 本地CSV`，不写生产数据库。CSV列：`episode_id,edition_type,window_hours,impressions,clicks,reported_ctr_percent,retention_3s_percent,retention_30s_percent,average_watch_seconds,duration_seconds,ai_start_seconds,games_start_seconds,traffic_source`。`edition_type` 用 main/reset/model_temporary；窗口只收24或72小时。曝光和点击缺失时不从用户报告的75%反推分母；计算CTR与平台报告CTR分列保存。当前没有原始后台CSV，不做效果结论。
+
 ## 验证与限制
 
-四个已复现问题有隔离回归；又覆盖完整导出/上传顺序、单项异常隔离、视觉输入改变、预发行排序及阶段路由。已配置的 Qwen Python 环境完成新闻项目 155 项测试；系统默认 Python 缺 `librosa`，不能代表完整环境。上传 skill 的契约改动经 17 项 Python＋27 项隔离 Chrome 测试零跳过，并同步源码、生产与安装副本。紧凑候选命令在现有数据库运行，返回58条总量与分页指针。开发过程未真实发布新稿件；新一期开播与B站实际投稿路径仍需下一次生产期次验证，不能以隔离测试冒充实际投稿。
+四个已复现问题有隔离回归；又覆盖完整导出/上传顺序、单项异常隔离、视觉输入改变、预发行排序及阶段路由。已配置的 Qwen Python 环境完成新闻项目 157 项测试；系统默认 Python 缺 `librosa`，不能代表完整环境。上传 skill 的契约改动经 17 项 Python＋27 项隔离 Chrome 测试零跳过，并同步源码、生产与安装副本。紧凑候选命令在现有数据库运行，返回58条总量与分页指针。开发过程未真实发布新稿件；新一期开播与B站实际投稿路径仍需下一次生产期次验证，不能以隔离测试冒充实际投稿。
