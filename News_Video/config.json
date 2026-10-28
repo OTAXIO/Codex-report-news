@@ -293,5 +293,10 @@
       "solid_right_block_width": 64,
       "user_selected_template": "B/graphic"
     }
+  },
+  "cover_generation": {
+    "backend": "hyperframes",
+    "style": "legacy",
+    "independent_of_video_renderer": true
   }
 }

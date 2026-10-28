@@ -21,6 +21,13 @@ class RenderSelectionChecks(unittest.TestCase):
     def test_old_in_progress_episode_stays_hyperframes(self):
         r.save(self.episode/'scene-timings.json',[])
         self.assertEqual(r.select_plan(self.root,self.episode)['backend'],'hyperframes')
+    def test_legacy_cover_does_not_change_multiplane_video_plan(self):
+        import cover_generator as cover
+        plan=r.select_plan(self.root,self.episode,'multiplane','graphic')
+        cfg=r.load(self.root/'config.json');cfg['cover_generation']={'backend':'hyperframes'};r.save(self.root/'config.json',cfg)
+        with patch.object(cover,'ROOT',self.root),patch.object(cover,'make_hyperframes') as legacy,patch.object(r,'select_plan',side_effect=AssertionError('Cover must not select video renderer')):
+            cover.make('test');legacy.assert_called_once_with('test')
+        self.assertEqual(r.load(self.episode/'render-plan.json'),plan)
     def test_temporary_reset_and_model_editions_use_graphic_default(self):
         cfg=r.load(self.root/'config.json');cfg['rendering']['default_template']='graphic';r.save(self.root/'config.json',cfg)
         for alert_type in ['reset','model']:

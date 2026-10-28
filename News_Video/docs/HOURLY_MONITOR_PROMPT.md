@@ -27,3 +27,8 @@ tibo只有明确新鲜的额度重置通知才发。reset关键词本身、请�
 每小时同时upload_bridge.py pending；未知先回查，不能盲目重投。真实code0+aid/BV才记submitted，公开账号和标题一致才published及finalize。BV1UxnZ6AEVZ和BV1WLnf6fEgM已公开，禁止重传或修改。已有Chrome基础链真实发稿验证不等于新的小时reset/模型触发全链已实发，不能虚报。
 
 早晚两期主片仍通过important_events提及近24小时已发临时重要事件，小时任务不另改主片。无新有效事件/实质状态变化时静默；只在新有效reset、成品就绪、公开发布或需用户处理的新故障时通知一次，同一故障不每小时重复打扰。不得外部消息联系任何人；任务外内容不扩展范围。
+
+
+### 2026-10-28 封面恢复旧版（当前有效）
+
+用户确认后续早报、晚报及临时新闻的封面统一恢复原cover_generator.make_hyperframes/Pillow配置，config.cover_generation.backend=hyperframes、style=legacy；正常调用cover_generator.py <id>即可，不再跟随视频后端自动换用Multiplane封面。视频本体仍是Multiplane B（graphic），render-plan保持不变。旧封面的版式、标题层级、logo处理与双比例输出沿用原实现；真实新闻标题、单次大日期、简短类型说明、双封面及投稿规则照旧。此要求覆盖此前“B版生成双封面”的措辞；B仅指视频画面。只作用于之后新制作的封面，不重做或覆盖已发布封面/视频，不重投旧稿。

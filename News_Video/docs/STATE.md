@@ -230,3 +230,6 @@ layout_policy.py导览使用完整主语标题、已核验一句事实和板块�
 
 
 2026-10-27 临时新闻B版同步：用户明确所有新建temporary（tibo reset/新模型）同样采用multiplane/graphic。应用reset任务已更新并实际读回ACTIVE、每小时30分和原绑定会话不变；显式build B并核对render-plan，替换旧HyperFrames check措辞，保留reset无概览/正文01/单消息及防重回查。RESET_ALERTS、MODEL_ALERTS、小时提示、生产规则、工作流、制作skill、工作区与DSH副本、Notion已同步。8项后端检查通过（新增reset/model默认B验证）；既有统一配置/选择逻辑已覆盖临时稿，无需复制新制作流程。已发布视频不重做不重传，本轮未产生视频或投稿。
+
+
+2026-10-28 封面按用户要求恢复旧版：config.cover_generation.backend=hyperframes/style=legacy，cover_generator默认调用原Pillow实现，封面与视频渲染计划解耦；视频仍multiplane/graphic。9项后端/封面/恢复检查通过，实际旧版16:9(1920x1080)、4:3(1920x1440)及投稿JPG已生成诊断预览并看图，不建立或改动视频render-plan、不发布。早报/晚报/reset三任务已更新并实际读回ACTIVE及原时刻、绑定保持；新封面使用旧版覆盖历史B双封面措辞。规则/制作skill/DSH副本同步，已发布稿件不改。

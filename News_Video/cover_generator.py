@@ -51,8 +51,15 @@ def make_hyperframes(episode_id):
     print(out/'cover-16x9.png')
 
 def make(episode_id,renderer=None,template=None):
+    # Cover art has its own user preference; selecting it must not change the
+    # video's pinned Multiplane/B render plan.
+    cfg=json.loads((ROOT/'config.json').read_text(encoding='utf-8'))
+    backend=renderer or cfg.get('cover_generation',{}).get('backend','hyperframes')
+    if backend=='hyperframes':
+        return make_hyperframes(episode_id)
+    if backend!='multiplane':raise ValueError('Unknown cover renderer')
     from renderer_backends import select_plan
-    out=ROOT/'episodes'/episode_id;plan=select_plan(ROOT,out,renderer,template)
+    out=ROOT/'episodes'/episode_id;plan=select_plan(ROOT,out,backend,template)
     if plan['backend']=='multiplane':
         from renderers.multiplane_cover import make as make_multiplane_cover
         make_multiplane_cover(ROOT,out,plan)
