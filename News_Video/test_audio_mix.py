@@ -60,6 +60,15 @@ class MusicChecks(unittest.TestCase):
                 validate_release_mix(episode,dict(requirement,repeat_from_seconds=3),1.2)
             stamp=result.stat().st_mtime_ns
             self.assertEqual(ensure_soundtrack(root,episode,1.2,ff).stat().st_mtime_ns,stamp)
+            from unittest.mock import patch
+            original_digest=digest(result);denied=[False]
+            def inaccessible_once(path):
+                if Path(path)==result and not denied[0]:
+                    denied[0]=True;raise PermissionError('Prior runtime identity owns cached mix')
+                return digest(path)
+            with patch('audio_mix.digest',side_effect=inaccessible_once):ensure_soundtrack(root,episode,1.2,ff)
+            self.assertEqual(digest(result),original_digest)
+            self.assertEqual(list(episode.glob('.soundtrack-*.preparing')),[])
             old_key=r['cache_key']
             policy.update(target_lufs=-29,reference_voice_gap_db=16,music_peak_dbfs=-21)
             (root/'config.json').write_text(json.dumps(dict(background_music=policy)))

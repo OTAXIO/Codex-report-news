@@ -1,5 +1,5 @@
 """Offline, speech-first looping music shared by Studio and MP4 rendering."""
-import hashlib,json,math,subprocess,tempfile,wave
+import hashlib,json,math,subprocess,tempfile,wave,uuid
 from pathlib import Path
 import numpy as np
 
@@ -108,7 +108,12 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
     output=episode/'soundtrack.wav';report_path=episode/'audio-mix.json'
     if output.exists() and report_path.exists():
         previous=json.loads(report_path.read_text(encoding='utf-8'))
-        if previous.get('cache_key')==key and previous.get('soundtrack_sha256')==digest(output):return output
+        try:
+            if previous.get('cache_key')==key and previous.get('soundtrack_sha256')==digest(output):return output
+        except PermissionError:
+            # A prior Windows sandbox identity may own a private-temp DACL.
+            # Rebuild only this unarchived mix from the original local stems.
+            pass
     executable=str(ffmpeg or cfg.get('voice',{}).get('qwen3',{}).get('ffmpeg_executable') or 'ffmpeg')
     frames=round(duration*SAMPLE_RATE)
     repeat_from=float(policy.get('repeat_from_seconds',0))
@@ -133,7 +138,15 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
                 source_frames=len(pcm);pcm=loop_music(pcm,frames,repeat_from)
             stems.append(pcm)
         mixed,music,levels=speech_first_mix(stems[0],stems[1],policy)
-        temp=folder/'soundtrack.wav';write_pcm(temp,mixed);temp.replace(output)
+        # Files renamed out of TemporaryDirectory retain its private Windows
+        # DACL. Create the atomic output beside the destination so it inherits
+        # the project directory permissions across authorized runtime users.
+        temp=episode/('.soundtrack-'+uuid.uuid4().hex+'.preparing')
+        try:
+            write_pcm(temp,mixed)
+            try:temp.replace(output)
+            except PermissionError as error:raise ValueError('Existing soundtrack is owned by another runtime identity; preserve it and create a new episode revision under the current media runtime') from error
+        finally:temp.unlink(missing_ok=True)
     report=dict(enabled=True,cache_key=key,track=policy.get('title',source.name),music_sha256=source_hash,
                 narration_sha256=identity['narration_sha256'],duration=len(mixed)/SAMPLE_RATE,
                 loop_to_video_end=True,intro_play_count=1,repeat_from_seconds=repeat_from,
