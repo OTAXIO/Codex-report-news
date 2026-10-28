@@ -331,7 +331,9 @@ def candidate_order(item):
     ai=item['kind']=='ai'
     if item['kind']=='games':return (1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
     prerelease=bool(re.search(r'/(?:releases/tag)/[^/]*(?:alpha|beta|nightly|preview)',item.get('url',''),re.I))
-    return (0 if ai else 1,int(prerelease) if ai else 0,item.get('priority_tier',2) if ai else 0,
+    repost=bool(re.match(r'^(?:RT\s+@|转发)',item.get('title',''),re.I))
+    link_only=bool(re.fullmatch(r'https?://\S+',item.get('title','').strip(),re.I))
+    return (0 if ai else 1,int(prerelease or repost or link_only) if ai else 0,item.get('priority_tier',2) if ai else 0,
             item.get('preferred_vendor_order',99) if ai else 0,
             item.get('source_priority',100) if ai else 0,
             -dt.datetime.fromisoformat(item['published']).timestamp())

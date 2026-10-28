@@ -48,7 +48,11 @@ class WorkflowRegressions(unittest.TestCase):
         base={'kind':'ai','published':'2026-10-28T00:00:00+00:00','priority_tier':1,'preferred_vendor_order':0,'source_priority':1}
         stable=dict(base,url='https://example.com/official/model-release')
         alpha=dict(base,url='https://github.com/openai/codex/releases/tag/rust-v0.166.0-alpha.5')
+        repost=dict(base,url='https://x.com/openaidevs/status/123',title='RT @someone: a product example')
+        link_only=dict(base,url='https://x.com/openaidevs/status/456',title='https://t.co/abc')
         self.assertLess(news_video.candidate_order(stable),news_video.candidate_order(alpha))
+        self.assertLess(news_video.candidate_order(stable),news_video.candidate_order(repost))
+        self.assertLess(news_video.candidate_order(stable),news_video.candidate_order(link_only))
 
     def test_recap_stays_before_games(self):
         event={'event_key':'new', 'original_event_key':'old', 'episode_id':'temporary-x',
