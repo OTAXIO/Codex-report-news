@@ -266,13 +266,13 @@
     "file": "assets/music/oshinko.flac",
     "sha256": "c23453e509f1f112c50e300b2fabf224a8d4dc70d89567d6f9cfbd4bff014ea2",
     "loop_to_video_end": true,
-    "target_lufs": -32,
-    "music_peak_dbfs": -24,
+    "target_lufs": -29,
+    "music_peak_dbfs": -21,
     "source": "User-supplied local FLAC; not distributed with Git or handoff",
     "ducking": false,
     "gain_mode": "constant",
     "repeat_from_seconds": 3,
-    "reference_voice_gap_db": 18,
+    "reference_voice_gap_db": 16,
     "voice_gap_measure": "active_window_median"
   },
   "rendering": {

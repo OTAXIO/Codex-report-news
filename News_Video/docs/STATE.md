@@ -233,3 +233,6 @@ layout_policy.py导览使用完整主语标题、已核验一句事实和板块�
 
 
 2026-10-28 封面按用户要求恢复旧版：config.cover_generation.backend=hyperframes/style=legacy，cover_generator默认调用原Pillow实现，封面与视频渲染计划解耦；视频仍multiplane/graphic。9项后端/封面/恢复检查通过，实际旧版16:9(1920x1080)、4:3(1920x1440)及投稿JPG已生成诊断预览并看图，不建立或改动视频render-plan、不发布。早报/晚报/reset三任务已更新并实际读回ACTIVE及原时刻、绑定保持；新封面使用旧版覆盖历史B双封面措辞。规则/制作skill/DSH副本同步，已发布稿件不改。
+
+
+2026-10-28 BGM按用户反馈小幅调高：后续新片target_lufs=-29、music_peak_dbfs=-21、reference_voice_gap_db=16，固定增益/无ducking/后续3秒循环不变。100秒原曲+既有配音真实对照音乐峰值-24→-21dBFS（+3dB）、正常播报参考差19.016dB；release混音核验通过，20秒诊断试听在.cache/bgm-review-20261028-plus3/new-20s.wav。4项混音检查通过，包括新配置缓存失效、旧配置兼容、实际FFmpeg及峰值越界拒绝；初次系统临时目录权限失败，使用项目缓存临时目录后通过。早报/晚报/reset任务同步新参数，保持原时刻/绑定，旧release和已发布稿不重做。本轮未制作或发布新视频。

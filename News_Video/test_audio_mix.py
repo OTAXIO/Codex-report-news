@@ -60,6 +60,21 @@ class MusicChecks(unittest.TestCase):
                 validate_release_mix(episode,dict(requirement,repeat_from_seconds=3),1.2)
             stamp=result.stat().st_mtime_ns
             self.assertEqual(ensure_soundtrack(root,episode,1.2,ff).stat().st_mtime_ns,stamp)
+            old_key=r['cache_key']
+            policy.update(target_lufs=-29,reference_voice_gap_db=16,music_peak_dbfs=-21)
+            (root/'config.json').write_text(json.dumps(dict(background_music=policy)))
+            ensure_soundtrack(root,episode,1.2,ff)
+            louder=json.loads((episode/'audio-mix.json').read_text())
+            self.assertNotEqual(louder['cache_key'],old_key)
+            self.assertGreater(louder['music_peak_dbfs'],r['music_peak_dbfs'])
+            self.assertGreaterEqual(louder['reference_measured_voice_gap_db'],15.99)
+            self.assertFalse(louder['ducking']);self.assertEqual(louder['gain_mode'],'constant')
+            validate_release_mix(episode,dict(requirement,reference_voice_gap_db=16,music_peak_dbfs=-21),1.2)
+            policy['music_peak_dbfs']=-20
+            (root/'config.json').write_text(json.dumps(dict(background_music=policy)))
+            with self.assertRaisesRegex(ValueError,'Unsafe'):ensure_soundtrack(root,episode,1.2,ff)
+            policy['music_peak_dbfs']=-21
+            (root/'config.json').write_text(json.dumps(dict(background_music=policy)))
             (root/'music.wav').unlink()
             with self.assertRaises(FileNotFoundError):ensure_soundtrack(root,episode,1.2,ff)
             policy['enabled']=False

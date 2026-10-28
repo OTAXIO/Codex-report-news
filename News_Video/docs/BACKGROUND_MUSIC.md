@@ -6,12 +6,12 @@
 
 - 全程固定低音量，无播报ducking、无停顿时恢复音量；仅整片起止约0.35秒淡入淡出。
 - 首遍00:00到曲尾；第二遍起每轮只播放00:03到曲尾，前3秒只出现一次，按timings.duration裁到视频结束。
-- 配音基准-16 LUFS，音乐初始目标-32 LUFS、峰值上限-24dBFS。200ms有效正常播报窗口（RMS大于-35dBFS）音量比的中位数作为整期参考，参考差距至少18dB。固定增益整条计算一次，不实时闪避。最低窗口差仅用于诊断。
+- 配音基准-16 LUFS，音乐初始目标-29 LUFS、峰值上限-21dBFS。200ms有效正常播报窗口（RMS大于-35dBFS）音量比的中位数作为整期参考，参考差距至少16dB。固定增益整条计算一次，不实时闪避。最低窗口差仅用于诊断。
 - 旧规则以最轻200ms尾字约束整条音乐，导致用户无法听见，已废止。不能因为最低窗口差未达旧20dB而再次把整首压到接近静音，也不将数值检测说成用户已认可实际听感。
 
 ## 制作与发布路径
 
-import-editorial固化background_music_requirement，使用voice_gap_measure=active_window_median、reference_voice_gap_db=18。audio_mix.py生成soundtrack.wav和audio-mix.json，纯配音narration.wav独立保留。build_film预览和render_sample最终编码复用同一混音，最终混音不再次整体loudnorm，release保存报告和混音。
+import-editorial固化background_music_requirement，使用voice_gap_measure=active_window_median、reference_voice_gap_db=16。audio_mix.py生成soundtrack.wav和audio-mix.json，纯配音narration.wav独立保留。build_film预览和render_sample最终编码复用同一混音，最终混音不再次整体loudnorm，release保存报告和混音。
 
 release准备检查曲目哈希、循环起点、恒定增益、参考音量差、峰值、时长和输出哈希。缺曲、哈希不符、纯音乐而无有效配音、时长/缓存不符等问题停止，不静默换曲。旧已发布成品不修改；legacy旧发布要求与新参考指标分开核验，不伪造报告。
 
@@ -23,3 +23,10 @@ release准备检查曲目哈希、循环起点、恒定增益、参考音量差�
 
 
 2026-10-27试听确认：用户已确认“听到了听到了，是我的问题，以后就按这个执行”。采用刚才听到的当前版本，停止继续提高或更改混音：音乐初始目标-32LUFS、正常播报窗口中位数参考差18dB、峰值上限-24dBFS、固定增益且无ducking、首遍从头、后续每轮00:03起播。样段主观可听性已由用户确认；此事实不代表未来每个节目天然通过技术检测，原release检查继续执行。原曲继续保存在assets/music/oshinko.flac，不依赖Downloads。
+
+
+### 2026-10-28 背景音乐小幅调高（当前有效）
+
+用户反馈BGM仍偏小，后续新制作采用约+3dB版本：音乐初始目标-29LUFS（原-32）、峰值上限-21dBFS（原-24）、正常播报窗口中位参考差至少16dB（原18）。按audio_mix一次选择恒定增益，实际每期仍受播报优先与峰值约束，不承诺每期恰好+3dB。配音基准-16LUFS不变；无ducking、不随播报/停顿升降，首遍从00:00、后续每轮00:03到曲尾，前3秒只出现一次。此条覆盖历史“停止提高音量”和旧数值要求。
+
+真实原曲与既有新闻配音完成100秒新旧对照：音乐峰值-24→-21dBFS，实际提高3dB；新版正常播报参考差约19.02dB，恒定增益、无ducking及3秒循环检查通过。数值检查不等于用户主观听感认可。仅后续新片使用；既有release的恢复按原成品继续，已发布视频不重混、不重做、不重传。混音由audio_mix统一生成，预览和成片复用soundtrack.wav，不二次整体归一化，release按本期固化参数/哈希核验。

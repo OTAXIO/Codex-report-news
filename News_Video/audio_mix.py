@@ -93,7 +93,9 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
     if receipt.exists() and json.loads(receipt.read_text(encoding='utf-8')).get('published'):
         raise ValueError('Published soundtrack is immutable; use a new edition')
     target=float(policy.get('target_lufs',-32));gap=float(policy.get('reference_voice_gap_db',18))
-    if not -50<=target<=-30 or not math.isfinite(gap) or gap<16 or not -60<=float(policy.get('music_peak_dbfs',-24))<=-24:
+    # Permit the user's modest +3 dB revision while keeping a minimum 16 dB
+    # representative speech advantage and a conservative music peak ceiling.
+    if not -50<=target<=-29 or not math.isfinite(gap) or gap<16 or not -60<=float(policy.get('music_peak_dbfs',-24))<=-21:
         raise ValueError('Unsafe background music levels; retain speech-first limits')
     if not math.isfinite(duration) or duration<=0:raise ValueError('Invalid soundtrack duration')
     source=(root/policy['file']).resolve()
