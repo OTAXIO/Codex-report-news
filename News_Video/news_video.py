@@ -219,9 +219,15 @@ def collect(kind):
     def one(source):
         result=dict(source_id=source["id"],source_type=source["type"],model_calls=0)
         try:
-            body,final,encoding=fetch(source["url"])
-            (directory/(source["id"]+".source")).write_bytes(body)
-            if source["type"]=="official_game_page":
+            if source['type']=='skland_browser':
+                from skland_sources import BrowserReader
+                with BrowserReader(ROOT) as browser:entries,details=browser.collect(source)
+                final=source['url'];result['browser']=details
+            else:
+                body,final,encoding=fetch(source["url"])
+                (directory/(source["id"]+".source")).write_bytes(body)
+            if source['type']=='skland_browser':pass
+            elif source["type"]=="official_game_page":
                 from game_sources import parse,decode
                 entries=parse(decode(body,encoding),source)
             else:entries=parse_feed(body,source) if source["type"]=="rss" else official_bridge(body,source,encoding)
@@ -237,7 +243,15 @@ def collect(kind):
                 ET.ElementTree(rss).write(directory/(source["id"]+".converted.xml"),encoding="utf-8",xml_declaration=True)
         except Exception as error: result.update(ok=False,error=str(error),items=[])
         return source,result
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: results=list(pool.map(one,sources))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: results=list(pool.map(one,[s for s in sources if s['type']!='skland_browser']))
+    # One browser task at a time; stop failures per source, never rotate identity.
+    browser_error=None
+    for source in sources:
+        if source['type']=='skland_browser':
+            if browser_error:results.append((source,dict(source_id=source['id'],source_type=source['type'],model_calls=0,ok=False,error=browser_error,items=[],stopped=True)))
+            else:
+                pair=one(source);results.append(pair)
+                if not pair[1].get('ok'):browser_error=pair[1]['error']
     db=database(); reports=[]; new=0
     for source,result in results:
         for item in result.pop("items"):
@@ -321,6 +335,7 @@ def candidates(hours=48,compact=False,limit=12,cursor=0):
         brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path') if item.get(k) is not None} for item in selected]
         print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
                               items=brief,excluded_used_count=len(excluded),full_file='data/candidates.json',
+                              game_coverage=payload['game_coverage'],
                               note='Open full local evidence before final factual claims; compact list omits summaries.'),ensure_ascii=False))
     else:
         for item in rows: print(json.dumps({k:item[k] for k in ["id","kind","publisher","published","title","url","summary"]},ensure_ascii=False))
@@ -329,7 +344,7 @@ def candidate_order(item):
     # Discovery order only; leader_editorial applies verified reset exceptions
     # and the final company-before-ordinary-leaders scene order at import.
     ai=item['kind']=='ai'
-    if item['kind']=='games':return (1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
+    if item['kind']=='games':return (-1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
     prerelease=bool(re.search(r'/(?:releases/tag)/[^/]*(?:alpha|beta|nightly|preview)',item.get('url',''),re.I))
     repost=bool(re.match(r'^(?:RT\s+@|转发)',item.get('title',''),re.I))
     link_only=bool(re.fullmatch(r'https?://\S+',item.get('title','').strip(),re.I))
@@ -350,6 +365,21 @@ def article(item_id,compact=False,max_chars=8000):
                                   original_text=evidence.get('original_text'),evidence_path='data/leader-posts/'+item_id+'.json'),ensure_ascii=False))
         else:print(json.dumps(evidence,ensure_ascii=False,indent=2))
         return
+    game_path=ROOT/'data/game-items'/(item_id+'.json')
+    game_data=load(game_path) if game_path.exists() else {}
+    if game_data.get('source_type')=='skland_browser':
+        from skland_sources import BrowserReader
+        from game_sources import article as game_article
+        with BrowserReader(ROOT) as browser:data=browser.article(game_data)
+        data.update(item_id=item_id,fetched_at=dt.datetime.now(UTC).isoformat())
+        data=game_article(ROOT,item_id,data,'')
+        dump(ROOT/'data/articles'/(item_id+'.json'),data)
+        if compact:
+            print(json.dumps(dict(item_id=item_id,title=data['title'],published=data['published'],published_precision=data['published_precision'],
+                 text=data['text'][:max_chars],truncated=len(data['text'])>max_chars,body_complete=True,
+                 related_images=data['related_images'],full_file='data/articles/'+item_id+'.json'),ensure_ascii=False))
+        else:print(json.dumps(data,ensure_ascii=False,indent=2))
+        return
     body,final,encoding=fetch(row["url"])
     page=PageText(); page.feed(body.decode(encoding,errors="replace"))
     content=re.sub(r"[ \t]+"," "," ".join(page.parts))
@@ -369,7 +399,7 @@ def article(item_id,compact=False,max_chars=8000):
 def import_editorial(path):
     cfg=config(); episode=load(path)
     episode['audio_content_review_required']=True
-    episode['production_policy_version']=2
+    episode['production_policy_version']=3
     from production_policy import validate_content
     validate_content(episode)
     if cfg.get('background_music',{}).get('enabled'):
@@ -383,6 +413,8 @@ def import_editorial(path):
     leader_audit=prepare_main_leaders(episode,ROOT)
     tibo_audit=episode.get('tibo_audit')
     if leader_audit:episode['leader_audit']=leader_audit
+    from production_policy import apply_story_order
+    apply_story_order(episode,ROOT)
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
     if episode.get('edition_slot')=='temporary':
@@ -399,6 +431,11 @@ def import_editorial(path):
             if row["kind"]=="games":
                 record=load(ROOT/"data/game-items"/(row["id"]+".json"))
                 if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
+                if record.get('source_type')=='skland_browser':
+                    inspected=ROOT/'data/articles'/(row['id']+'.json')
+                    if not inspected.exists() or not load(inspected).get('body_complete'):
+                        raise ValueError('Read full Skland official article before selecting it')
+                    scene['published']=load(inspected)['published'];scene['published_precision']=load(inspected)['published_precision']
             if scene.get("image") and row["kind"]=="games":
                 article_path=ROOT/"data/articles"/(row["id"]+".json")
                 if not article_path.exists() or not any(x.get("file")==scene["image"] and x.get("source_url")==scene.get("image_source_url") for x in load(article_path).get("related_images",[])):raise ValueError("Game picture must match the inspected official article and recorded source URL")

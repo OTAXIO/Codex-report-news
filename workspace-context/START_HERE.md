@@ -1,3 +1,5 @@
+> 2026-10-29 当前排序：主片00导览后，正文01为真实封面头条，其后为其他核实重大消息、剩余游戏、普通AI及对应负责人。无重大消息优先游戏头条；2＋2不是上限或每类只取1条。统一story_order与lead_event_id，详见docs/GAMES_FIRST.md（docs内文件见GAMES_FIRST.md）。已有任务按原计划，已发布不重做。
+
 # 新闻项目交接入口（2026-10-28）
 
 当前仍由 Codex 负责视频制作和已授权的自动投稿；DSH 暂不启动并行调度。现行短规则在 `Codex-report-news/News_Video/docs/CURRENT_RUNBOOK.md`，具体接手指令在 `handoff/DSH_PROMPT.md`。V_0 原始基线保留在 `Codex-report-news/News_Video/docs/V_0/`，已发布作品不重做、不重传。
@@ -18,3 +20,5 @@
 4. 合格后 release、已用新闻记账、自动投稿和平台回查；公开确认后清理本期残留。
 
 详细代码入口和失败恢复见 `docs/WORKFLOW.md`；专项政策按 `CURRENT_RUNBOOK.md` 链接查。`STATE.md`、旧任务 prompt 和历史样片是状态记录，不代表新要求。完整交接包的 CRC 和逐文件 SHA-256 由 `build_handoff.py` 生成时验证；不据此声称已在 DSH 真机验收。
+
+森空岛读取通过BrowserSkill，具体本地绑定、依赖与状态见docs/GAMES_FIRST.md及来源验收文档。不要复制浏览器profile或Cookie；缺环境记录缺口并继续已有官网来源。

@@ -20,3 +20,5 @@ description: 为项目新闻视频编写来源可核验的中文口播；也保�
 5. 按场景和时长写可朗读稿，逐页核对事实/贡献/代词/时间，再查朗读节奏。估时与真实试讲分别记录，不声称未做的实测。
 
 可用[演讲需求表](../help-me-shared/templates/speech-brief.md)与[主体表](../help-me-shared/templates/speaker-map.md)做内部记录，不混入正文。新产物放 work/report 的合理位置，Word/PDF 需要时才用对应工具生成并看实际版式。未经要求不改 PPT、不写 Notion、不发送；submit 等明确指令才压缩。
+
+新闻模式当前排序见 ../../docs/GAMES_FIRST.md：00后正文头条先播，默认游戏→AI，已核实重大消息可提前；模块口播按统一顺序生成。游戏事件充足可多选，不能每类1条截断。

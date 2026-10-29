@@ -66,6 +66,9 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     from production_policy import validate_video,tags
     validate_video(root,source/'sample.mp4')
     publication=json.loads((source/'publication.json').read_text(encoding='utf-8'))
+    from production_policy import validate_lead_contract
+    cover_path=source/'cover.json'
+    validate_lead_contract(ep,publication,json.loads(cover_path.read_text(encoding='utf-8')) if cover_path.exists() else {})
     publication['tags']=tags(publication.get('tags',[]))
     (source/'publication.json').write_text(json.dumps(publication,ensure_ascii=False,indent=2),encoding='utf-8')
     check=json.loads((source/'check.json').read_text(encoding='utf-8-sig'))

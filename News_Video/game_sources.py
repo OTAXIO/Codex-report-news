@@ -69,7 +69,7 @@ def article(root,item_id,data,page):
             Image.open(io.BytesIO(b)).convert('RGB').save(dest)
             local.append(dict(file=dest.relative_to(root).as_posix(),source_url=url,final_url=final,article_url=data['url']))
         except Exception as e:local.append(dict(source_url=url,error=type(e).__name__))
-    data.update(official_body=bodies or ([data.get('summary','')] if data.get('body_complete') else []),related_images=local)
+    data.update(official_body=bodies or data.get('official_body') or ([data.get('summary','')] if data.get('body_complete') else []),related_images=local)
     return data
 
 def coverage(rows):
@@ -80,4 +80,6 @@ def coverage(rows):
         seen.add(key)
         slot='arknights_'+('cn' if row.get('game_region')=='cn' else 'global') if row.get('game')=='arknights' else 'endfield_'+row.get('game_topic','other')
         if slot in buckets:buckets[slot].append(row['id'])
-    return dict(targets=targets,candidate_ids=buckets,advisory_only=True,maximum_items=None,enforce_minimum=False,shortfall={k:max(0,1-len(v)) for k,v in buckets.items()})
+    return dict(targets=targets,candidate_ids=buckets,advisory_only=True,maximum_items=None,enforce_minimum=False,
+                selection_policy='Review all independent fresh events, not one per bucket; prefer updates then meaningful activities. No filler.',
+                counts={k:len(v) for k,v in buckets.items()},shortfall={k:max(0,1-len(v)) for k,v in buckets.items()})

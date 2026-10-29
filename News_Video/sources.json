@@ -307,5 +307,45 @@
     "enabled": true,
     "source_priority": 0,
     "rss_verified": false
+  },
+  {
+    "id": "skland-arknights",
+    "name": "森空岛 明日方舟Arknights 官方公告",
+    "publisher": "明日方舟Arknights",
+    "group": "games",
+    "type": "skland_browser",
+    "url": "https://www.skland.com/game/arknights?cateId=1",
+    "game": "arknights",
+    "game_region": "cn",
+    "skland_game_id": 1,
+    "skland_cate_id": 1,
+    "official_authors": [
+      "明日方舟Arknights"
+    ],
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false,
+    "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
+    "collect_trigger": "before_each_episode"
+  },
+  {
+    "id": "skland-endfield",
+    "name": "森空岛 明日方舟终末地 官方公告",
+    "publisher": "明日方舟终末地",
+    "group": "games",
+    "type": "skland_browser",
+    "url": "https://www.skland.com/game/endfield?cateId=12",
+    "game": "endfield",
+    "game_region": "cn",
+    "skland_game_id": 3,
+    "skland_cate_id": 12,
+    "official_authors": [
+      "明日方舟终末地"
+    ],
+    "enabled": true,
+    "source_priority": 0,
+    "rss_verified": false,
+    "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
+    "collect_trigger": "before_each_episode"
   }
 ]

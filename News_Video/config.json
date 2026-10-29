@@ -170,7 +170,16 @@
       "混元/HY",
       "Qwen Code",
       "ZCode"
-    ]
+    ],
+    "story_order": {
+      "version": 3,
+      "default": [
+        "games",
+        "ai"
+      ],
+      "lead_matches_cover": true,
+      "major_requires_semantic_review": true
+    }
   },
   "edition_labels": {
     "06:00": "早间新闻",
@@ -336,6 +345,7 @@
       "official_page",
       "official_x"
     ],
-    "collect_trigger": "before_each_episode"
+    "collect_trigger": "before_each_episode",
+    "selection_policy": "all_fresh_independent_valuable_events; do_not_stop_at_one_per_bucket"
   }
 }

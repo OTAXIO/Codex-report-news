@@ -39,6 +39,11 @@ def call(args,root=ROOT):
     return result
 def prepare(directory,root=ROOT):
     if not settings(root).get('enabled'):return None
+    directory=Path(directory)
+    if (directory/'episode.json').is_file():
+        from production_policy import validate_lead_contract
+        validate_lead_contract(load(directory/'episode.json'),load(directory/'publication.json'),
+                               load(directory/'cover.json') if (directory/'cover.json').is_file() else {})
     result=call(['from-release',str(Path(directory).resolve())],root)
     if not result.get('ok'):raise ValueError('Upload contract invalid: '+result.get('error',{}).get('code','UNKNOWN'))
     return result

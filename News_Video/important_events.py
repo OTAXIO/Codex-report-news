@@ -108,7 +108,8 @@ def prepare_main_recaps(ep,root=None):
         # Recaps are AI items. Keep them before the first game scene, while
         # allowing an existing reset-first block to retain its placement.
         index=next((i for i,s in enumerate(ep['scenes']) if s.get('game') or s.get('section','').startswith(('游戏','国内','国际'))),len(ep['scenes']))
-        ep['scenes'].insert(index,scene)
+        if ep.get('production_policy_version',0)>=3:ep['scenes'].append(scene)
+        else:ep['scenes'].insert(index,scene)
         existing.update(identity)
 
 def validate_recap(scene,ep,root=None):

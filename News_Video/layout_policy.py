@@ -67,7 +67,7 @@ def prepare_overview(ep,preferred=True):
         raise ValueError('No news to overview')
     # Preserve a genuinely authored rich guide. Legacy auto-guides used empty
     # details and short navigation labels, so refresh those before voicing.
-    if existing and not existing.get('overview_generated') and sum(bool(isinstance(f,dict) and f.get('detail')) for f in existing.get('facts',[]))>1:
+    if existing and not ep.get('story_order') and not existing.get('overview_generated') and sum(bool(isinstance(f,dict) and f.get('detail')) for f in existing.get('facts',[]))>1:
         existing.setdefault('lead',overview_lead(body,ep.get('edition_slot')=='temporary'));return
     highlights,count=overview_highlights(body)
     facts=[dict(title=s.get('overview_title') or s.get('title') or '本期重点',detail=overview_detail(s),category=overview_group(s),scene_id=s['id']) for s in highlights]

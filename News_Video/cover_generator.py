@@ -22,6 +22,9 @@ def make_hyperframes(episode_id):
     if (out/'release.json').exists():raise ValueError('Published edition: create a new revision')
     ep=json.loads((out/'episode.json').read_text(encoding='utf-8'))
     brief=json.loads((out/'cover.json').read_text(encoding='utf-8'))
+    from production_policy import validate_lead_contract
+    publication=json.loads((out/'publication.json').read_text(encoding='utf-8')) if (out/'publication.json').exists() else None
+    validate_lead_contract(ep,publication,brief)
     image_path=(ROOT/brief['image']).resolve()
     if not image_path.is_relative_to((ROOT/'assets').resolve()):raise ValueError('Cover image must be a verified asset under assets/')
     logo=Image.open(image_path).convert('RGBA')
