@@ -15,5 +15,12 @@ class BottomProgressChecks(unittest.TestCase):
         self.assertIn('top:1040px',markup)
         self.assertEqual(spec['chapter_highlight_y'],1041)
         self.assertEqual(spec['chapters'][0]['id'],'a')
+    def test_captions_follow_navigation_and_content_stays_above_them(self):
+        for engine,old_y in [('multiplane',836),('hyperframes',844)]:
+            spec=navigation_layout(engine);caption=spec['caption']
+            self.assertEqual(caption['y']-old_y,spec['nav_offset_y'])
+            self.assertEqual(spec['content_extra_y'],spec['nav_offset_y'])
+            self.assertGreater(caption['y']-spec['reading_area_bottom'],10)
+            self.assertLess(caption['y']+caption['height'],spec['module_highlight_y']-25)
 
 if __name__=='__main__':unittest.main()

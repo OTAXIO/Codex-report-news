@@ -10,9 +10,9 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 .identity{position:absolute;left:96px;top:338px;width:1600px;display:flex;gap:22px;align-items:center;font-size:27px;border-left:6px solid #01A1FE;padding-left:18px}.identity b{font-size:30px}.identity span{color:#384450}.identity i{font-size:23px;font-style:normal;background:#e9f6ff;padding:4px 12px}.leader .facts{top:408px}.leader .facts article:first-child{border-top:0}
 .leader .facts{top:400px;gap:14px}.leader .facts article{padding-top:12px}.leader .facts h2{font-size:31px;margin-bottom:8px}.leader .facts p{font-size:26px;line-height:1.4}
 .route{position:absolute;left:1360px;top:350px;width:350px}.route small{font-size:23px;color:#58616b}.route-stop{position:relative;display:flex;align-items:center;gap:25px;height:95px;font-size:45px}.route-stop i{position:relative;width:18px;height:18px;border:4px solid #01A1FE;background:#fff;border-radius:50%}.route-stop:not(:last-child) i:after{content:'';position:absolute;left:3px;top:14px;height:80px;width:4px;background:#01A1FE}.metrics{position:absolute;left:1300px;top:340px;width:420px;display:grid;grid-template-columns:1fr 1fr;gap:30px}.metrics strong{display:block;font-size:120px;line-height:1.15;color:#01A1FE}.metrics b{font-size:25px}.metrics p{font-size:23px;line-height:1.5;border-top:3px solid #101218;padding-top:15px}.brief .kicker span{background:#01A1FE;color:#101218}.brief .facts article{border-top:4px solid #01A1FE}
-.source{position:absolute;left:96px;top:751px;width:1610px;font-size:22px;line-height:1.4;color:#58616b}.source b{color:#101218}.source span{display:block;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:1550px;margin-top:4px}
+.source{position:absolute;left:96px;top:calc(751px + var(--content-extra-y,0px));width:1610px;font-size:22px;line-height:1.4;color:#58616b}.source b{color:#101218}.source span{display:block;font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:1550px;margin-top:4px}
 .lead{position:absolute;left:96px;top:274px;width:1600px;margin:0;font-size:28px;line-height:1.5;color:#384450}.overview-grid{position:absolute;left:96px;top:354px;width:1680px;display:grid;grid-template-columns:1fr 1fr;gap:27px 50px;grid-auto-rows:198px}.overview-grid article{border-left:5px solid #01A1FE;padding:0 22px}.category{font-size:22px;letter-spacing:2px;color:#0082cc;margin-bottom:12px;font-weight:700}.overview-grid h2{font-size:32px;line-height:1.35;margin:0 0 14px}.overview-grid p{font-size:26px;line-height:1.5;color:#384450;margin:0}
-.caption{position:absolute;left:100px;top:836px;width:1720px;height:62px;font-size:38px;font-weight:700;text-align:center;line-height:1.4;white-space:nowrap;background:#fff;padding:3px 8px;z-index:5}
+.caption{position:absolute;left:100px;top:var(--caption-y,836px);width:1720px;height:62px;font-size:38px;font-weight:700;text-align:center;line-height:1.4;white-space:nowrap;background:#fff;padding:3px 8px;z-index:5}
 .navigation{position:absolute;left:0;top:var(--navigation-offset,0px);width:1920px;height:1080px;pointer-events:none}#modules{position:absolute;left:96px;top:914px;width:1728px;height:30px;border-top:1px solid #dce3e9}.module{position:absolute;top:0;height:29px;text-align:center;color:#7b8590;font-size:23px;line-height:28px;border-bottom:4px solid #dce3e9}.module.active{color:#101218;border-bottom-color:#01A1FE;font-weight:700}.now-label{position:absolute;left:96px;top:950px;font-size:24px;font-weight:700;width:1410px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#clock{position:absolute;right:96px;top:951px;font-size:23px;font-variant-numeric:tabular-nums}#chapters{position:absolute;left:96px;top:986px;width:1728px;height:30px}.chapter{position:absolute;top:0;white-space:nowrap;text-align:center;line-height:26px;height:28px;overflow:hidden;font-size:20px}.chapter.active{background:#01A1FE;color:#101218;font-weight:700}#track,#fill{position:absolute;left:96px;top:1030px;height:8px;width:1728px;background:#e0e7ec}#fill{background:#01A1FE;transform-origin:left center}.marker{position:absolute;top:1026px;width:2px;height:12px;background:#101218}
 .navigation:before{content:'';position:absolute;left:96px;top:908px;width:1728px;height:140px;background:#fff}
 /* Graphic option: stronger edge geometry and ink, stable white reading field. */
@@ -28,7 +28,7 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 .original .identity{top:320px}.original .facts{top:390px;width:1580px;gap:22px}.original .facts p{font-size:28px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere}.original .facts h2{font-size:27px}.original .facts article{padding-top:12px}.original .keep{white-space:normal}
 
 /* Official event posters retain their full image rather than cropped captions. */
-.game.has-media .facts{width:760px}.game .source{width:760px}.game .photo{left:940px;top:350px;width:880px;height:460px}.game .photo img{object-fit:contain}
+.game.has-media .facts{width:760px}.game .source{width:760px}.game .photo{left:940px;top:350px;width:880px;height:calc(460px + var(--content-extra-y,0px))}.game .photo img{object-fit:contain}
 /* Every page has imagery; overview uses a compact header mark, full text keeps a right rail. */
 .overview.has-media .lead{width:1240px}
 .overview .brand,.overview .photo{left:1450px;top:204px;width:320px;height:126px}
@@ -40,14 +40,14 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 .original .brand-window{width:390px;height:280px}
 .original .brand img{width:340px;height:260px}
 .game .brand{left:980px;top:350px;width:780px}
-.game .brand-window{width:780px;height:380px}
-.game .brand img{width:740px;height:360px}
+.game .brand-window{width:780px;height:calc(380px + var(--content-extra-y,0px))}
+.game .brand img{width:740px;height:calc(360px + var(--content-extra-y,0px))}
 .has-diagram .brand,.has-diagram .photo{left:1450px;top:204px;width:320px;height:126px}
 .has-diagram .brand-window{width:320px;height:126px;box-shadow:none;transform:none;background:transparent}
 .has-diagram .brand img,.has-diagram .photo img{width:320px;height:126px;object-fit:contain;transform:none}
 .has-diagram .brand b{display:none}
 /* Tall posters use the full reading height instead of a shallow landscape window. */
-.portrait-media .photo,.game.portrait-media .photo{left:1080px;top:112px;width:560px;height:700px}
+.portrait-media .photo,.game.portrait-media .photo{left:1080px;top:112px;width:560px;height:calc(700px + var(--content-extra-y,0px))}
 .portrait-media .photo img{object-fit:contain}
 .portrait-media h1,.graphic .portrait-media h1{width:940px}
 .portrait-media .facts,.game.portrait-media .facts,.original.portrait-media .facts{width:900px}

@@ -1,7 +1,7 @@
 """Build editable, offline HyperFrames scenes with burned-in captions."""
 import argparse, html, json, re, shutil, datetime, hashlib
 from pathlib import Path
-from progress_overlay import build_progress
+from progress_overlay import build_progress,navigation_layout
 from layout_policy import folio_numbers,is_overview
 from caption_layout import sentence_captions,tokens,width
 ROOT=Path(__file__).parent
@@ -54,6 +54,7 @@ def build_hyperframes(episode_id,film_directory=None):
     from episode_paths import episode_directory
     cfg=read(ROOT/'config.json'); epdir=episode_directory(ROOT,episode_id)
     episode=read(epdir/'episode.json'); timing=read(epdir/'timings.json')
+    geometry=navigation_layout();extra=geometry['content_extra_y']
     from scene_media import validate
     validate(episode,ROOT)
     film=Path(film_directory) if film_directory else ROOT/'film'; assets=film/'assets'; comps=film/'compositions'
@@ -112,7 +113,9 @@ def build_hyperframes(episode_id,film_directory=None):
         url=scene.get('source_url','')
         shorturl=re.sub(r'^https?://','',url).split('?')[0]
         if len(shorturl)>96:shorturl=shorturl[:93]+'…'
-        source_html=(f'<div class="source" style="{"width:1050px" if logo else ""}">来源：{esc(source)}　{esc(date)}<br>{esc(shorturl)}</div>' if scene.get('show_source',True) else '')
+        source_width='width:900px' if portrait else 'width:1050px' if logo else ''
+        source_html=(f'<div class="source" style="{source_width}">来源：{esc(source)}　{esc(date)}<br>{esc(shorturl)}</div>' if scene.get('show_source',True) else '')
+        portrait_css=f'.page-image{{left:1160px;top:112px;width:540px}}.page-image img{{width:540px;height:{700+extra}px}}.page-image>div{{display:none}}.title,.facts.has-brand,.source,.speaker-line{{width:900px}}' if portrait and not overview else ''
         data=f'''<template>
 <style>
 @font-face{{font-family:NewsSans;src:url('assets/fonts/msyh.ttc');font-weight:400}}
@@ -134,14 +137,14 @@ def build_hyperframes(episode_id,film_directory=None):
 .facts.has-brand .detail{{font-size:28px;line-height:1.35;margin-top:6px}}
 ul{{margin:0;padding:0;list-style:none}}li{{position:relative;margin:0 0 18px;padding-left:28px}}li:before{{content:'·';position:absolute;left:0;top:0;font-size:36px;font-weight:700}}
 .point{{font-size:36px;line-height:1.3;font-weight:700}}.detail{{font-size:29px;line-height:1.4;margin-top:8px}}
-.source{{position:absolute;left:192px;top:740px;width:1450px;font-size:23px;line-height:1.35;overflow-wrap:anywhere}}
+.source{{position:absolute;left:192px;top:{740+extra}px;width:1450px;font-size:23px;line-height:1.35;overflow-wrap:anywhere}}
 .stamp{{position:absolute;left:192px;top:1005px;color:#101218;font-size:22px;letter-spacing:2px}}
 {overview_css}
 {identity_css}
 .page-image img{{object-fit:contain}}
 {'.page-image{left:1450px;top:200px;width:280px}.page-image img{width:280px;height:130px}.page-image>div{display:none}.overview-lead{width:1200px}' if overview else ''}
 {'.title{width:1100px}.facts.has-brand{top:354px;width:1460px}.facts.has-brand li{margin:0}' if overview else '.title{width:1000px;font-size:56px;top:178px}.facts.has-brand{top:355px}' if not identity_html else ''}
-{'.page-image{left:1160px;top:112px;width:540px}.page-image img{width:540px;height:700px}.page-image>div{display:none}.title,.facts.has-brand,.source,.speaker-line{width:900px}' if portrait and not overview else ''}
+{portrait_css}
 </style>
 <div id="root" data-composition-id="{sid}" data-width="1920" data-height="1080">
 <div id="{sid}-body" class="clip" data-start="0" data-duration="{length:.6f}" data-layout-allow-overlap="true" data-layout-allow-overflow="true">
@@ -161,8 +164,7 @@ ul{{margin:0;padding:0;list-style:none}}li{{position:relative;margin:0 0 18px;pa
         for j,cue in enumerate(sentence_captions(s)):
             captions.append(dict(id=f'caption-{i}-{j}',**cue))
     caphtml=''.join(f'<div id="{x["id"]}" class="caption clip" data-start="{x["start"]:.6f}" data-duration="{x["end"]-x["start"]:.6f}" data-track-index="3">{esc(x["text"]).replace(chr(10),"<br>")}</div>' for x in captions)
-    captionfile=f'''<template><style>@font-face{{font-family:NewsSans;src:url('assets/fonts/msyhbd.ttc');font-weight:700}}#root{{position:absolute;inset:0;pointer-events:none}}.caption{{position:absolute;left:192px;bottom:140px;width:1536px;min-height:88px;padding:12px 30px;background:#FFFFFF;color:#101218;font:700 40px/1.3 NewsSans;text-align:center;box-sizing:border-box}}</style><div id="root" data-composition-id="captions" data-width="1920" data-height="1080">{caphtml}</div><script>window.__timelines['captions']=gsap.timeline({{paused:true}});</script></template>'''
-    captionfile=captionfile.replace('bottom:140px','bottom:160px').replace('min-height:88px','min-height:64px').replace('text-align:center;box-sizing:border-box','text-align:center;white-space:nowrap;box-sizing:border-box')
+    captionfile=f'''<template><style>@font-face{{font-family:NewsSans;src:url('assets/fonts/msyhbd.ttc');font-weight:700}}#root{{position:absolute;inset:0;pointer-events:none}}.caption{{position:absolute;left:192px;top:{geometry['caption']['y']}px;width:1536px;height:76px;padding:12px 30px;background:#FFFFFF;color:#101218;font:700 40px/1.3 NewsSans;text-align:center;white-space:nowrap;box-sizing:border-box}}</style><div id="root" data-composition-id="captions" data-width="1920" data-height="1080">{caphtml}</div><script>window.__timelines['captions']=gsap.timeline({{paused:true}});</script></template>'''
     (comps/'captions.html').write_text(captionfile,encoding='utf-8')
     variables=esc(json.dumps([dict(id='blue',type='color',label='主蓝色',default=cfg['theme']['blue'])],ensure_ascii=False))
     root=f'''<!doctype html><html lang="zh-CN" data-composition-variables='{variables}'><head><meta charset="utf-8"><script src="assets/gsap.min.js"></script><style>*{{box-sizing:border-box}}html,body{{margin:0;width:1920px;height:1080px;overflow:hidden;background:#FFFFFF}}:root{{--blue:{cfg['theme']['blue']}}}#root{{position:relative;width:1920px;height:1080px}}#root>.clip{{position:absolute;inset:0}}</style></head><body><div id="root" data-composition-id="main" data-start="0" data-duration="{duration:.6f}" data-width="1920" data-height="1080" data-fps="30">{''.join(hosts)}<div id="captions" class="clip" data-composition-id="captions" data-composition-src="compositions/captions.html" data-start="0" data-duration="{duration:.6f}" data-track-index="3" data-track-kind="captions" data-width="1920" data-height="1080" style="z-index:10"></div><audio id="narration" class="clip" src="assets/narration.wav" data-start="0" data-duration="{duration:.6f}" data-track-index="2"></audio></div><script>window.__timelines=window.__timelines||{{}};window.__timelines.main=gsap.timeline({{paused:true}});</script></body></html>'''

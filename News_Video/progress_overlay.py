@@ -6,6 +6,8 @@ def navigation_layout(renderer='hyperframes'):
     shift=1080-8-(1030 if modern else 1045)
     return dict(nav_offset_y=shift,bar=dict(x=x,y=1072,width=width,height=8),
                 chapter_highlight_y=(991 if modern else 1014)+shift,module_highlight_y=(942 if modern else 968)+shift,
+                caption=dict(x=100 if modern else 192,y=836+shift if modern else 844+shift,width=1720 if modern else 1536,height=62 if modern else 76),
+                content_extra_y=shift,reading_area_bottom=(836+shift if modern else 844+shift)-15,
                 bottom_edge_aligned=True)
 def group(scene):
     section=scene['section']

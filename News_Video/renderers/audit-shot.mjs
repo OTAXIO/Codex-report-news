@@ -17,7 +17,7 @@ try{
   const times=[0,data.duration-1/30,...data.scenes.flatMap(s=>[Math.min(s.end-.01,s.start+.4),(s.start+s.end)/2]),...data.captions.map(c=>(c.start+c.end)/2)];
   const failures=[];
   for(const t of times){
-    const findings=await page.evaluate(({t,requireImage})=>{
+    const findings=await page.evaluate(({t,requireImage,readingBottom,captionSpec})=>{
       window.SHOT.render(t);
       const root=Array.from(document.querySelectorAll('.scene')).find(n=>n.style.visibility==='visible');
       if(!root)return ['missing_scene'];
@@ -36,12 +36,15 @@ try{
       if(facts&&title.getBoundingClientRect().bottom>facts.getBoundingClientRect().top-8)notes.push('headline_overlaps_facts');
       if(facts&&source&&facts.getBoundingClientRect().bottom>source.getBoundingClientRect().top-10)notes.push('facts_overlap_source');
       for(const n of root.querySelectorAll('.facts p'))if(n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1)notes.push('fact_text_overflow');
-      for(const n of root.querySelectorAll('h1,.facts,.overview-grid,.source,.brand,.photo,.route,.metrics,.identity')){
-        const b=n.getBoundingClientRect();if(b.left<90||b.right>1840||b.top<95||b.bottom>821)notes.push('outside_reading_area:'+n.className);
+      for(const n of root.querySelectorAll('h1,.facts,.overview-grid,.overview-grid p,.overview-grid h2,.source,.brand,.photo,.route,.metrics,.identity')){
+        const b=n.getBoundingClientRect();if(b.left<90||b.right>1840||b.top<95||b.bottom>readingBottom)notes.push('outside_reading_area:'+n.className);
       }
       const cap=document.getElementById('caption');if(cap.scrollWidth>cap.clientWidth+1)notes.push('caption_overflow');
+      const capBox=cap.getBoundingClientRect(),navBox=document.getElementById('modules').getBoundingClientRect();
+      if(capBox.bottom>navBox.top-6)notes.push('caption_overlaps_navigation');
+      if(captionSpec&&Math.abs(capBox.top-captionSpec.y)>1)notes.push('caption_position_differs_from_layout');
       return notes;
-    },{t,requireImage:data.require_page_image});
+    },{t,requireImage:data.require_page_image,readingBottom:data.progress.reading_area_bottom||821,captionSpec:data.progress.caption});
     if(findings.length)failures.push({time:t,findings});
   }
   const result={ok:failures.length===0,samples:times.length,failures};

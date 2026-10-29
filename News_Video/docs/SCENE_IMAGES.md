@@ -30,6 +30,14 @@ presentation.require_image_every_page=true。scene_media.prepare在导入并生�
 
 ## 进度条贴底
 
-全片进度细条放到1080p画面的y=1072，高8px，底部严格等于1080。导航整体保持相对间距向下移动（Multiplane+42px，HyperFrames+27px），新闻分段标题和当前高亮位于色条上方。progress_overlay.navigation_layout统一输出实际bar、chapter/module采样坐标，两引擎及最终MP4验证器共用布局元数据；不把旧检查坐标写死，也不删除验证。分段刻度不越出画面，字幕与正文保持原位置。最终合并诊断期次为page-image-preview-20261029-v3。
+全片进度细条放到1080p画面的y=1072，高8px，底部严格等于1080。导航整体保持相对间距向下移动（Multiplane+42px，HyperFrames+27px），新闻分段标题和当前高亮位于色条上方。progress_overlay.navigation_layout统一输出实际bar、chapter/module采样坐标，两引擎及最终MP4验证器共用布局元数据；不把旧检查坐标写死，也不删除验证。分段刻度不越出画面；v3曾保留字幕原位，当前字幕位置按下节同步下移规则执行。最终合并诊断期次为page-image-preview-20261029-v3。
 
 最终v3实际MP4为161.2秒，7段新闻导航、底边位置、全片解码均通过；从最终MP4提取1.63/15.97/63/146.13/161.1秒检查。渲染首次在第434帧发生upstream worker_stalled且cancel超时；只停止命令行匹配本诊断目录的进程树，保留分段，以原计划resume成功，未换引擎/参数或重做已发布片。此为实际恢复记录，不能把卡住阶段误报为已完成。
+
+## 字幕随导航下移（当前有效）
+
+字幕与导航同步下移：B版字幕top836→878，高62px，底部940，距导航模块956有16px；旧HyperFrames由实际top844→871，高76px，底部947，距导航957有10px。正文安全区分别扩展42/27px，来源下移同样距离。B版竖海报700→742px、横图460→502px，保持完整contain；旧引擎竖图700→727px。字体、单行字幕、内容和时间轴不变，释放的空间用于正文和图片。
+
+所有坐标由navigation_layout输出caption、content_extra_y和reading_area_bottom；模板用同一元数据生成样式，DOM验收检查字幕位置、与导航间隔及图文安全区，禁止只移动字而留下旧检查范围。进度细条仍贴底，已发布视频不更改。当前完整诊断期次page-image-preview-20261029-v4，203项测试与64处DOM检查通过。
+
+字幕下移v4最终成片161.2秒、1920×1080/30fps，7段进度/高亮及全片解码通过；实际MP4已提取1.63/15.97/63/146.13秒检查。旧HyperFrames同素材check通过。此轮未改音轨或字幕时间轴，未投稿。
