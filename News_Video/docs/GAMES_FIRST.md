@@ -1,15 +1,15 @@
 
 后续新正式片按 [48小时、来源与导览规则](FRESHNESS_AND_SOURCES.md) 执行：仅原始发布48h内（临时6h/回顾24h更严），导入/release/首次提交共用门禁；森空岛默认非浏览器模式，暂无验收替代源时记录缺口；干员读gàn yuán，仅TTS词组替换；00标题有公司/产品/游戏或人物主体及具体事件。已发布不改。
 
-# 游戏优先与头条一致（2026-10-29）
+# 分时段栏目顺序与头条一致（2026-10-30）
 
-新 morning/night 主片采用 production_policy_version=3。导入先核验来源、合并回顾与负责人，再由 `production_policy.apply_story_order` 统一生成 `story_order`；随后重建00导览，再配音与生成时间轴。已在制、已发布及历史期次不批量重排。
+新 morning/night 主片采用 production_policy_version=4，config.editorial.story_order.by_slot配置morning=[ai,games]、night=[games,ai]。导入先核验来源、合并回顾与负责人，再由 `production_policy.apply_story_order` 统一生成 `story_order`；随后重建00导览，再配音与生成时间轴。story_order记录version、edition_slot、default_order及事件顺序；已有固化计划优先于配置默认值，避免恢复中重排。已在制、已发布及历史期次不批量重排。
 
-正文顺序：封面头条 → 其他已核验重大事件 → 剩余游戏 → 剩余AI及对应负责人。没有重大事件优先选真实游戏头条，无有效游戏则选有效AI。正文01、00首项、episode/publication/cover 的 `lead_event_id` 必须一致。事件多页相邻，头条播过不在原栏目重复；同事件跨语言/跨平台仍共用 event_key。
+正文顺序：封面头条 → 其他已核验重大事件 → 本期剩余栏目。早报morning为剩余AI及对应负责人→剩余游戏；晚报night为剩余游戏→剩余AI及对应负责人。没有重大事件时从本时段首栏目选择真实头条，该栏目没有有效素材时可由另一栏目开场，不硬凑。正文01、00首项、episode/publication/cover 的 `lead_event_id` 必须一致。事件多页相邻，头条播过不在原栏目重复；同事件跨语言/跨平台仍共用 event_key。
 
 ## 编辑接口
 
-输入 `lead_event_id` 指向 scene.event_key（无时使用item_id或scene.id）。有重大事件只能选其中之一；否则有游戏就从游戏中选。其他等优先级新闻沿用编辑输入顺序，游戏编辑排序按更新、重要活动及信息价值；没有硬数量配额。
+输入 `lead_event_id` 指向 scene.event_key（无时使用item_id或scene.id）。有重大事件只能选其中之一；否则从本时段优先栏目选，有AI的早报选AI，有游戏的晚报选游戏；优先栏目缺素材才用另一栏目。普通负责人仍跟随对应公司，不因早报AI优先而抢在公司前。其他等优先级新闻沿用编辑输入顺序，游戏编辑排序按更新、重要活动及信息价值；没有硬数量配额。
 
 重大事件必须在scene提供：
 
@@ -23,7 +23,7 @@ category支持model_release、product_launch、quota_reset、game_update。导�
 
 00导览口播与额外2秒保持，首项对应正文01；新片重建导览以避免保留旧顺序。普通负责人在AI部分跟随对应company，无法匹配公司时位于其余AI之后。tibo reset单独临时稿仍无00、正文01、只讲本事件，完整原文及详细中文要求不变。
 
-导航从实际连续场景计算，可为“头条 → 游戏资讯 → AI动态”；没有独立重大头条时为“游戏资讯 → AI动态”。同类别不连续时使用不同区间和唯一ID，不把中间游戏覆盖成AI。转场在排序定稿后、配音前生成，字幕与音频使用同一稿件；不要在已有配音上临时改句。
+导航从实际连续场景计算：常规早报为“AI动态 → 游戏资讯”，晚报为“游戏资讯 → AI动态”；有已核验重大头条时可在各自时段顺序前加“头条”。同类别不连续时使用不同区间和唯一ID，不把中间游戏覆盖成AI。转场在排序定稿后、配音前生成，字幕与音频使用同一稿件；不要在已有配音上临时改句。
 
 ## 游戏选题与来源
 
@@ -38,3 +38,7 @@ category支持model_release、product_launch、quota_reset、game_update。导�
 早06、晚18及小时30分tibo范围不变。B视频、legacy双封面、Qwen3、BGM、单行字幕、正式片>30秒、release与投稿防重、分时段活动及固定游戏标签继续执行。诊断样片preview/diagnostic_hold不记正式已用、不投稿。来源状态与实际预览/回归结果见同目录验收记录；未运行路径不能写成通过。
 
 本轮实际来源与诊断验证、浏览器绑定及守护程序限制见 [GAMES_FIRST_ACCEPTANCE.md](GAMES_FIRST_ACCEPTANCE.md)。
+
+### 2026-10-30 分时段排序验收
+
+排序、真实import-editorial、00首项、负责人跟随公司、重大例外、导航区间、幂等转场及旧计划恢复检查通过；早06/晚18定时任务已按各自顺序更新并读回。完整回归217项中214项通过，3项旧release/upload测试因其他在制发布校验要求cover.json而失败；在修改前排序代码及本轮开始时的发布代码隔离副本中复现相同3项失败，未修改或绕过该校验。本轮未新配音、渲染或投稿，不改已发布成品。

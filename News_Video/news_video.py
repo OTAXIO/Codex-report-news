@@ -453,8 +453,8 @@ def import_editorial(path):
     cfg=config(); episode=load(path)
     if cfg.get('freshness',{}).get('enabled'):episode['overview_subject_policy']=1
     episode['audio_content_review_required']=True
-    episode['production_policy_version']=3
-    from production_policy import validate_content
+    from production_policy import ORDER_VERSION,validate_content
+    episode['production_policy_version']=ORDER_VERSION
     validate_content(episode)
     if cfg.get('background_music',{}).get('enabled'):
         bgm=cfg['background_music']

@@ -173,11 +173,11 @@
       "ZCode"
     ],
     "story_order": {
-      "version": 3,
-      "default": [
-        "games",
-        "ai"
-      ],
+      "version": 4,
+      "by_slot": {
+        "morning": ["ai", "games"],
+        "night": ["games", "ai"]
+      },
       "lead_matches_cover": true,
       "major_requires_semantic_review": true
     }

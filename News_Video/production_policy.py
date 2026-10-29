@@ -4,8 +4,18 @@ from pathlib import Path
 
 FIXED_TAGS=['明日方舟','终末地']
 
-ORDER_VERSION=3
+ORDER_VERSION=4
+EDITION_ORDER={'morning':['ai','games'],'night':['games','ai']}
 MAJOR_CATEGORIES={'model_release','product_launch','quota_reset','game_update'}
+
+def edition_order(episode,root=None):
+    # Persisted plans stay stable when a default changes during recovery.
+    planned=(episode.get('story_order') or {}).get('default_order')
+    configured=config(root).get('editorial',{}).get('story_order',{}).get('by_slot',{}) if root is not None else {}
+    order=planned or configured.get(episode['edition_slot']) or EDITION_ORDER[episode['edition_slot']]
+    if len(order)!=2 or set(order)!={'ai','games'}:
+        raise ValueError('Story order must contain ai and games exactly once')
+    return list(order)
 
 def event_id(scene):
     return scene.get('event_key') or scene.get('item_id') or scene['id']
@@ -45,23 +55,27 @@ def apply_story_order(episode,root=None):
     if not groups:raise ValueError('No body news to order')
     major=[key for key,pages in groups.items() if any(is_major(s,root) for s in pages)]
     games=[key for key,pages in groups.items() if is_game(pages[0])]
-    # Editor ranks equally eligible stories by input order. A plain AI cover
-    # cannot displace available games; choose the lead before making artwork.
+    default_order=edition_order(episode,root)
+    # Pick artwork from the slot's first available module, unless a reviewed
+    # major story takes priority. Ordinary leaders follow their company.
     requested=episode.get('lead_event_id')
     company_keys=[k for k,v in groups.items() if v[0].get('source_type')!='leader_x']
-    eligible=major or games or company_keys or list(groups)
-    if requested and requested not in eligible:raise ValueError('lead_event_id must name a verified major event, or a game when available')
+    preferred=games if default_order[0]=='games' else [k for k in groups if k not in games]
+    eligible=major or [k for k in preferred if k in company_keys] or preferred or company_keys or list(groups)
+    if requested and requested not in eligible:raise ValueError('lead_event_id must name a verified major event, or an event in the edition first module when available')
     lead=requested or eligible[0]
-    remaining=[key for key in groups if key not in major and key not in games and key!=lead]
+    remaining=[key for key in groups if key not in major and key not in games]
     leaders=[key for key in remaining if groups[key][0].get('source_type')=='leader_x']
     companies=[key for key in remaining if key not in leaders]
+    if lead in companies:companies=[lead]+[key for key in companies if key!=lead]
     ai=[]
     for key in companies:
         ai.append(key);company=str(groups[key][0].get('company','')).casefold()
         related=[k for k in leaders if company and str(groups[k][0].get('company','')).casefold()==company]
         ai.extend(related);leaders=[k for k in leaders if k not in related]
     ai+=leaders
-    order=list(dict.fromkeys([lead]+major+games+ai))
+    modules_by_kind={'games':games,'ai':ai}
+    order=list(dict.fromkeys([lead]+major+[key for kind in default_order for key in modules_by_kind[kind]]))
     body=[s for key in order for s in groups[key]]
     for scene in body:
         scene['navigation_group']='headline' if event_id(scene) in major else 'games' if is_game(scene) else 'ai'
@@ -74,14 +88,14 @@ def apply_story_order(episode,root=None):
             intro=''
             # Do not duplicate an authored or old generated module preamble.
             if group=='games':intro=('先来看游戏资讯。' if previous is None else '接下来是游戏资讯。')
-            elif group=='ai' and previous is not None:intro='接下来是AI动态。'
-            if intro and not scene.get('narration','').startswith(('接下来是游戏资讯','先来看游戏资讯','接下来是AI动态')):
+            elif group=='ai':intro=('先来看AI动态。' if previous is None else '接下来是AI动态。')
+            if intro and not scene.get('narration','').startswith(('接下来是游戏资讯','先来看游戏资讯','接下来是AI动态','先来看AI动态')):
                 scene['module_intro_text']=intro;scene['narration']=intro+scene.get('narration','')
         previous=group
     episode['scenes']=guides+body
     episode['lead_event_id']=lead
     episode['story_order']=dict(version=ORDER_VERSION,event_ids=order,major_event_ids=major,
-                               default_order=['games','ai'],lead_event_id=lead)
+                               default_order=default_order,edition_slot=episode['edition_slot'],lead_event_id=lead)
 
 def validate_lead_contract(episode,publication=None,cover=None):
     from layout_policy import validate_overview
