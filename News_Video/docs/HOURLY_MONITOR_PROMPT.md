@@ -1,3 +1,6 @@
+
+后续新正式片按 [48小时、来源与导览规则](FRESHNESS_AND_SOURCES.md) 执行：仅原始发布48h内（临时6h/回顾24h更严），导入/release/首次提交共用门禁；森空岛默认非浏览器模式，暂无验收替代源时记录缺口；干员读gàn yuán，仅TTS词组替换；00标题有公司/产品/游戏或人物主体及具体事件。已发布不改。
+
 # 小时tibo/reset轻量入口
 
 仅在D:/Basement/Codex_Video运行：检查迁移锁，存在静默跳过；在News_Video以既有Python和require_escalated执行hourly_monitor.py --compact及upload_bridge.py pending。每小时30分只读tibo，不采社会RSS、公司、游戏及其他负责人；不调用模型API。无待办/状态变化立即静默，不预读PROJECT_PROMPT、STATE、WORKFLOW、skill、源码或已发布成品。

@@ -22,3 +22,5 @@ description: 为项目新闻视频编写来源可核验的中文口播；也保�
 可用[演讲需求表](../help-me-shared/templates/speech-brief.md)与[主体表](../help-me-shared/templates/speaker-map.md)做内部记录，不混入正文。新产物放 work/report 的合理位置，Word/PDF 需要时才用对应工具生成并看实际版式。未经要求不改 PPT、不写 Notion、不发送；submit 等明确指令才压缩。
 
 新闻模式当前排序见 ../../docs/GAMES_FIRST.md：00后正文头条先播，默认游戏→AI，已核实重大消息可提前；模块口播按统一顺序生成。游戏事件充足可多选，不能每类1条截断。
+
+新闻新规则见 [48小时与来源](../../docs/FRESHNESS_AND_SOURCES.md)：原发布时间48h硬门禁、保留临时6h/回顾24h；缺时间不选，旧提醒不刷新；森空岛不自动调用浏览器。导览标题带明确主体和具体事实，不用导航短标签替代，API必须区分OpenAI/GPT、Codex和ChatGPT。干员读gàn yuán（干四声），词组TTS-only，不改汉字字幕。

@@ -125,14 +125,15 @@ def parse_feed(body, source):
             title = entry.findtext(ns+"title", "")
             links = entry.findall(ns+"link")
             link = next((x.attrib.get("href", "") for x in links if x.attrib.get("rel", "alternate")=="alternate"), "")
-            date = entry.findtext(ns+"published", "") or entry.findtext(ns+"updated", "")
+            date = entry.findtext(ns+"published", "")
             summary = entry.findtext(ns+"summary", "") or entry.findtext(ns+"content", "")
         if not title or not link: continue
         try: link = normalized_url(link)
         except ValueError: continue
         images=[urllib.parse.urljoin(link,u) for u in re.findall(r'<img[^>]+src=[\"\x27]([^\"\x27]+)',summary,re.I)]
         images += [node.attrib.get('url') for node in entry.iter() if node.tag.split('}')[-1] in {'content','thumbnail','enclosure'} and node.attrib.get('url') and ('image' in node.attrib.get('type','image'))]
-        output.append(dict(title=text(title), url=link, published=parse_date(date), summary=text(summary)[:10000],images=list(dict.fromkeys(images))))
+        output.append(dict(title=text(title), url=link, published=parse_date(date), raw_published=date,
+                           time_basis='original_publication',summary=text(summary)[:10000],images=list(dict.fromkeys(images))))
     return output
 
 class PageText(HTMLParser):
@@ -165,7 +166,7 @@ def official_bridge(body, source, encoding):
             version=re.search(r'\b(\d+\.\d+\.\d+)\b',title)
             if not date or not version:continue
             end=headings[i+1].start() if i+1<len(headings) else len(markup)
-            entries.append(dict(title='WorkBuddy '+title,url=source['url'],entry_key='workbuddy:'+version.group(1)+':'+date.group(1),published=parse_date(date.group(1)),published_precision='date',summary=text(markup[heading.end():end])[:10000]))
+            entries.append(dict(title='WorkBuddy '+title,url=source['url'],entry_key='workbuddy:'+version.group(1)+':'+date.group(1),published=parse_date(date.group(1)),raw_published=date.group(1),published_precision='date',summary=text(markup[heading.end():end])[:10000]))
         if not entries:raise ValueError('WorkBuddy changelog has no dated version headings; preserve source gap')
         return list({item['entry_key']:item for item in entries}.values())
     if source['id']=='kimi-blog':
@@ -180,7 +181,7 @@ def official_bridge(body, source, encoding):
             if not links:continue
             url=normalized_url(urllib.parse.urljoin(source['url'],links[-1]))
             if urllib.parse.urlsplit(url).hostname!='www.kimi.com':continue
-            entries.append(dict(title=text(title.group(1)),url=url,published=parse_date(date.group(1)),summary='',published_precision='date'))
+            entries.append(dict(title=text(title.group(1)),url=url,published=parse_date(date.group(1)),raw_published=date.group(1),summary='',published_precision='date'))
         if not entries:raise ValueError('Kimi blog has no dated article cards; preserve source gap')
         return list({item['url']:item for item in entries}.values())
     if source['id']=='glm-zcode':
@@ -189,7 +190,7 @@ def official_bridge(body, source, encoding):
         for i,match in enumerate(matches):
             version,date=match.groups();published=dt.datetime.strptime(date,'%b %d, %Y').replace(tzinfo=UTC).isoformat()
             end=matches[i+1].start() if i+1<len(matches) else len(content)
-            entries.append(dict(title='ZCode '+version+' 更新',url=source['url'],entry_key=source['id']+':'+version,published=published,summary=content[match.end():end].strip()[:10000]))
+            entries.append(dict(title='ZCode '+version+' 更新',url=source['url'],entry_key=source['id']+':'+version,published=published,raw_published=date,published_precision='date',summary=content[match.end():end].strip()[:10000]))
         if not entries:raise ValueError('GLM/ZCode page has no dated release entries; preserve coverage gap')
         return entries
     for href, title in page.links:
@@ -200,7 +201,7 @@ def official_bridge(body, source, encoding):
         if eligible:
             date_match = re.search(r"(20\d{2})[-/](\d{2})[-/](\d{2})", title + " " + url)
             published=parse_date("-".join(date_match.groups())) if date_match else None
-            entries.append(dict(title=text(title), url=normalized_url(url), published=published, summary=""))
+            entries.append(dict(title=text(title), url=normalized_url(url), published=published, raw_published="-".join(date_match.groups()) if date_match else None,published_precision="date", summary=""))
     if source["id"]=="deepseek":
         # Docusaurus anchors are a changelog, not separate fabricated news URLs.
         page_text=" ".join(page.parts)
@@ -208,7 +209,7 @@ def official_bridge(body, source, encoding):
         for i in range(1,len(chunks)-1,2):
             date, content=chunks[i], re.sub(r"\s+", " ", chunks[i+1]).strip()
             if content:
-                entries.append(dict(title="DeepSeek 更新 "+date, url=source["url"]+"?edition="+date, published=parse_date(date),summary=content[:8000]))
+                entries.append(dict(title="DeepSeek 更新 "+date, url=source["url"]+"?edition="+date, published=parse_date(date),raw_published=date,published_precision="date",summary=content[:8000]))
     if not entries: raise ValueError("Official page has no extractable dated news entries; source gap preserved")
     return entries
 
@@ -256,6 +257,18 @@ def collect(kind):
     for source,result in results:
         for item in result.pop("items"):
             key=hashlib.sha256(item.get('entry_key',item["url"]).encode()).hexdigest()[:20]
+            from freshness import time_evidence
+            evidence_path=ROOT/'data/time-evidence'/(key+'.json')
+            evidence=time_evidence(item,source)
+            # A refreshed feed must not make an existing URL younger.
+            if evidence_path.is_file():
+                previous=load(evidence_path)
+                from freshness import stamp
+                try:
+                    old_stamp=stamp(previous['original_published_at'])
+                    if not evidence.get('original_published_at') or old_stamp<=stamp(evidence['original_published_at']):evidence=previous
+                except (ValueError,TypeError,KeyError):pass
+            dump(evidence_path,evidence)
             if source["group"]=="games":
                 from game_sources import archive
                 archive(ROOT,key,item,source)
@@ -268,7 +281,9 @@ def collect(kind):
               (key,source["id"],source["publisher"],source["group"],item["title"],item["url"],item["published"],item["summary"],now.isoformat(),now.isoformat(),hashlib.sha256((item["title"]+item["summary"]).encode()).hexdigest()))
             db.execute("INSERT OR REPLACE INTO observations VALUES(?,?,?)",(key,source["id"],now.isoformat()))
         reports.append(result)
-    report=dict(id=run_id,started=now.isoformat(),finished=dt.datetime.now(UTC).isoformat(),kind=kind,model_calls=0,new_items=new,sources=reports)
+    gaps=[dict(source_id=s['id'],status='disabled_source_gap',reason=s['disabled_reason']) for s in load(ROOT/'sources.json')
+          if not s.get('enabled',True) and s.get('disabled_reason') and (kind=='all' or s['group']==kind)]
+    report=dict(id=run_id,started=now.isoformat(),finished=dt.datetime.now(UTC).isoformat(),kind=kind,model_calls=0,new_items=new,sources=reports,source_gaps=gaps)
     db.execute("INSERT INTO runs VALUES(?,?,?,?,?)",(run_id,kind,report["started"],report["finished"],json.dumps(report,ensure_ascii=False))); db.commit();db.close()
     if kind in {'ai','games','all'} and config().get('x_enabled'):
         from leader_sources import collect as collect_x
@@ -279,9 +294,36 @@ def collect(kind):
 
 def candidates(hours=48,compact=False,limit=12,cursor=0):
     if limit<1 or limit>50 or cursor<0:raise ValueError('Use limit 1-50 and a nonnegative cursor')
-    cutoff=(dt.datetime.now(UTC)-dt.timedelta(hours=hours)).isoformat()
+    if not 0<hours<=48:raise ValueError('Formal candidates require a window of 1-48 hours')
+    snapshot=ROOT/'data/candidates.json'
+    if cursor:
+        if not snapshot.is_file():raise ValueError('Start candidate pagination with cursor 0')
+        payload=load(snapshot)
+        if payload.get('hours')!=hours:raise ValueError('Candidate window changed; restart cursor 0')
+        rows=payload['items'];selected=rows[cursor:cursor+limit]
+        if compact:
+            print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
+                                  items=[{k:v for k,v in item.items() if k not in {'summary','content_hash'}} for item in selected],
+                                  reference_time=payload['generated_at'],game_coverage=payload['game_coverage'],full_file='data/candidates.json'),ensure_ascii=False));return
+        for item in selected:print(json.dumps(item,ensure_ascii=False))
+        return
+    reference=dt.datetime.now(UTC)
+    cutoff=(reference-dt.timedelta(hours=hours)).isoformat()
     db=database()
-    rows=[dict(row) for row in db.execute("SELECT * FROM items WHERE published>=? ORDER BY kind,published DESC",(cutoff,))]
+    rows=[dict(row) for row in db.execute("SELECT * FROM items WHERE published IS NOT NULL ORDER BY kind,published DESC")]
+    from freshness import check,evidence_for,time_evidence
+    rejected=[];fresh=[]
+    for row in rows:
+        try:evidence=evidence_for(ROOT,dict(item_id=row['id']))
+        except ValueError:
+            # Existing records retain their collected timestamp; date precision
+            # is refined below from the source registry before acceptance.
+            source=next((s for s in load(ROOT/'sources.json') if s['id']==row['source_id']),{})
+            evidence=time_evidence(row,source)
+        result=check(evidence,reference,hours)
+        if result['ok']:fresh.append(row)
+        else:rejected.append(dict(item_id=row['id'],reason=result['reason']))
+    rows=fresh
     sources={s['id']:s for s in load(ROOT/'sources.json')}
     if config().get('x_enabled'):
         from leader_sources import registry
@@ -317,7 +359,7 @@ def candidates(hours=48,compact=False,limit=12,cursor=0):
     db.close()
     from used_news import recent_records,exclude_used
     rows,excluded,used_context=exclude_used(rows,recent_records(ROOT,days=max(2,(hours+23)//24+1)))
-    payload=dict(producer="RSS + Agent Reach collector; no model calls",cutoff_utc=cutoff,generated_at=dt.datetime.now(UTC).isoformat(),items=rows,
+    payload=dict(producer="RSS + Agent Reach collector; no model calls",cutoff_utc=cutoff,generated_at=reference.isoformat(),hours=hours,excluded_stale=rejected,items=rows,
         excluded_used_news=excluded,previously_used_news=used_context,
         dedup_policy='Exclude completed exports by item ID, canonical URL, event key or normalized source title; compare previously_used_news before selecting rewritten reports of the same event.')
     from important_events import recap_candidates
@@ -368,6 +410,17 @@ def article(item_id,compact=False,max_chars=8000):
     game_path=ROOT/'data/game-items'/(item_id+'.json')
     game_data=load(game_path) if game_path.exists() else {}
     if game_data.get('source_type')=='skland_browser':
+        if config().get('game_news',{}).get('skland_mode')=='non_browser_only':
+            cached=ROOT/'data/articles'/(item_id+'.json')
+            if not cached.is_file() or not load(cached).get('body_complete'):
+                raise ValueError('SOURCE_GAP: no inspected cached Skland original; browser fallback is disabled')
+            data=load(cached)
+            if compact:
+                print(json.dumps(dict(item_id=item_id,title=data['title'],published=data['published'],
+                    text=data.get('text','')[:max_chars],truncated=len(data.get('text',''))>max_chars,
+                    full_file='data/articles/'+item_id+'.json',source_status='cached_original_only'),ensure_ascii=False))
+            else:print(json.dumps(data,ensure_ascii=False,indent=2))
+            return
         from skland_sources import BrowserReader
         from game_sources import article as game_article
         with BrowserReader(ROOT) as browser:data=browser.article(game_data)
@@ -398,6 +451,7 @@ def article(item_id,compact=False,max_chars=8000):
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
+    if cfg.get('freshness',{}).get('enabled'):episode['overview_subject_policy']=1
     episode['audio_content_review_required']=True
     episode['production_policy_version']=3
     from production_policy import validate_content
@@ -413,6 +467,8 @@ def import_editorial(path):
     leader_audit=prepare_main_leaders(episode,ROOT)
     tibo_audit=episode.get('tibo_audit')
     if leader_audit:episode['leader_audit']=leader_audit
+    from freshness import audit_episode
+    audit_episode(episode,ROOT,bind=True)
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)
     from layout_policy import prepare_overview

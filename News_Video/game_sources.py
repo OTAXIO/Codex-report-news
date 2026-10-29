@@ -40,7 +40,7 @@ def parse(page,source):
         url=source['article_base'].rstrip('/')+'/'+str(key)
         images=[urljoin(url,str(row[k])) for k in ['cover','image','thumb','thumbnail'] if isinstance(row.get(k),str) and row[k]]
         images+=re.findall(r'<img[^>]+src=[\"\x27]([^\"\x27]+)',str(row.get('content','')),re.I)
-        out.append(dict(title=text(title),url=url,published=published,summary=text(row.get('brief') or row.get('content') or row.get('description') or title),images=images,game=source['game'],game_region=source['game_region'],game_topic=topic(title),source_type='official_game_page',body_complete=bool(row.get('content'))))
+        out.append(dict(title=text(title),url=url,published=published,raw_published=stamp,source_timezone='UTC' if isinstance(stamp,(int,float)) else source.get('timezone'),summary=text(row.get('brief') or row.get('content') or row.get('description') or title),images=images,game=source['game'],game_region=source['game_region'],game_topic=topic(title),source_type='official_game_page',body_complete=bool(row.get('content'))))
     if not out:raise ValueError('Official game page returned no dated announcements; inspect source drift, do not invent news')
     return out
 

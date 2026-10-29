@@ -53,7 +53,8 @@
       "training_target": "0.6B_only_if_needed",
       "attempt_1_7b_training": false,
       "pronunciation_targets": {
-        "tibo": "tī bo: ti1, bo0; second syllable light, short, unstressed; no internal pause"
+        "tibo": "tī bo: ti1, bo0; second syllable light, short, unstressed; no internal pause",
+        "干员": "gàn yuán; gan4 yuan2; lexical TTS-only override"
       },
       "sampling": {
         "temperature": 0.8,
@@ -346,6 +347,16 @@
       "official_x"
     ],
     "collect_trigger": "before_each_episode",
-    "selection_policy": "all_fresh_independent_valuable_events; do_not_stop_at_one_per_bucket"
+    "selection_policy": "all_fresh_independent_valuable_events; do_not_stop_at_one_per_bucket",
+    "skland_mode": "non_browser_only"
+  },
+  "freshness": {
+    "enabled": true,
+    "maximum_hours": 48,
+    "basis": "original_publication",
+    "unknown_time": "exclude",
+    "future_time": "exclude",
+    "date_precision": "whole_interval_must_fit",
+    "recheck_before_first_submit": true
   }
 }

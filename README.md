@@ -1,3 +1,5 @@
+> 后续正式片的48h时效门禁、森空岛非浏览器模式、干员四声和导览主体约束见 [当前政策](News_Video/docs/FRESHNESS_AND_SOURCES.md)。
+
 > 2026-10-29 当前排序：主片00导览后，正文01为真实封面头条，其后为其他核实重大消息、剩余游戏、普通AI及对应负责人。无重大消息优先游戏头条；2＋2不是上限或每类只取1条。统一story_order与lead_event_id，详见docs/GAMES_FIRST.md（docs内文件见GAMES_FIRST.md）。已有任务按原计划，已发布不重做。
 
 # 新闻视频生成项目

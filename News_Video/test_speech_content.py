@@ -3,6 +3,11 @@ from pathlib import Path
 from verify_speech_content import compare_sentence,validate_review
 from caption_layout import sentence_captions
 class SpeechContentChecks(unittest.TestCase):
+    def test_explicit_tts_homophones_do_not_create_false_asr_mismatch(self):
+        from verify_speech_content import lexical_asr_text
+        rules={'干员':'赣员','调用':'掉用'}
+        self.assertEqual(lexical_asr_text('新增赣员，掉用API。',rules),'新增干员，调用API。')
+        self.assertEqual(lexical_asr_text('准员展示和干预。',rules),'准员展示和干预。')
     def test_original_48_second_noise_failure_is_blocked(self):
         self.assertIn('abnormally_long_sentence',compare_sentence('亚指数时间不等于多项式时间，这项结果也不等于证明所有难题都能高效解决。','亚指数时间不等于多项式时间',48)['problems'])
         self.assertIn('missing_or_changed_speech',compare_sentence('这是必须实际读出的完整句子。','',4)['problems'])

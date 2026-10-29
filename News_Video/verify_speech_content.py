@@ -5,6 +5,12 @@ ROOT=Path(__file__).resolve().parent
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 def comparable(text):return re.sub(r'[^\u4e00-\u9fffa-z0-9]','',text.lower())
+def lexical_asr_text(text,readings):
+    # Compare only explicit whole-word TTS homophones. This is not a tone
+    # check and must never normalize arbitrary characters or ASR mistakes.
+    for word,value in sorted(readings.items(),key=lambda row:len(row[0]),reverse=True):
+        text=text.replace(value,word)
+    return text
 def compare_sentence(expected,heard,seconds):
     expected=comparable(expected);heard=comparable(heard)
     similarity=difflib.SequenceMatcher(None,expected,heard,autojunk=False).ratio()
@@ -29,7 +35,7 @@ def run(episode):
     import os,sys
     sys.path.insert(0,str(ROOT));sys.path.insert(0,str(ROOT/'../../Voice_Generate/tools'))
     from pronunciation import spoken_text
-    from speech_text import prepare_text
+    from speech_text import prepare_text,READINGS
     os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1')
     import torch,soundfile as sf,numpy as np
     from scipy.signal import resample_poly
@@ -49,8 +55,10 @@ def run(episode):
         results=model.generate(input=str(wav),disable_pbar=True)
         heard=results[0].get('text','') if results else ''
         expected_spoken=prepare_text(spoken_text(sentence['text'],config['voice'].get('pronunciations',{})))
-        row=compare_sentence(expected_spoken,heard,len(samples)/sr);row.update(index=i,expected=sentence['text'],expected_spoken=expected_spoken,heard=heard);rows.append(row)
-    score=difflib.SequenceMatcher(None,comparable(''.join(r['expected_spoken'] for r in rows)),comparable(''.join(r['heard'] for r in rows)),autojunk=False).ratio()
+        normalized=lexical_asr_text(heard,READINGS)
+        normalized_expected=lexical_asr_text(expected_spoken,READINGS)
+        row=compare_sentence(normalized_expected,normalized,len(samples)/sr);row.update(index=i,expected=sentence['text'],expected_spoken=expected_spoken,expected_lexical_normalized=normalized_expected,heard=heard,heard_lexical_normalized=normalized);rows.append(row)
+    score=difflib.SequenceMatcher(None,comparable(''.join(r['expected_lexical_normalized'] for r in rows)),comparable(''.join(r['heard_lexical_normalized'] for r in rows)),autojunk=False).ratio()
     clipping=float(np.mean(np.abs(audio)>=.999));ok=not any(r['problems'] for r in rows) and score>=.9 and clipping<.0001 and bool(np.isfinite(audio).all())
     report=dict(ok=ok,method='local per-sentence ASR plus duration and waveform checks',narration_sha256=digest(directory/'narration.wav'),script_sha256=digest(directory/'spoken_script.txt'),overall_similarity=score,clipped_sample_fraction=clipping,sentences=rows,subjective_listening_performed=False)
     (directory/'audio-content-review.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')

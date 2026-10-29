@@ -6,6 +6,7 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
+ 'freshness-audit.json',
  'render-plan.json','render-job.json','render-validation.json','render-assets.json','visual-build.json','layout-audit.json',
  'soundtrack.wav','audio-mix.json','caption-alignment.json','audio-content-review.json',
  'game-coverage-audit.json','original-post.json','leader-audit.json','tibo-audit.json','ai-coverage-audit.json','sample.mp4','cover-bilibili.jpg','cover-16x10.png','cover-16x9.png','cover-4x3.png',
@@ -60,6 +61,9 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     if (source/'release.json').exists():raise ValueError('Edition already archived; use a new revision ID')
     ep=json.loads((source/'episode.json').read_text(encoding='utf-8'));slot=slot or infer_slot(ep)
     if ep['id']!=episode_id:raise ValueError('Episode ID does not match its directory')
+    from freshness import audit_episode
+    freshness=audit_episode(ep,root)
+    if freshness:(source/'freshness-audit.json').write_text(json.dumps(freshness,ensure_ascii=False,indent=2),encoding='utf-8')
     target,video_name=release_target(root,ep,slot)
     for required in ['sample.mp4','cover-4x3.png','cover-16x9.png','script.txt','publication.json','check.json','progress-validation.json']:
         if not (source/required).is_file():raise ValueError('Release is incomplete: '+required)

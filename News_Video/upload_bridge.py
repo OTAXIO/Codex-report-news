@@ -60,6 +60,12 @@ def publish_ready(directory,root=ROOT):
     if receipt.get('state') in {'unknown','uploading','submitting'}:return dict(ok=False,error=dict(code='RECONCILE_REQUIRED'))
     pub=load(directory/'publication.json')
     if not cfg.get('enabled') or not cfg.get('auto_submit') or pub.get('auto_publish') is False:return dict(ok=True,skipped='automatic_upload_disabled_for_this_release')
+    from freshness import audit_episode,enabled
+    try:audit=audit_episode(load(directory/'episode.json'),root) if enabled(root) else None
+    except ValueError as error:
+        result=dict(ok=False,state='freshness_blocked',error=dict(code='FRESHNESS_BLOCKED',message=str(error)))
+        save(directory/'freshness-blocked.json',result);return result
+    if audit:save(directory/'freshness-submit-audit.json',audit)
     from production_policy import validate_video,tags
     from episode_paths import release_movie
     validate_video(root,release_movie(directory))

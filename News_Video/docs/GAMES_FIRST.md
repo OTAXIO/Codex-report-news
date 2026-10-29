@@ -1,3 +1,6 @@
+
+后续新正式片按 [48小时、来源与导览规则](FRESHNESS_AND_SOURCES.md) 执行：仅原始发布48h内（临时6h/回顾24h更严），导入/release/首次提交共用门禁；森空岛默认非浏览器模式，暂无验收替代源时记录缺口；干员读gàn yuán，仅TTS词组替换；00标题有公司/产品/游戏或人物主体及具体事件。已发布不改。
+
 # 游戏优先与头条一致（2026-10-29）
 
 新 morning/night 主片采用 production_policy_version=3。导入先核验来源、合并回顾与负责人，再由 `production_policy.apply_story_order` 统一生成 `story_order`；随后重建00导览，再配音与生成时间轴。已在制、已发布及历史期次不批量重排。

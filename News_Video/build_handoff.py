@@ -30,7 +30,7 @@ def build(date='2026-10-26'):
         if p.is_file() and '__pycache__' not in p.parts and (p.suffix in {'.py','.mjs','.md','.json','.yaml','.txt'} or p.name in {'LICENSE','NOTICE'}):add(p)
     for p in ROOT.glob('*.py'):add(p)
     for name in ['config.json','sources.json','leader_sources.json','package.json','pnpm-lock.yaml','pnpm-workspace.yaml','requirements.txt','README.md','.gitignore']:add(ROOT/name)
-    for directory in ['renderers','docs','skills','logs/news-used','logs/releases','data/articles','data/game-items','data/collections','data/source-probes','data/leader-posts','data/reset-alerts','data/model-alerts']:
+    for directory in ['renderers','docs','skills','logs/news-used','logs/releases','data/articles','data/game-items','data/time-evidence','data/collections','data/source-probes','data/leader-posts','data/reset-alerts','data/model-alerts']:
         for p in (ROOT/directory).rglob('*'):
             if p.is_file() and 'history' not in p.relative_to(ROOT).parts and '__pycache__' not in p.parts:add(p)
     for p in (ROOT/'assets').rglob('*'):

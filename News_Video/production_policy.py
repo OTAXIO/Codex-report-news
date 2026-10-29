@@ -84,6 +84,8 @@ def apply_story_order(episode,root=None):
                                default_order=['games','ai'],lead_event_id=lead)
 
 def validate_lead_contract(episode,publication=None,cover=None):
+    from layout_policy import validate_overview
+    validate_overview(episode)
     if not episode.get('story_order'):return  # Frozen historical episodes.
     from layout_policy import is_overview
     body=[s for s in episode['scenes'] if not is_overview(s)]

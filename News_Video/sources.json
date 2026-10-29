@@ -34,7 +34,8 @@
     "vendor": "Anthropic",
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
-    "region": "international"
+    "region": "international",
+    "published_precision": "date"
   },
   {
     "id": "deepseek",
@@ -46,7 +47,8 @@
     "vendor": "DeepSeek",
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
-    "region": "domestic"
+    "region": "domestic",
+    "published_precision": "date"
   },
   {
     "id": "minimax",
@@ -58,7 +60,8 @@
     "vendor": "MiniMax",
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
-    "region": "domestic"
+    "region": "domestic",
+    "published_precision": "date"
   },
   {
     "id": "deepmind",
@@ -171,7 +174,8 @@
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
     "region": "domestic",
-    "product": "ZCode"
+    "product": "ZCode",
+    "published_precision": "date"
   },
   {
     "id": "google-ai",
@@ -322,11 +326,12 @@
     "official_authors": [
       "明日方舟Arknights"
     ],
-    "enabled": true,
+    "enabled": false,
     "source_priority": 0,
     "rss_verified": false,
     "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
-    "collect_trigger": "before_each_episode"
+    "collect_trigger": "before_each_episode",
+    "disabled_reason": "Non-browser migration: no verified public feed/API yet; browser remains explicit opt-in only"
   },
   {
     "id": "skland-endfield",
@@ -342,10 +347,11 @@
     "official_authors": [
       "明日方舟终末地"
     ],
-    "enabled": true,
+    "enabled": false,
     "source_priority": 0,
     "rss_verified": false,
     "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
-    "collect_trigger": "before_each_episode"
+    "collect_trigger": "before_each_episode",
+    "disabled_reason": "Non-browser migration: no verified public feed/API yet; browser remains explicit opt-in only"
   }
 ]
