@@ -3,7 +3,7 @@
   "assets": [
     {
       "id": "openai",
-      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/openai.png",
+      "path": "assets/logos/openai.png",
       "source": "https://avatars.githubusercontent.com/u/14957082?s=512&v=4",
       "organization": "https://github.com/openai",
       "width": 200,
@@ -13,7 +13,7 @@
     },
     {
       "id": "anthropic",
-      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/anthropic.png",
+      "path": "assets/logos/anthropic.png",
       "source": "https://avatars.githubusercontent.com/u/76263028?s=512&v=4",
       "organization": "https://github.com/anthropics",
       "width": 388,
@@ -23,7 +23,7 @@
     },
     {
       "id": "ai2",
-      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/ai2.png",
+      "path": "assets/logos/ai2.png",
       "source": "https://avatars.githubusercontent.com/u/5667695?s=512&v=4",
       "organization": "https://github.com/allenai",
       "width": 460,
@@ -33,7 +33,7 @@
     },
     {
       "id": "qwen",
-      "path": "D:/Basement/Codex_Video/Codex-report-news/News_Video/assets/logos/qwen.png",
+      "path": "assets/logos/qwen.png",
       "source": "https://avatars.githubusercontent.com/u/141221163?s=512&v=4",
       "organization": "https://github.com/QwenLM",
       "width": 460,
@@ -67,6 +67,66 @@
       "height": 60,
       "sha256": "d42c09bc6f08bb8435f3549c88467590aa73b0ce8cf38a1513398bc8dcb7b971",
       "usage": "Official-site favicon identifying the company in a sourced news report; no endorsement."
+    },
+    {
+      "id": "deepseek",
+      "path": "assets/logos/deepseek-identity.png",
+      "source": "https://github.com/deepseek-ai.png?size=512",
+      "final_url": "https://avatars.githubusercontent.com/u/148330874?s=512&v=4",
+      "organization": "https://github.com/deepseek-ai",
+      "width": 460,
+      "height": 460,
+      "sha256": "137d75555237585929d4e786d0cf801a7270baa6d56253f2b6506d37779b4356",
+      "usage": "Game/company identity fallback; never presented as an event photograph",
+      "retrieved_utc": "2026-10-29T11:24:22.500503+00:00"
+    },
+    {
+      "id": "kimi",
+      "path": "assets/logos/kimi-identity.png",
+      "source": "https://github.com/MoonshotAI.png?size=512",
+      "final_url": "https://avatars.githubusercontent.com/u/129152888?s=512&v=4",
+      "organization": "https://github.com/MoonshotAI",
+      "width": 460,
+      "height": 460,
+      "sha256": "a42aba1703301ce074e91295b4cf27dd4fb8fc536bd0c0492f907222d8be34e7",
+      "usage": "Game/company identity fallback; never presented as an event photograph",
+      "retrieved_utc": "2026-10-29T11:24:25.487910+00:00"
+    },
+    {
+      "id": "glm",
+      "path": "assets/logos/glm-identity.png",
+      "source": "https://github.com/zai-org.png?size=512",
+      "final_url": "https://avatars.githubusercontent.com/u/223098841?s=512&v=4",
+      "organization": "https://github.com/zai-org",
+      "width": 460,
+      "height": 460,
+      "sha256": "be4c00d53a2f8c84071d28d9cb5c738787223b0deeaa428ab7db78a150e57f6a",
+      "usage": "Game/company identity fallback; never presented as an event photograph",
+      "retrieved_utc": "2026-10-29T11:24:28.340885+00:00"
+    },
+    {
+      "id": "endfield",
+      "path": "assets/logos/endfield-identity.png",
+      "source": "https://web.hycdn.cn/endfield/official-v4/_next/static/media/share.dc935341.jpg",
+      "final_url": "https://web.hycdn.cn/endfield/official-v4/_next/static/media/share.dc935341.jpg",
+      "organization": "https://endfield.hypergryph.com/zh-cn/",
+      "width": 256,
+      "height": 256,
+      "sha256": "927cbd01d945a86861c74038e9928d7d22090e41f0f403f435ad2c201bac93b7",
+      "usage": "Game/company identity fallback; never presented as an event photograph",
+      "retrieved_utc": "2026-10-29T11:24:28.573668+00:00"
+    },
+    {
+      "id": "arknights",
+      "path": "assets/logos/arknights-identity.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/11/d9/c0/11d9c0ce-b8e1-21db-f8d7-6d416acf6d93/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+      "final_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/11/d9/c0/11d9c0ce-b8e1-21db-f8d7-6d416acf6d93/AppIcon-0-0-1x_U007emarketing-0-8-0-85-220.png/512x512bb.jpg",
+      "organization": "https://ak.hypergryph.com/",
+      "width": 512,
+      "height": 512,
+      "sha256": "5898890ef447e82f86eea9458b61e821b22fc68fd8907d3f5e11adfde27b34d5",
+      "usage": "Game/company identity fallback; never presented as an event photograph",
+      "retrieved_utc": "2026-10-29T11:24:30.217905+00:00"
     }
   ]
 }

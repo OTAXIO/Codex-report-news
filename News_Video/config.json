@@ -263,7 +263,8 @@
     "overview_hold_seconds": 2,
     "reset_overview": false,
     "cover_subtitle_enabled": false,
-    "cover_footer_no_date": true
+    "cover_footer_no_date": true,
+    "require_image_every_page": true
   },
   "model_alerts": {
     "enabled": true,

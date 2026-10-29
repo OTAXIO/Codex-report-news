@@ -11,6 +11,11 @@ class ResetAlertChecks(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name)
         self.patch=patch.object(n,'ROOT',self.root);self.patch.start()
         cfg=json.loads((Path(__file__).parent/'config.json').read_text(encoding='utf-8'));n.dump(self.root/'config.json',cfg)
+        # Isolated reset drafts use the same verified-identity requirement as production.
+        import shutil
+        asset=self.root/'assets/logos/openai.png';asset.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(Path(__file__).parent/'assets/logos/openai.png',asset)
+        n.dump(self.root/'assets/logos/sources.json',dict(assets=[dict(id='openai',path='assets/logos/openai.png',source='https://github.com/openai',sha256=hashlib.sha256(asset.read_bytes()).hexdigest())]))
         self.now=dt.datetime.now(n.UTC)
     def tearDown(self):self.patch.stop();self.tmp.cleanup()
 
@@ -43,6 +48,7 @@ class ResetAlertChecks(unittest.TestCase):
         alert=r.draft(key,self.root/'review.json',self.now);ep=n.load(self.root/'episodes'/alert['episode_id']/'episode.json')
         self.assertEqual(ep['edition_slot'],'temporary');self.assertEqual(len(ep['scenes']),1)
         self.assertFalse(ep['counts_toward_daily_main_limit']);self.assertEqual(ep['scenes'][0]['publisher'],'tibo')
+        self.assertEqual(ep['scenes'][0]['resolved_media']['subject'],'openai')
         _,spec=build_progress(ep,[dict(start=0,end=8)],8,'#01A1FE')
         self.assertEqual([x['label'] for x in spec['modules']],['临时新闻'])
         other=self.post(21);r.scan(self.now)

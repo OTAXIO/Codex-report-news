@@ -1,5 +1,12 @@
 """Editable chapter overview and deterministic whole-video progress."""
 import html,json,math
+def navigation_layout(renderer='hyperframes'):
+    """Absolute sampling coordinates share the exact footer-to-bottom offset."""
+    modern=renderer=='multiplane';x,width=(96,1728) if modern else (192,1536)
+    shift=1080-8-(1030 if modern else 1045)
+    return dict(nav_offset_y=shift,bar=dict(x=x,y=1072,width=width,height=8),
+                chapter_highlight_y=(991 if modern else 1014)+shift,module_highlight_y=(942 if modern else 968)+shift,
+                bottom_edge_aligned=True)
 def group(scene):
     section=scene['section']
     if scene['id']=='intro':return '开场'
@@ -11,6 +18,7 @@ def group(scene):
     return section
 
 def build_progress(episode,offsets,duration,blue):
+    geometry=navigation_layout();dy=geometry['nav_offset_y']
     footer_tag=html.escape(episode.get('footer_tag','AI 生成 · 本地样片'))
     chapters=[];headlines=[]
     for scene,timing in zip(episode['scenes'],offsets):
@@ -43,17 +51,17 @@ def build_progress(episode,offsets,duration,blue):
 @font-face{{font-family:NewsSans;src:url('assets/fonts/msyh.ttc');font-weight:400}}
 @font-face{{font-family:NewsSans;src:url('assets/fonts/msyhbd.ttc');font-weight:700}}
 #root{{position:absolute;inset:0;pointer-events:none;font-family:NewsSans;color:#101218}}
-.footer{{position:absolute;left:192px;top:930px;width:1536px;height:126px;background:#FFFFFF;border-top:1px solid #E4E7EB}}
-.module{{position:absolute;top:938px;height:32px;box-sizing:border-box;font-size:26px;line-height:29px;font-weight:700;text-align:center;color:#757A82;background:#FFFFFF;border-bottom:4px solid #E4E7EB}}
+.footer{{position:absolute;left:192px;top:{930+dy}px;width:1536px;height:{1080-930-dy}px;background:#FFFFFF;border-top:1px solid #E4E7EB}}
+.module{{position:absolute;top:{938+dy}px;height:32px;box-sizing:border-box;font-size:26px;line-height:29px;font-weight:700;text-align:center;color:#757A82;background:#FFFFFF;border-bottom:4px solid #E4E7EB}}
 .module-active{{color:#101218;border-bottom-color:var(--blue,{blue})}}
-.headline{{position:absolute;left:192px;top:977px;width:940px;height:34px;font-size:24px;line-height:32px;font-weight:700}}
-.tag{{position:absolute;left:1170px;top:980px;font-size:19px;line-height:28px}}
-.clock{{position:absolute;right:192px;top:977px;font-size:24px;line-height:32px;font-variant-numeric:tabular-nums;text-align:right}}
-.chapter{{position:absolute;top:1013px;height:28px;font-size:18px;line-height:26px;text-align:center;white-space:nowrap}}
+.headline{{position:absolute;left:192px;top:{977+dy}px;width:940px;height:34px;font-size:24px;line-height:32px;font-weight:700}}
+.tag{{position:absolute;left:1170px;top:{980+dy}px;font-size:19px;line-height:28px}}
+.clock{{position:absolute;right:192px;top:{977+dy}px;font-size:24px;line-height:32px;font-variant-numeric:tabular-nums;text-align:right}}
+.chapter{{position:absolute;top:{1013+dy}px;height:28px;font-size:18px;line-height:26px;text-align:center;white-space:nowrap}}
 .current{{background:#FFFFFF;font-weight:700}}.current span{{display:inline-block;background:var(--blue,{blue});padding:0}}
-.track,.fill{{position:absolute;left:192px;top:1045px;width:1536px;height:8px}}
+.track,.fill{{position:absolute;left:192px;top:{geometry['bar']['y']}px;width:1536px;height:8px}}
 .track{{background:#E4E7EB}}.fill{{background:var(--blue,{blue});transform-origin:left center}}
-.marker{{position:absolute;top:1042px;width:2px;height:14px;background:#101218}}
+.marker{{position:absolute;top:{1042+dy}px;width:2px;height:{1080-1042-dy}px;background:#101218}}
 </style><div id="root" data-composition-id="progress" data-width="1920" data-height="1080">
 <div id="progress-frame" class="clip" data-start="0" data-duration="{duration:.6f}" data-layout-allow-overlap="true"><div class="footer"></div>{''.join(module_html)}<div class="tag">{footer_tag}</div><div id="progress-clock" class="clock">00:00 / {total}</div>{''.join(labels)}<div class="track"></div><div id="progress-fill" class="fill"></div>{''.join(markers)}</div>{''.join(headlines)}
 </div><script>
@@ -64,5 +72,5 @@ tl.fromTo('#progress-fill',{{scaleX:0}},{{scaleX:1,duration:{duration:.9f},ease:
 tl.to(time,{{value:{duration:.9f},duration:{duration:.9f},ease:'none',onUpdate:()=>{{clock.textContent=formatTime(time.value)+' / {total}';}}}},0);
 window.__timelines['progress']=tl;
 </script></template>'''
-    spec=dict(duration=duration,chapters=chapters,modules=modules,module_highlight_y=968,bar=dict(x=192,y=1045,width=1536,height=8),blue=blue,clock_step_seconds=1)
+    spec=dict(duration=duration,chapters=chapters,modules=modules,blue=blue,clock_step_seconds=1,**geometry)
     return markup,spec

@@ -6,6 +6,7 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
+ 'scene-media.json',
  'freshness-audit.json',
  'render-plan.json','render-job.json','render-validation.json','render-assets.json','visual-build.json','layout-audit.json',
  'soundtrack.wav','audio-mix.json','caption-alignment.json','audio-content-review.json',
@@ -62,6 +63,8 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     ep=json.loads((source/'episode.json').read_text(encoding='utf-8'));slot=slot or infer_slot(ep)
     if ep['id']!=episode_id:raise ValueError('Episode ID does not match its directory')
     from freshness import audit_episode
+    from scene_media import validate as validate_media
+    validate_media(ep,root)
     freshness=audit_episode(ep,root)
     if freshness:(source/'freshness-audit.json').write_text(json.dumps(freshness,ensure_ascii=False,indent=2),encoding='utf-8')
     target,video_name=release_target(root,ep,slot)

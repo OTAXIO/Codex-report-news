@@ -13,10 +13,11 @@ def input_fingerprint(episode_id,plan):
     epdir=episode_directory(ROOT,episode_id)
     episode=read(epdir/'episode.json')
     files=[epdir/name for name in ('episode.json','timings.json','captions.json','render-plan.json','soundtrack.wav')]
-    files += [ROOT/name for name in ('config.json','build_film.py','progress_overlay.py','layout_policy.py','caption_layout.py','production_policy.py')]
+    files += [ROOT/name for name in ('config.json','build_film.py','progress_overlay.py','layout_policy.py','caption_layout.py','production_policy.py','scene_media.py')]
     if plan['backend']=='multiplane':
         files += [ROOT/name for name in ('renderers/multiplane.py','renderers/news-shot.js','renderers/news-shot.css')]
     for scene in episode['scenes']:
+        if scene.get('resolved_media'):files.append((ROOT/scene['resolved_media']['path']).resolve())
         for key in ('logo','image'):
             if scene.get(key):files.append((ROOT/scene[key]).resolve())
     records=[]
@@ -53,6 +54,8 @@ def build_hyperframes(episode_id,film_directory=None):
     from episode_paths import episode_directory
     cfg=read(ROOT/'config.json'); epdir=episode_directory(ROOT,episode_id)
     episode=read(epdir/'episode.json'); timing=read(epdir/'timings.json')
+    from scene_media import validate
+    validate(episode,ROOT)
     film=Path(film_directory) if film_directory else ROOT/'film'; assets=film/'assets'; comps=film/'compositions'
     assets.mkdir(parents=True,exist_ok=True); comps.mkdir(exist_ok=True)
     (assets/'fonts').mkdir(exist_ok=True)
@@ -90,11 +93,15 @@ def build_hyperframes(episode_id,film_directory=None):
 .overview-note{position:absolute;left:192px;top:822px;width:1460px;font-size:22px;line-height:1.3;color:#414955}
 '''
         logo=''
-        if scene.get('logo'):
-            source_logo=ROOT/scene['logo']
-            if not source_logo.is_file():raise ValueError('Missing verified company logo: '+str(source_logo))
-            (assets/'logos').mkdir(exist_ok=True);shutil.copyfile(source_logo,assets/'logos'/source_logo.name)
-            logo=f'<div class="brand"><img src="{esc(scene["logo"])}" alt="{esc(scene["company"])} organization logo"><div>{esc(scene["company"])}</div></div>'
+        media=scene.get('resolved_media')
+        portrait=bool(media and media.get('layout')=='portrait')
+        image_value=media['path'] if media else scene.get('image') or scene.get('logo')
+        if image_value:
+            source_logo=ROOT/image_value
+            if not source_logo.is_file():raise ValueError('Missing verified page image: '+str(source_logo))
+            local_image=assets/('page-'+str(index)+source_logo.suffix);shutil.copyfile(source_logo,local_image)
+            caption=scene.get('company') or scene.get('image_alt') or {'arknights':'明日方舟','endfield':'明日方舟：终末地'}.get((media or {}).get('subject')) or (media or {}).get('subject') or scene['title']
+            logo=f'<div class="brand page-image"><img src="assets/{esc(local_image.name)}" alt="{esc(caption)}"><div>{esc(caption)}</div></div>'
         identity_html='';identity_css=''
         if scene.get('speaker_identity') and not overview:
             label={'opinion':'个人观点','preview':'预告 / 计划','experience':'使用体会','reshare':'转发信息'}.get(scene.get('claim_type'),'推文动态')
@@ -131,6 +138,10 @@ ul{{margin:0;padding:0;list-style:none}}li{{position:relative;margin:0 0 18px;pa
 .stamp{{position:absolute;left:192px;top:1005px;color:#101218;font-size:22px;letter-spacing:2px}}
 {overview_css}
 {identity_css}
+.page-image img{{object-fit:contain}}
+{'.page-image{left:1450px;top:200px;width:280px}.page-image img{width:280px;height:130px}.page-image>div{display:none}.overview-lead{width:1200px}' if overview else ''}
+{'.title{width:1100px}.facts.has-brand{top:354px;width:1460px}.facts.has-brand li{margin:0}' if overview else '.title{width:1000px;font-size:56px;top:178px}.facts.has-brand{top:355px}' if not identity_html else ''}
+{'.page-image{left:1160px;top:112px;width:540px}.page-image img{width:540px;height:700px}.page-image>div{display:none}.title,.facts.has-brand,.source,.speaker-line{width:900px}' if portrait and not overview else ''}
 </style>
 <div id="root" data-composition-id="{sid}" data-width="1920" data-height="1080">
 <div id="{sid}-body" class="clip" data-start="0" data-duration="{length:.6f}" data-layout-allow-overlap="true" data-layout-allow-overflow="true">

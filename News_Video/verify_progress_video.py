@@ -24,6 +24,7 @@ def verify(episode):
             edge=im[:,-spec['right_block_width']:,:].reshape(-1,3)
             if float(np.mean(mask(edge)))<.98:raise ValueError('Right edge block is not solid blue')
         bar=spec['bar'];x,w=bar['x'],bar['width']
+        if spec.get('bottom_edge_aligned') and bar['y']+bar['height']!=im.shape[0]:raise ValueError('Progress bar does not touch the actual video bottom edge')
         blue_pixels=np.flatnonzero(mask(im[bar['y']+3,x:x+w,:]))
         # Chapter markers cut small black gaps into the blue bar. Its leading
         # edge, rather than blue-pixel count, measures the actual video progress.

@@ -60,6 +60,8 @@ def publish_ready(directory,root=ROOT):
     if receipt.get('state') in {'unknown','uploading','submitting'}:return dict(ok=False,error=dict(code='RECONCILE_REQUIRED'))
     pub=load(directory/'publication.json')
     if not cfg.get('enabled') or not cfg.get('auto_submit') or pub.get('auto_publish') is False:return dict(ok=True,skipped='automatic_upload_disabled_for_this_release')
+    from scene_media import validate as validate_media
+    if (directory/'episode.json').is_file():validate_media(load(directory/'episode.json'),root)
     from freshness import audit_episode,enabled
     try:audit=audit_episode(load(directory/'episode.json'),root) if enabled(root) else None
     except ValueError as error:

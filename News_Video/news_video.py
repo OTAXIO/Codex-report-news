@@ -473,6 +473,8 @@ def import_editorial(path):
     apply_story_order(episode,ROOT)
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
+    from scene_media import prepare as prepare_scene_media
+    media_audit=prepare_scene_media(episode,ROOT)
     if episode.get('edition_slot')=='temporary':
         from temporary_editions import validate_temporary
         validate_temporary(episode)
@@ -543,6 +545,7 @@ def import_editorial(path):
     if tibo_audit:dump(directory/'tibo-audit.json',tibo_audit)
     if leader_audit:dump(directory/'leader-audit.json',leader_audit)
     dump(directory/"episode.json",episode)
+    if media_audit:dump(directory/'scene-media.json',media_audit)
     (directory/"script.txt").write_text("\n".join(s["narration"] for s in episode["scenes"]),encoding="utf-8")
     print(directory)
 
