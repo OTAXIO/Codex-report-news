@@ -31,3 +31,5 @@ presentation.require_image_every_page=true。scene_media.prepare在导入并生�
 ## 进度条贴底
 
 全片进度细条放到1080p画面的y=1072，高8px，底部严格等于1080。导航整体保持相对间距向下移动（Multiplane+42px，HyperFrames+27px），新闻分段标题和当前高亮位于色条上方。progress_overlay.navigation_layout统一输出实际bar、chapter/module采样坐标，两引擎及最终MP4验证器共用布局元数据；不把旧检查坐标写死，也不删除验证。分段刻度不越出画面，字幕与正文保持原位置。最终合并诊断期次为page-image-preview-20261029-v3。
+
+最终v3实际MP4为161.2秒，7段新闻导航、底边位置、全片解码均通过；从最终MP4提取1.63/15.97/63/146.13/161.1秒检查。渲染首次在第434帧发生upstream worker_stalled且cancel超时；只停止命令行匹配本诊断目录的进程树，保留分段，以原计划resume成功，未换引擎/参数或重做已发布片。此为实际恢复记录，不能把卡住阶段误报为已完成。
