@@ -193,4 +193,4 @@ def build(episode_id,renderer=None,template=None):
     return ROOT/plan['artifact_directory']
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--renderer',choices=['hyperframes','multiplane']);p.add_argument('--template',choices=['editorial','graphic']);a=p.parse_args();build(a.episode,a.renderer,a.template)
+    p=argparse.ArgumentParser();p.add_argument('episode');p.add_argument('--renderer',choices=['hyperframes','multiplane']);p.add_argument('--template',choices=['editorial','graphic','persona']);a=p.parse_args();build(a.episode,a.renderer,a.template)

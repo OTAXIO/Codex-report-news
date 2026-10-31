@@ -465,6 +465,11 @@ def import_editorial(path):
     from leader_editorial import apply_leader_identity_and_speech,prepare_main_leaders
     apply_leader_identity_and_speech(episode,ROOT)
     leader_audit=prepare_main_leaders(episode,ROOT)
+    # Leader attribution prepends an introduction sentence, so a grouping plan
+    # computed before this step would no longer cover every spoken sentence.
+    if episode.get('voice_context_group_sentence_counts'):
+        from reset_layout import context_groups
+        episode['voice_context_group_sentence_counts']=context_groups(episode['scenes'])
     tibo_audit=episode.get('tibo_audit')
     if leader_audit:episode['leader_audit']=leader_audit
     from freshness import audit_episode
@@ -640,6 +645,9 @@ def doctor():
         cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())
     if v.get('backend')=='qwen3':
         q=v['qwen3'];checks.update(qwen_python=Path(q['python']).is_file(),qwen_worker=(Path(v['repository'])/'tools/qwen_generate_job.py').is_file(),qwen_weights=(Path(q['model_path'])/'model.safetensors').is_file(),qwen_tokenizer=(Path(q['model_path'])/'speech_tokenizer/model.safetensors').is_file())
+        reference=Path(v.get('reference_audio',''))
+        checks.update(qwen_reference_audio=reference.is_file(),qwen_reference_text=bool(v.get('reference_text','').strip()))
+        if v.get('reference_sha256'):checks['qwen_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
 def main():

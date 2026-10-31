@@ -52,3 +52,67 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 .portrait-media h1,.graphic .portrait-media h1{width:940px}
 .portrait-media .facts,.game.portrait-media .facts,.original.portrait-media .facts{width:900px}
 .portrait-media .source,.portrait-media .identity{width:900px}
+
+/* Persona option: Persona 3 inspired, vivid #01A1FE and white with #023077 navy ink. A slanted blue
+   header slab with speed lines and parallel ink/navy stripes carries the impact;
+   the reading field stays white. Shared safe-area geometry is unchanged; only
+   paint, cards and the cut wipe differ. */
+.wipe{display:none}
+@font-face{font-family:PersonaDisplay;src:url('assets/fonts/impact.ttf');font-weight:400}
+#stage.persona{color:#101218;background:radial-gradient(circle at 78% 72%,rgba(1,161,254,.16),transparent 34%),repeating-linear-gradient(115deg,rgba(1,161,254,.06) 0 3px,transparent 3px 34px),#fff}
+#stage.persona:before{z-index:1}
+#stage.persona .edge-ticks{left:0;top:0;width:1920px;height:350px;background:repeating-linear-gradient(115deg,rgba(2,48,119,.10) 0 3px,transparent 3px 42px),#01A1FE;clip-path:polygon(0 0,100% 0,100% 85.7%,0 100%)}
+#stage.persona .edge-band{background:#01A1FE;box-shadow:-10px 0 0 #fff,-16px 0 0 #101218}
+#stage.persona .edge-band:before,#stage.persona .edge-band:after{content:'';position:absolute;left:-1856px;top:0;width:1856px;height:400px}
+#stage.persona .edge-band:before{background:#101218;clip-path:polygon(0 358px,1856px 310px,1856px 321px,0 369px)}
+#stage.persona .edge-band:after{background:#023077;clip-path:polygon(0 380px,1856px 332px,1856px 342px,0 390px)}
+#stage.persona .publication-label{left:96px;top:40px;width:auto;padding:8px 28px 8px 20px;border:0;background:#101218;color:#fff;font-weight:700;letter-spacing:3px;transform:skewX(-14deg);box-shadow:6px 6px 0 #fff}
+#stage.persona .kicker{top:112px;gap:18px}
+#stage.persona .kicker span{background:none;padding:0;transform:none;display:flex;align-items:center;gap:0;color:#fff}
+#stage.persona .rn{display:inline-block;padding:4px 20px;background:#fff;color:#01A1FE;font-size:26px;letter-spacing:3px;transform:skewX(-14deg);box-shadow:6px 6px 0 #101218}
+#stage.persona .kicker em{font-style:normal;margin-left:22px;padding:4px 16px;background:#101218;color:#fff;font-size:22px;letter-spacing:1px;transform:skewX(-14deg)}
+#stage.persona .kicker i{width:200px;height:6px;background:#fff;transform:skewX(-30deg);box-shadow:0 10px 0 #101218}
+#stage.persona h1{color:#fff;font-size:66px;letter-spacing:0;line-height:1.3;transform:skewX(-9deg);transform-origin:0 100%}
+#stage.persona h1 .title-ink{background:#101218;padding:0 24px 4px 16px;-webkit-box-decoration-break:clone;box-decoration-break:clone;box-shadow:12px 12px 0 #fff;text-shadow:5px 5px 0 #01A1FE}
+#stage.persona .scene:not(.has-media) h1{width:1380px}
+/* Folio uses the same slanted white tag as the kicker: blue numerals, ink hard shadow. */
+#stage.persona .scene-folio{right:130px;top:86px;width:230px;height:170px;padding:0;background:none;isolation:isolate;font-family:PersonaDisplay,NewsSans;font-weight:400;font-size:150px;line-height:170px;letter-spacing:6px;text-align:center;color:#01A1FE;transform:skewX(-12deg)}
+#stage.persona .scene-folio:before{content:'';position:absolute;inset:0;z-index:-1;background:#fff;box-shadow:10px 10px 0 #101218}
+#stage.persona .facts{gap:12px}
+#stage.persona .facts article{border:0;padding:10px 26px 10px 16px;background:#EAF7FF;clip-path:polygon(0 0,100% 0,98.6% 100%,0 100%);box-shadow:none}
+#stage.persona .facts article:nth-child(even){margin-left:26px;background:#D3EEFF}
+#stage.persona .point-number{min-width:54px;padding:4px 6px;align-self:flex-start;text-align:center;background:#01A1FE;color:#fff;font-family:PersonaDisplay,NewsSans;font-weight:400;font-size:31px;transform:skewX(-12deg);box-shadow:4px 4px 0 #101218}
+#stage.persona .facts h2{color:#101218}
+#stage.persona .facts p{color:#2A3442}
+#stage.persona .brand-window{border:0;background:#fff;box-shadow:0 0 0 5px #101218,20px 20px 0 #01A1FE;transform:rotate(-3deg)}
+#stage.persona .brand img{transform:rotate(3deg)}
+#stage.persona .brand b{display:inline-block;margin-top:30px;padding:4px 22px;background:#01A1FE;color:#fff;transform:skewX(-14deg);box-shadow:5px 5px 0 #101218}
+#stage.persona .photo{background:#fff;padding:10px;box-shadow:0 0 0 5px #101218,18px 18px 0 #01A1FE}
+#stage.persona .overview .brand-window,#stage.persona .has-diagram .brand-window{background:#fff;box-shadow:0 0 0 4px #101218,9px 9px 0 #101218;transform:rotate(-3deg)}
+#stage.persona .overview .photo,#stage.persona .has-diagram .photo{padding:4px}
+#stage.persona .identity{background:#101218;color:#fff;border-left:8px solid #01A1FE;padding:6px 16px}
+#stage.persona .identity span{color:#8CD3FF}
+#stage.persona .identity i{background:#01A1FE;color:#fff}
+#stage.persona .original .facts article{padding:8px 22px 8px 14px}
+#stage.persona .source{border:0;padding:2px 16px;background:#101218;color:#C3CCD8;width:auto;max-width:1610px}
+#stage.persona .source b{color:#fff}
+#stage.persona .source span{color:#7FD3FF}
+#stage.persona .game .source,#stage.persona .portrait-media .source{max-width:760px}
+#stage.persona .lead{color:#fff;font-weight:700;text-shadow:3px 3px 0 #101218}
+#stage.persona .overview-grid article{border:0;padding:10px 20px;background:#EAF7FF;clip-path:polygon(0 0,100% 0,98% 100%,0 100%)}
+#stage.persona .overview-grid article:nth-child(even){background:#D3EEFF}
+#stage.persona .category{display:inline-block;padding:2px 12px;background:#01A1FE;color:#fff;transform:skewX(-14deg);margin-bottom:8px}
+#stage.persona .overview-grid h2{font-size:30px;margin-bottom:8px}
+#stage.persona .overview-grid p{font-size:24px;color:#2A3442}
+#stage.persona .metrics strong{text-shadow:6px 6px 0 #101218}
+#stage.persona .caption{background:linear-gradient(90deg,#01A1FE 0 16px,#fff 16px calc(100% - 16px),#01A1FE calc(100% - 16px));color:#101218;box-shadow:0 0 0 3px #101218}
+#stage.persona .caption:empty{visibility:hidden}
+#stage.persona .navigation:before{box-shadow:0 -6px 0 #01A1FE}
+#stage.persona .wipe{display:block;position:absolute;left:0;top:0;width:2800px;height:1080px;visibility:hidden;background:repeating-linear-gradient(90deg,rgba(2,48,119,.12) 0 3px,transparent 3px 44px),linear-gradient(90deg,#fff 0 26px,#01A1FE 26px calc(100% - 120px),#101218 calc(100% - 120px) calc(100% - 102px),#023077 calc(100% - 102px))}
+/* Header mark sits left of the folio shard. */
+#stage.persona .overview .brand,#stage.persona .overview .photo,#stage.persona .has-diagram .brand,#stage.persona .has-diagram .photo{left:1360px;top:190px;width:176px;height:136px}
+#stage.persona .overview .brand-window,#stage.persona .has-diagram .brand-window{width:176px;height:136px}
+#stage.persona .overview .brand img,#stage.persona .overview .photo img,#stage.persona .has-diagram .brand img,#stage.persona .has-diagram .photo img{width:156px;height:120px}
+#stage.persona .overview .brand b,#stage.persona .has-diagram .brand b{display:none}
+#stage.persona .identity{width:auto;max-width:1600px}
+#stage.persona .portrait-media .identity{max-width:900px}

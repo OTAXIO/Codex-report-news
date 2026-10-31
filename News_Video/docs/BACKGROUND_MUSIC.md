@@ -1,6 +1,6 @@
 # 背景音乐使用与验收
 
-使用用户提供的《おしんこ》。本体已经保存在项目assets/music/oshinko.flac，48kHz双声道FLAC、94.366667秒，后续不依赖Downloads文件。SHA256：c23453e509f1f112c50e300b2fabf224a8d4dc70d89567d6f9cfbd4bff014ea2。原文件与本地来源记录不进入公开Git/DSH ZIP，换机另行提供同一文件，doctor验证哈希。
+使用用户提供的《おしんこ》。当前原曲保存在工作区media-library/music/oshinko.flac（代码目录外），配置使用../../media-library/music/oshinko.flac；assets/music/oshinko.flac保留同哈希副本，48kHz双声道FLAC、94.366667秒，后续不依赖Downloads文件。SHA256：c23453e509f1f112c50e300b2fabf224a8d4dc70d89567d6f9cfbd4bff014ea2。原文件与本地来源记录不进入公开Git/DSH ZIP，换机另行提供同一文件，doctor验证哈希。
 
 ## 当前有效音量与循环规则
 

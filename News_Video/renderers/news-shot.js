@@ -5,13 +5,32 @@ const caption=document.getElementById('caption');
 const modules=document.getElementById('modules');
 const chapters=document.getElementById('chapters');
 const markers=document.getElementById('markers');
+const wipe=document.getElementById('wipe');
+const persona=story.template==='persona';
+// Persona kicker: the category and its scope ("游戏资讯 / 明日方舟…") become two separate slanted tags.
+if(persona)document.querySelectorAll('.kicker span').forEach(n=>{
+  const [head,...rest]=n.textContent.split(' / ');
+  n.textContent='';
+  const b=document.createElement('b');b.className='rn';b.textContent=head;n.append(b);
+  if(rest.length){const tail=document.createElement('em');tail.textContent=rest.join(' / ');n.append(tail);}
+});
+// The slab crosses each cut within ±0.25s and holds full cover around it, so the
+// hard cut is hidden; stable reading frames from cut+0.25s onward are untouched.
+const cuts=story.scenes.slice(1).map(s=>s.start);
+function wipeAt(time){
+  const c=cuts.find(c=>Math.abs(time-c)<.25);
+  if(c===undefined)return null;
+  const k=(time-c+.25)/.5;
+  return k<.4?-3100+2800*(k/.4):k<.6?-300:-300+2800*((k-.6)/.4);
+}
 const moduleNodes=story.progress.modules.map(m=>{const n=document.createElement('div');n.className='module';n.textContent=m.label;n.style.left=(1728*m.start/story.duration)+'px';n.style.width=(1728*(m.end-m.start)/story.duration)+'px';modules.append(n);return n;});
 const chapterNodes=story.progress.chapters.map((c,i)=>{const n=document.createElement('div');const b=story.progress.chapter_bounds[i];n.className='chapter';n.textContent=b.width<65?String(i).padStart(2,'0'):c.label;n.style.left=(b.x-96)+'px';n.style.width=b.width+'px';n.style.fontSize=Math.min(21,Math.max(16,b.width/Math.max(1,c.label.length)))+'px';chapters.append(n);if(i){const line=document.createElement('div');line.className='marker';line.style.left=b.x+'px';markers.append(line);}return n;});
 function clock(t){const s=Math.floor(Math.max(0,t));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
 function render(t){
   const time=Math.max(0,Math.min(t,story.duration-1e-7));
   const current=story.scenes.findIndex(s=>time>=s.start&&time<s.end);
-  sceneNodes.forEach((n,i)=>{const active=i===current;const p=Math.min(1,Math.max(0,(time-story.scenes[i].start)/.32));const ease=1-Math.pow(1-p,3);n.style.visibility=active?'visible':'hidden';n.style.opacity=active?String(ease):'0';n.style.transform='translateX('+((1-ease)*(story.template==='graphic'?48:20))+'px)';});
+  sceneNodes.forEach((n,i)=>{const active=i===current;const p=Math.min(1,Math.max(0,(time-story.scenes[i].start)/.32));const ease=1-Math.pow(1-p,3);n.style.visibility=active?'visible':'hidden';n.style.opacity=active?String(ease):'0';n.style.transform='translateX('+((1-ease)*(persona?64:story.template==='graphic'?48:20))+'px)';});
+  if(persona){const x=wipeAt(time);wipe.style.visibility=x===null?'hidden':'visible';wipe.style.transform='translateX('+(x===null?-3100:x)+'px) skewX(-18deg)';}
   const cue=story.captions.find(c=>time>=c.start&&time<c.end);caption.textContent=cue?cue.text:'';
   document.getElementById('now-label').textContent=current>=0?story.scenes[current].section+' / '+story.scenes[current].title:'';
   document.getElementById('clock').textContent=clock(time)+' / '+clock(story.duration);
@@ -20,6 +39,6 @@ function render(t){
   moduleNodes.forEach((n,i)=>{const m=story.progress.modules[i];n.className=time>=m.start&&time<m.end?'module active':'module';});
 }
 Shot.define({duration:story.duration,fps:30,cuts:story.scenes.slice(1).map(s=>s.start),
-  fonts:[['700 64px NewsSans','新闻导览国内国际'],['400 29px NewsSans','来源北京时间']],
+  fonts:[['700 64px NewsSans','新闻导览国内国际'],['400 29px NewsSans','来源北京时间'],...(persona?[['400 168px PersonaDisplay','0123456789']]:[])],
   setup:()=>Promise.all(Array.from(document.images,img=>img.decode())),
   render,post:{motionBlur:1,grain:0},meta:{template:story.template,chapters:story.progress.chapters}});

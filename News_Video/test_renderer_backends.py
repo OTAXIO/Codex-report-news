@@ -28,6 +28,13 @@ class RenderSelectionChecks(unittest.TestCase):
         with patch.object(cover,'ROOT',self.root),patch.object(cover,'make_hyperframes') as legacy,patch.object(r,'select_plan',side_effect=AssertionError('Cover must not select video renderer')):
             cover.make('test');legacy.assert_called_once_with('test')
         self.assertEqual(r.load(self.episode/'render-plan.json'),plan)
+    def test_cover_style_selects_persona_or_legacy_without_touching_video_plan(self):
+        import cover_generator as cover
+        cfg=r.load(self.root/'config.json');cfg['cover_generation']={'backend':'hyperframes','style':'persona'};r.save(self.root/'config.json',cfg)
+        with patch.object(cover,'ROOT',self.root),patch.object(cover,'make_persona') as persona,patch.object(cover,'make_hyperframes') as legacy,patch.object(r,'select_plan',side_effect=AssertionError('Cover must not select video renderer')):
+            cover.make('test');persona.assert_called_once_with('test');legacy.assert_not_called()
+            cover.make('test',style='legacy');legacy.assert_called_once_with('test')
+            with self.assertRaisesRegex(ValueError,'Unknown cover style'):cover.make('test',style='p5')
     def test_temporary_reset_and_model_editions_use_graphic_default(self):
         cfg=r.load(self.root/'config.json');cfg['rendering']['default_template']='graphic';r.save(self.root/'config.json',cfg)
         for alert_type in ['reset','model']:
@@ -40,6 +47,13 @@ class RenderSelectionChecks(unittest.TestCase):
         self.assertEqual(r.select_plan(self.root,self.episode,'hyperframes')['template'],'legacy')
         other=self.root/'episodes/graphic';other.mkdir()
         self.assertEqual(r.select_plan(self.root,other,'multiplane','graphic')['template'],'graphic')
+    def test_persona_option_is_explicit_and_default_stays_graphic(self):
+        cfg=r.load(self.root/'config.json');cfg['rendering']['default_template']='graphic';r.save(self.root/'config.json',cfg)
+        persona=self.root/'episodes/persona';persona.mkdir()
+        plan=r.select_plan(self.root,persona,'multiplane','persona')
+        self.assertEqual((plan['template'],plan['artifact_directory']),('persona','episodes/persona/visuals/multiplane-persona'))
+        self.assertEqual(r.select_plan(self.root,self.episode)['template'],'graphic')
+        with self.assertRaisesRegex(ValueError,'Unknown Multiplane template'):r.select_plan(self.root,self.root/'episodes/other','multiplane','p5')
     def test_archived_media_and_version_drift_are_not_rebuilt(self):
         r.select_plan(self.root,self.episode)
         r.save(self.root/'node_modules/multiplane/package.json',dict(version='99'))

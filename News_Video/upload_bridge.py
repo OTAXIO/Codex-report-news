@@ -40,6 +40,8 @@ def call(args,root=ROOT):
 def prepare(directory,root=ROOT):
     if not settings(root).get('enabled'):return None
     directory=Path(directory)
+    from publication_policy import validate as validate_publication
+    validate_publication(directory)
     if (directory/'episode.json').is_file():
         from production_policy import validate_lead_contract
         validate_lead_contract(load(directory/'episode.json'),load(directory/'publication.json'),

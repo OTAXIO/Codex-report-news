@@ -36,7 +36,7 @@
     "speed": 1.0,
     "pause": 0.4,
     "language": "zh",
-    "reference_audio": "D:\\Basement\\Codex_Video\\Codex-report-news\\News_Video\\assets\\references\\dijiang-ready.wav",
+    "reference_audio": "D:/Basement/Codex_Video/media-library/voice/dijiang-ready.wav",
     "reference_text": "帝江号，我已就位，该出发了。",
     "soft_release": false,
     "tail_style": "natural",
@@ -73,7 +73,8 @@
       "paragraph_pause": 0.6,
       "compound_pause_max_seconds": 0.12
     },
-    "backend": "qwen3"
+    "backend": "qwen3",
+    "reference_sha256": "e116e06f2c370db13aafa6282e800e27ddb61ab4fb928ef5edea6992b81c6d6a"
   },
   "publication_preset": {
     "category_name": "News",
@@ -175,8 +176,14 @@
     "story_order": {
       "version": 4,
       "by_slot": {
-        "morning": ["ai", "games"],
-        "night": ["games", "ai"]
+        "morning": [
+          "ai",
+          "games"
+        ],
+        "night": [
+          "games",
+          "ai"
+        ]
       },
       "lead_matches_cover": true,
       "major_requires_semantic_review": true
@@ -253,7 +260,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "b58df0cb7c2c51cdcc8263abee56f52d9d952011bba05d1c5126ee32eaa954d8"
+    "validation_sha256": "96e07046ede8a82bfce76be027d9ccf7bfa0bc49b7f71e2b692782b83c4accc2"
   },
   "workspace_directory": "../..",
   "presentation": {
@@ -276,7 +283,7 @@
   "background_music": {
     "enabled": true,
     "title": "おしんこ",
-    "file": "assets/music/oshinko.flac",
+    "file": "../../media-library/music/oshinko.flac",
     "sha256": "c23453e509f1f112c50e300b2fabf224a8d4dc70d89567d6f9cfbd4bff014ea2",
     "loop_to_video_end": true,
     "target_lufs": -29,
@@ -290,7 +297,7 @@
   },
   "rendering": {
     "default_backend": "multiplane",
-    "default_template": "graphic",
+    "default_template": "persona",
     "node_executable": "C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe",
     "multiplane": {
       "ffmpeg": ".tools/ffmpeg/ffmpeg.exe",
@@ -304,12 +311,12 @@
       "report": "docs/RENDERER_ACCEPTANCE.md",
       "sample_revision": "v4",
       "solid_right_block_width": 64,
-      "user_selected_template": "B/graphic"
+      "user_selected_template": "persona（2026-10-31，P3蓝白版）"
     }
   },
   "cover_generation": {
     "backend": "hyperframes",
-    "style": "legacy",
+    "style": "persona",
     "independent_of_video_renderer": true
   },
   "main_content_groups": [

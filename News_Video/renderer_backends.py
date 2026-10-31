@@ -3,7 +3,7 @@ import hashlib,json,os,shutil,subprocess
 from pathlib import Path
 
 BACKENDS={'hyperframes','multiplane'}
-TEMPLATES={'editorial','graphic'}
+TEMPLATES={'editorial','graphic','persona'}
 
 def load(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def save(path,data):

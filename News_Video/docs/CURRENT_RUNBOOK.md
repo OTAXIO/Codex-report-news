@@ -21,7 +21,7 @@
 
 - 用项目 `help-me-speech` 的 news 模式写稿。事实、解释、限制按原来源核对；公司/产品名、数字、多音字按语音政策处理。00 导览用完整主语和一句事实说明，口播仅“这是本视频的导览。”并停2秒；reset 无导览。先完成来源核验和回顾/负责人合并，import-editorial生成统一story_order与新导览，再定稿配音。重大例外须importance_review，publication.json和cover.json均填同一lead_event_id；接口见GAMES_FIRST.md。
 - 配音沿用现有 Qwen3 0.6B、音色、语速、读音与句间/场景停顿；本地 ASR 内容核对和最终 PCM 字幕对齐须通过。正式片实际 MP4 时长 >30.0秒，目标≥31秒，不靠空白、重复、降速凑时长。
-- 视频默认 Multiplane/graphic B，旧 HyperFrames 可显式选；每期 render-plan 锁定，不暗中回退。白底黑字、#01A1FE 点缀、右侧满高64px蓝块，游戏图可用880×460但不裁主体。单行字幕、来源时间、两模块分段导航和全片进度保留。封面始终用旧 Pillow/legacy 双比例；真实最重要新闻作标题主体，日期只出现一次。
+- 视频默认 Multiplane/persona（2026-10-31 起，P3蓝白版：#01A1FE斜切页眉、白底正文卡片），B（graphic）与旧 HyperFrames 可显式选；每期 render-plan 锁定，不暗中回退。正文黑字、#01A1FE 主色、右侧满高64px蓝块，游戏图可用880×460但不裁主体。单行字幕、来源时间、两模块分段导航和全片进度保留。封面用 Pillow 双比例，2026-10-31 起默认 P3 蓝白版（cover_generation.style=persona，`--style legacy` 可出旧版）；真实最重要新闻作标题主体，日期只出现一次。
 - `audio_mix.py` 一次生成 soundtrack.wav：音乐目标-29LUFS、峰值-21dBFS、正常口播中位差≥16dB，恒定增益、无ducking；首遍0秒、以后每轮从3秒播放。模型、音色、原曲、已确认声音参数不在本轮优化中修改。
 
 ## 交付、上传与恢复
@@ -39,3 +39,6 @@
 竖版新闻海报按比例自动放大：高宽比>1.35使用随字幕布局扩展的完整图窗口（当前B版742px，旧引擎727px），横图保持大横框，logo不强制拉伸；标题/正文与图分栏，字幕和导航不受遮挡，见SCENE_IMAGES规则。
 
 底部全片进度细条贴视频下边界：1080p时y1072、高8px，新闻导航保持相对布局下移；字幕随导航下移，扩展正文/图片/来源安全区；以progress.json的caption、reading_area_bottom及进度坐标验收。
+
+
+2026-10-30 原曲恢复：固定BGM从工作区`media-library/music/oshinko.flac`读取（仓库外，config相对路径`../../media-library/music/oshinko.flac`）；原SHA256不变，原曲属于生产源素材，不是缓存。不得随源码清理或同步删除，不进Git/交接包。项目assets/music保留核验副本。

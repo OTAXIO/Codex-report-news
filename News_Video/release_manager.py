@@ -6,6 +6,7 @@ from project_paths import release_root
 ROOT=Path(__file__).resolve().parent
 SLOTS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻'}
 FINAL_NAMES={
+ 'publication-content-review.json',
  'scene-media.json',
  'freshness-audit.json',
  'render-plan.json','render-job.json','render-validation.json','render-assets.json','visual-build.json','layout-audit.json',
@@ -68,6 +69,8 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     freshness=audit_episode(ep,root)
     if freshness:(source/'freshness-audit.json').write_text(json.dumps(freshness,ensure_ascii=False,indent=2),encoding='utf-8')
     target,video_name=release_target(root,ep,slot)
+    from publication_policy import validate as validate_publication
+    validate_publication(source)
     for required in ['sample.mp4','cover-4x3.png','cover-16x9.png','script.txt','publication.json','check.json','progress-validation.json']:
         if not (source/required).is_file():raise ValueError('Release is incomplete: '+required)
     from production_policy import validate_video,tags

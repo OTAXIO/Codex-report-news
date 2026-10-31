@@ -1,3 +1,7 @@
+> 2026-10-31 视觉默认：用户确认样片后，新早晚主片及temporary临时新闻默认multiplane/persona（P3蓝白版：#01A1FE与白主色、斜切页眉、白色斜切编号标签、换页斜向擦屏），config.rendering.default_template=persona；临时稿首次构建显式`--renderer multiplane --template persona`。覆盖下文及历史文档中“默认B/graphic”“临时新闻统一graphic”的表述；右侧64px满高蓝块、阅读区、单行字幕、导航与MP4验收不变。已有render-plan的在制期次沿用原模板，已发布不重做。封面同日改为P3蓝白版：config.cover_generation.style=persona（仍由cover_generator.py <id>的Pillow路径生成，16:9与4:3分别排版，日期只出现一次，文字仍取自cover.json并须见于头条），覆盖“2026-10-28封面恢复旧版/legacy”的表述；`--style legacy`可显式出旧版。详见Codex-report-news/News_Video/docs/MULTIPLANE.md。
+
+> 2026-10-30 运行保护：用户已关闭每小时tibo/reset巡检，保持暂停，不因历史提示词自动恢复。早晚制作继续。接管或迁移先备份并核对运行目录、未提交改动和已用日志，不在生产目录直接执行git restore/reset/clean或镜像覆盖来代替环境修复。原曲和配音参考属于生产源素材，当前存于工作区media-library（代码仓库外），按config及哈希读取；不能当缓存删除。恢复记录见docs/RECOVERY_20261030.md（News_Video内）。
+
 > 2026-10-29：后续每页至少一张相关图片（含导览/负责人/reset分页），新闻原图优先，缺图用对应官方游戏/软件/公司标识；规则见Codex-report-news/News_Video/docs/SCENE_IMAGES.md。已发布不改。
 
 > 2026-10-29 新制作：原发布时间48h硬门禁（临时6h/回顾24h继续更严）；森空岛停用默认BrowserSkill，未验证替代源时报缺口，其他官网/X继续；干员读gàn yuán（干四声，TTS-only）；导览明确公司/产品/游戏/人物及事件。详细接口见Codex-report-news/News_Video/docs/FRESHNESS_AND_SOURCES.md。已发布不修改。
@@ -40,7 +44,7 @@ reset心跳按`Codex-report-news/News_Video/docs/HOURLY_MONITOR_PROMPT.md`执行
 
 ### 临时新闻统一B版（2026-10-27）
 
-后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template graphic`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
+后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template persona`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
 
 reset仍只讲该次已核实重置消息，不加00导览、正文01起；新模型临时稿继续遵循MODEL_ALERTS的概览及页数规则。不占早晚主片次数，主片重点回顾仍逐事件日内去重。使用`renderer_backends.py check <id>`及实际截图、最终MP4解码/导航/字幕/边缘检查，质检后先release再按既有授权自动投稿。
 

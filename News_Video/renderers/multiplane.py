@@ -7,6 +7,8 @@ from progress_overlay import group,navigation_layout
 from audio_mix import ensure_soundtrack
 from renderer_backends import save,load
 
+EXTRA_FONTS={'persona':['impact.ttf']}
+
 def text(value):return html.escape(str(value),quote=True)
 def phrase(value):
     # Keep English/model tokens intact; Chinese still wraps naturally.
@@ -22,7 +24,7 @@ def build(root,episode,plan):
     out=root/plan['artifact_directory'];out.mkdir(parents=True,exist_ok=True)
     assets=out/'assets';assets.mkdir(exist_ok=True)
     fonts=assets/'fonts';fonts.mkdir(exist_ok=True)
-    for name in ['msyh.ttc','msyhbd.ttc']:
+    for name in ['msyh.ttc','msyhbd.ttc']+EXTRA_FONTS.get(plan['template'],[]):
         shutil.copy2(Path('C:/Windows/Fonts')/name,fonts/name)
     for name in ['news-shot.css','news-shot.js']:
         shutil.copy2(Path(__file__).parent/name,out/name)
@@ -70,7 +72,7 @@ def build(root,episode,plan):
             body=identity+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
-        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span><i></i></div><h1>{phrase(s["title"])}</h1>{body}{source}</section>')
+        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span><i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
         chapters.append(dict(id=s['id'],label=s.get('short_title',s['title']),start=start,end=end))
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]
     for c in captions:
@@ -82,7 +84,7 @@ def build(root,episode,plan):
               chapter_bounds=[dict(x=96+1728*c['start']/timing['duration'],width=1728*(c['end']-c['start'])/timing['duration']) for c in chapters])
     model=dict(duration=timing['duration'],scenes=scenes,captions=captions,progress=spec,template=plan['template'],require_page_image=bool(ep.get('page_image_policy_version')))
     data=json.dumps(model,ensure_ascii=False).replace('</','<\\/')
-    page=f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>新闻视频</title><link rel="stylesheet" href="/multiplane/runtime/shot.css"><link rel="stylesheet" href="news-shot.css"></head><body><div id="stage" class="{plan['template']}" style="--caption-y:{spec['caption']['y']}px;--content-extra-y:{spec['content_extra_y']}px"><div class="edge-band"></div><div class="edge-ticks"></div><div class="publication-label">{text(ep.get('edition_date','').replace('-','.'))}　{text(ep.get('footer_tag','新闻速报'))}</div>{''.join(cards)}<div id="caption" class="caption"></div><div class="navigation" style="--navigation-offset:{spec['nav_offset_y']}px"><div id="modules"></div><div class="now-label" id="now-label"></div><div id="clock"></div><div id="chapters"></div><div id="track"></div><div id="fill"></div><div id="markers"></div></div></div><script id="story-data" type="application/json">{data}</script><script src="/multiplane/runtime/shot.js"></script><script src="news-shot.js"></script></body></html>'''
+    page=f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>新闻视频</title><link rel="stylesheet" href="/multiplane/runtime/shot.css"><link rel="stylesheet" href="news-shot.css"></head><body><div id="stage" class="{plan['template']}" style="--caption-y:{spec['caption']['y']}px;--content-extra-y:{spec['content_extra_y']}px"><div class="edge-band"></div><div class="edge-ticks"></div><div class="publication-label">{text(ep.get('edition_date','').replace('-','.'))}　{text(ep.get('footer_tag','新闻速报'))}</div>{''.join(cards)}<div id="wipe" class="wipe"></div><div id="caption" class="caption"></div><div class="navigation" style="--navigation-offset:{spec['nav_offset_y']}px"><div id="modules"></div><div class="now-label" id="now-label"></div><div id="clock"></div><div id="chapters"></div><div id="track"></div><div id="fill"></div><div id="markers"></div></div></div><script id="story-data" type="application/json">{data}</script><script src="/multiplane/runtime/shot.js"></script><script src="news-shot.js"></script></body></html>'''
     (out/'index.html').write_text(page,encoding='utf-8')
     save(episode/'scene-timings.json',offsets);save(episode/'captions.json',captions);save(episode/'progress.json',spec)
     save(out/'storyboard.json',model)

@@ -61,7 +61,7 @@ doctor、lint、inspect、stills、verify必须真实运行。每幕及每次字
 
 ### 临时新闻统一B版（2026-10-27）
 
-后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template graphic`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
+后续新建的所有temporary临时新闻（tibo reset及核实的新模型发布）统一采用multiplane/graphic，即B强图形版，与早晚主片一致。首次构建显式使用`python -B build_film.py <id> --renderer multiplane --template persona`并读回render-plan.json；现有config默认已经是B，临时期次复用相同的后端选择逻辑，不另建采集/音频/投稿流水线。右侧64px完整亮蓝矩形贯穿全高、右下角填满，左右无白边，中间白底黑字，单行字幕和临时新闻独立导航。
 
 reset仍只讲该次已核实重置消息，不加00导览、正文01起；新模型临时稿继续遵循MODEL_ALERTS的概览及页数规则。不占早晚主片次数，主片重点回顾仍逐事件日内去重。使用`renderer_backends.py check <id>`及实际截图、最终MP4解码/导航/字幕/边缘检查，质检后先release再按既有授权自动投稿。
 
@@ -71,3 +71,12 @@ B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并
 ### 2026-10-28 封面恢复旧版（当前有效）
 
 用户确认后续早报、晚报及临时新闻的封面统一恢复原cover_generator.make_hyperframes/Pillow配置，config.cover_generation.backend=hyperframes、style=legacy；正常调用cover_generator.py <id>即可，不再跟随视频后端自动换用Multiplane封面。视频本体仍是Multiplane B（graphic），render-plan保持不变。旧封面的版式、标题层级、logo处理与双比例输出沿用原实现；真实新闻标题、单次大日期、简短类型说明、双封面及投稿规则照旧。此要求覆盖此前“B版生成双封面”的措辞；B仅指视频画面。只作用于之后新制作的封面，不重做或覆盖已发布封面/视频，不重投旧稿。
+
+
+### 2026-10-31 P3蓝白版（multiplane/persona，当前默认）
+
+新增可选模板`persona`，参考女神异闻录3的斜切与速度线语言，主色仍为#01A1FE与白色（用户提供参考图实测主蓝#01A1FD），辅以墨黑#101218与深蓝#023077细线。顶部为贯穿全宽的#01A1FE斜切页眉（淡深蓝速度线），下沿一黑一深蓝两道平行斜线；标题黑底白字、蓝色投影；分类与编号都是白色斜切标签配墨黑硬投影，编号为主蓝斜体数字；正文区白底淡蓝斜纹，事实卡片浅蓝交替；字幕白底、两端蓝块；底部导航保留B版白底蓝色高亮。换页时蓝色斜向擦屏在切点前后0.25秒内完成，不影响稳定阅读帧。右侧64px满高蓝块与左侧14px黑边保留。
+
+阅读区坐标、单行字幕、导航采样坐标与B版共用，DOM审计及最终MP4蓝色验收不放宽。编号字体为本机Impact，与微软雅黑一样仅本地复制进期次visuals目录，不进Git/交接包。用户确认样片后设为默认：config.rendering.default_template=persona，新早晚主片与临时新闻均使用；B（graphic）仍可首次构建显式`--template graphic`选择。已有render-plan的在制期次沿用原模板，已发布不重做。用户已逐轮确认静帧样例；隔离样片persona-preview-20261031复用10月31日晚报已发布素材，preview/diagnostic_hold，不写已用新闻、不投稿。
+
+封面同日改为P3蓝白版并设为默认：config.cover_generation.style=persona，仍是cover_generator.py <id>的Pillow路径，与视频render-plan相互独立。#01A1FE底配深蓝速度线；左侧依次为时段白色斜切标签、白色大字主体（墨黑硬投影）、黑底白字headline_main标题条、白底蓝字highlight；右侧为斜放白框配图（墨黑描边与投影）及image_label标签；底部白色斜切色带只放一次大日期（footnote与时段相同则不重复）。16:9与4:3分别排版，cover-bilibili.jpg仍由4:3缩放。cover.json字段、lead_event_id、文字须见于头条的发布校验均不变。`--style legacy`可显式生成旧版；样例见persona-preview-20261031与cover-sample-20261031-morning（后者仅复制早报已发布元数据出封面，不渲染、不投稿）。
