@@ -104,7 +104,9 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 #stage.persona .overview-grid article:nth-child(even){background:#D3EEFF}
 #stage.persona .category{display:inline-block;padding:2px 12px;background:#01A1FE;color:#fff;transform:skewX(-14deg);margin-bottom:8px}
 #stage.persona .overview-grid h2{font-size:30px;margin-bottom:8px}
-#stage.persona .overview-grid p{font-size:24px;color:#2A3442}
+/* The slanted card clips overflow: cards grow with a two-line title and long summaries end with an ellipsis. */
+#stage.persona .overview-grid{grid-auto-rows:minmax(198px,auto)}
+#stage.persona .overview-grid p{font-size:24px;color:#2A3442;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 #stage.persona .metrics strong{text-shadow:6px 6px 0 #101218}
 #stage.persona .caption{background:linear-gradient(90deg,#01A1FE 0 16px,#fff 16px calc(100% - 16px),#01A1FE calc(100% - 16px));color:#101218;box-shadow:0 0 0 3px #101218}
 #stage.persona .caption:empty{visibility:hidden}

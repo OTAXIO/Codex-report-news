@@ -1,3 +1,5 @@
+> 2026-11-01 制作方：用户放弃让DSH（DeepSeek Harness）生成早晚报，今后早晚报由Claude Code制作并投稿（producer填"Claude Code"，已加入config.editorial.allowed_producers）。定时任务为Claude桌面应用本地任务news-morning与news-night（每次运行按北京时间判定期次并防重，app关闭时于下次启动补跑）。DSH不得再自行制作或投稿早晚报；发现DSH在制期次时按现有阶段接手并核对时效门禁。
+
 > 2026-10-31 视觉默认：用户确认样片后，新早晚主片及temporary临时新闻默认multiplane/persona（P3蓝白版：#01A1FE与白主色、斜切页眉、白色斜切编号标签、换页斜向擦屏），config.rendering.default_template=persona；临时稿首次构建显式`--renderer multiplane --template persona`。覆盖下文及历史文档中“默认B/graphic”“临时新闻统一graphic”的表述；右侧64px满高蓝块、阅读区、单行字幕、导航与MP4验收不变。已有render-plan的在制期次沿用原模板，已发布不重做。封面同日改为P3蓝白版：config.cover_generation.style=persona（仍由cover_generator.py <id>的Pillow路径生成，16:9与4:3分别排版，日期只出现一次，文字仍取自cover.json并须见于头条），覆盖“2026-10-28封面恢复旧版/legacy”的表述；`--style legacy`可显式出旧版。详见Codex-report-news/News_Video/docs/MULTIPLANE.md。
 
 > 2026-10-30 运行保护：用户已关闭每小时tibo/reset巡检，保持暂停，不因历史提示词自动恢复。早晚制作继续。接管或迁移先备份并核对运行目录、未提交改动和已用日志，不在生产目录直接执行git restore/reset/clean或镜像覆盖来代替环境修复。原曲和配音参考属于生产源素材，当前存于工作区media-library（代码仓库外），按config及哈希读取；不能当缓存删除。恢复记录见docs/RECOVERY_20261030.md（News_Video内）。

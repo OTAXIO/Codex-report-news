@@ -129,6 +129,7 @@
     "minor_sdk_patches": "supplementary, not a main-video default",
     "domestic_names": "Use established Chinese names for domestic brands; Qwen -> 千问; DeepSeek remains English",
     "allowed_producers": [
+      "Claude Code",
       "Codex current conversation",
       "DeepSeek Harness",
       "manual editor"
