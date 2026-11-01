@@ -72,7 +72,8 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 #stage.persona .rn{display:inline-block;padding:4px 20px;background:#fff;color:#01A1FE;font-size:26px;letter-spacing:3px;transform:skewX(-14deg);box-shadow:6px 6px 0 #101218}
 #stage.persona .kicker em{font-style:normal;margin-left:22px;padding:4px 16px;background:#101218;color:#fff;font-size:22px;letter-spacing:1px;transform:skewX(-14deg)}
 #stage.persona .kicker i{width:200px;height:6px;background:#fff;transform:skewX(-30deg);box-shadow:0 10px 0 #101218}
-#stage.persona h1{color:#fff;font-size:66px;letter-spacing:0;line-height:1.3;transform:skewX(-9deg);transform-origin:0 100%}
+/* Same size and leading as B so two-line titles keep the shared headline/facts clearance. */
+#stage.persona h1{color:#fff;font-size:64px;letter-spacing:0;line-height:1.2;transform:skewX(-9deg);transform-origin:0 100%}
 #stage.persona h1 .title-ink{background:#101218;padding:0 24px 4px 16px;-webkit-box-decoration-break:clone;box-decoration-break:clone;box-shadow:12px 12px 0 #fff;text-shadow:5px 5px 0 #01A1FE}
 #stage.persona .scene:not(.has-media) h1{width:1380px}
 /* Folio uses the same slanted white tag as the kicker: blue numerals, ink hard shadow. */

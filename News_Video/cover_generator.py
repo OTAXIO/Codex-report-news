@@ -111,12 +111,12 @@ def persona_canvas(ep,brief,height):
     image.paste(slot,(104,70+dy//2),slot)
     y=200+dy
     if brief.get('headline_top'):
-        top=fitted_tag(brief['headline_top'],150,1060,fg='white',bg=None,outline=BLACK,offset=10)
+        top=fitted_tag(brief['headline_top'],150,960,fg='white',bg=None,outline=BLACK,offset=10)
         image.paste(top,(104,y),top);y+=top.height+24
-    main=fitted_tag(brief['headline_main'],110,1080,fg='white',bg=BLACK,shadow='white',offset=12,padx=28,pady=14)
+    main=fitted_tag(brief['headline_main'],110,980,fg='white',bg=BLACK,shadow='white',offset=12,padx=28,pady=14)
     image.paste(main,(96,y),main);y+=main.height+34
     if brief.get('highlight'):
-        hi=fitted_tag(brief['highlight'],170,1040,fg=BLUE,bg='white',shadow=BLACK,offset=14,padx=30,pady=6)
+        hi=fitted_tag(brief['highlight'],170,960,fg=BLUE,bg='white',shadow=BLACK,offset=14,padx=30,pady=6)
         image.paste(hi,(110,min(y,band-hi.height-70)),hi)
     # The edition date appears exactly once, on the white band.
     date=ep['edition_date'][5:].replace('-','.')
