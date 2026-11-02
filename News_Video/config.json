@@ -42,7 +42,9 @@
     "tail_style": "natural",
     "pronunciations": {
       "OpenAI": "Open AI",
-      "tibo": "梯啵"
+      "tibo": "梯啵",
+      "祀": "似",
+      "都尉": "督尉"
     },
     "ai_pronunciation": "Connected English letter name sequence, no punctuation or sentence split inside AI",
     "qwen3": {
@@ -357,7 +359,7 @@
     ],
     "collect_trigger": "before_each_episode",
     "selection_policy": "all_fresh_independent_valuable_events; do_not_stop_at_one_per_bucket",
-    "skland_mode": "non_browser_only"
+    "skland_mode": "builtin_browser_capture"
   },
   "freshness": {
     "enabled": true,
@@ -366,6 +368,22 @@
     "unknown_time": "exclude",
     "future_time": "exclude",
     "date_precision": "whole_interval_must_fit",
-    "recheck_before_first_submit": true
+    "recheck_before_first_submit": true,
+    "effective_window": {
+      "enabled": true,
+      "decided": "2026-11-02 用户确认：游戏公告超48h但生效时间在本期前后24h内可入选；每期最多1页72h活动日程",
+      "before_hours": 24,
+      "after_hours": 24,
+      "max_announcement_age_days": 14,
+      "schedule_hours": 72,
+      "schedule_max_announcement_age_days": 30,
+      "max_schedule_scenes": 1,
+      "source_types": [
+        "official_game_page",
+        "skland_capture",
+        "skland_browser",
+        "official_x"
+      ]
+    }
   }
 }

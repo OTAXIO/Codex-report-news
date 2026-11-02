@@ -48,4 +48,52 @@ class SklandSourceChecks(unittest.TestCase):
         with self.assertRaises(SourceStopped):reader.__exit__(None,None,None)
         self.assertEqual(reader.call.call_args.args,('session','stop','owned'))
 
+class SklandCaptureChecks(unittest.TestCase):
+    """Built-in browser captures (skland_capture.js) import like collected items."""
+    def run_import(self,capture):
+        import tempfile,datetime as dt
+        from pathlib import Path
+        from unittest.mock import patch
+        import news_video as n,skland_sources as s
+        with tempfile.TemporaryDirectory() as tmp,patch.object(n,'ROOT',Path(tmp)),patch('news_video.fetch',side_effect=OSError('offline')):
+            root=Path(tmp)
+            n.dump(root/'sources.json',[dict(id='skland-arknights',name='森空岛',publisher='明日方舟Arknights',group='games',type='skland_capture',
+                url='https://www.skland.com/game/arknights?cateId=1',game='arknights',game_region='cn',skland_game_id=1,skland_cate_id=1,
+                official_authors=['明日方舟Arknights'],enabled=True)])
+            path=root/'data/skland-captures/cap.json';n.dump(path,capture)
+            result=s.import_capture(path)
+            db=n.database();rows=[dict(r) for r in db.execute('SELECT * FROM items')];db.close()
+            articles=[n.load(p) for p in (root/'data/articles').glob('*.json')] if (root/'data/articles').is_dir() else []
+            status=s.capture_status(root,dict(id='skland-arknights',url='u'),dt.datetime.now(dt.timezone.utc))
+            return result,rows,articles,n.load(path),status
+
+    def capture(self,text='SideStory 现已开启',truncated=False,page='https://www.skland.com/game/arknights?cateId=1'):
+        return dict(page=page,captured_at='2026-11-02T00:00:00Z',rows=[
+            dict(item=dict(id='9',title='SideStory开启',gameId=1,cateId=1,publishedAtTs='1793505636',imageList=[],text=text,text_truncated=truncated),
+                 user=dict(id='1',nickname='明日方舟Arknights',identity=2)),
+            dict(item=dict(id='10',title='同名冒充',gameId=1,cateId=1,publishedAtTs='1793505636',imageList=[],text='x'),
+                 user=dict(id='2',nickname='路人',identity=2))])
+
+    def test_official_rows_stored_with_exact_time_and_complete_body(self):
+        result,rows,articles,saved,status=self.run_import(self.capture())
+        self.assertEqual((result['official'],result['skipped_non_official'],result['complete_bodies']),(1,1,1))
+        self.assertEqual(rows[0]['published'],'2026-11-01T04:00:36+00:00')
+        self.assertTrue(articles[0]['body_complete']);self.assertEqual(articles[0]['text'],'SideStory 现已开启')
+        self.assertEqual(saved['source_id'],'skland-arknights');self.assertTrue(status['ok'])
+
+    def test_truncated_or_empty_text_needs_article_capture(self):
+        for text,truncated in [('长公告前半',True),('',False)]:
+            result,rows,articles,_,_=self.run_import(self.capture(text,truncated))
+            self.assertEqual(result['complete_bodies'],0);self.assertEqual(articles,[]);self.assertEqual(len(rows),1)
+
+    def test_unregistered_page_rejected(self):
+        with self.assertRaisesRegex(ValueError,'not a registered'):self.run_import(self.capture(page='https://www.skland.com/game/endfield?cateId=99'))
+
+    def test_missing_capture_reported_not_silent(self):
+        import datetime as dt,tempfile
+        import skland_sources as s
+        with tempfile.TemporaryDirectory() as tmp:
+            status=s.capture_status(tmp,dict(id='skland-endfield',url='https://www.skland.com/game/endfield?cateId=12'),dt.datetime.now(dt.timezone.utc))
+        self.assertFalse(status['ok']);self.assertIn('CAPTURE_REQUIRED',status['error'])
+
 if __name__=='__main__':unittest.main()

@@ -87,6 +87,9 @@ def fetch(url, timeout=22):
             with opener.open(req, timeout=timeout) as response:
                 final = normalized_url(response.url)
                 body = response.read(4_000_000)
+                # Some CDNs (DeepMind RSS) gzip despite Accept-Encoding: identity.
+                if body[:2] == bytes((0x1f, 0x8b)):
+                    import gzip; body = gzip.decompress(body)
                 encoding = response.headers.get_content_charset() or "utf-8"
                 return body, final, encoding
         except Exception as error:
@@ -197,11 +200,17 @@ def official_bridge(body, source, encoding):
         url=urllib.parse.urljoin(source["url"], href)
         if source["id"]=="anthropic": eligible="anthropic.com/news/" in url and len(title)>15
         elif source["id"]=="minimax": eligible="minimax.io/news/" in url and len(title)>10
+        # Registry-driven index pages: article links match link_pattern, dates come from each article.
+        elif source.get("link_pattern"): eligible=bool(re.search(source["link_pattern"],url)) and len(title)>=source.get("min_title",8)
         else: eligible=False
         if eligible:
             date_match = re.search(r"(20\d{2})[-/](\d{2})[-/](\d{2})", title + " " + url)
             published=parse_date("-".join(date_match.groups())) if date_match else None
             entries.append(dict(title=text(title), url=normalized_url(url), published=published, raw_published="-".join(date_match.groups()) if date_match else None,published_precision="date", summary=""))
+    if source["id"] in {"anthropic","minimax"} or source.get("link_pattern"):
+        # Cards repeat a link (image, heading, summary); keep the fullest anchor text.
+        entries=list({e["url"]:e for e in sorted(entries,key=lambda e:len(e["title"]))}.values())
+        article_dates(entries)
     if source["id"]=="deepseek":
         # Docusaurus anchors are a changelog, not separate fabricated news URLs.
         page_text=" ".join(page.parts)
@@ -212,6 +221,58 @@ def official_bridge(body, source, encoding):
                 entries.append(dict(title="DeepSeek 更新 "+date, url=source["url"]+"?edition="+date, published=parse_date(date),raw_published=date,published_precision="date",summary=content[:8000]))
     if not entries: raise ValueError("Official page has no extractable dated news entries; source gap preserved")
     return entries
+
+ARTICLE_DATE=re.compile(r'(?:published_time|datePublished|publishedAt|"date"|[dD]ate[tT]ime=)[^0-9]{0,12}(20\d\d-\d\d-\d\d(?:T[0-9:.]+(?:Z|[+-]\d\d:?\d\d)?)?)')
+
+def article_dates(entries, limit=12):
+    """Index pages (Anthropic, MiniMax) list links without dates; read each new
+    article's structured publish date once and cache it, so these sources can
+    pass the freshness gate instead of being silently undated."""
+    path=ROOT/'data/article-dates.json'
+    cache=load(path) if path.is_file() else {}
+    fetched=0
+    for entry in entries:
+        if entry.get('published'):continue
+        if entry['url'] not in cache and fetched<limit:
+            fetched+=1
+            try:
+                body,_,encoding=fetch(entry['url'])
+                match=ARTICLE_DATE.search(body.decode(encoding,errors='replace'))
+                cache[entry['url']]=match.group(1) if match else None
+            except Exception:continue
+        raw=cache.get(entry['url'])
+        if raw:entry.update(published=parse_date(raw),raw_published=raw,published_precision='date' if 'T' not in raw or raw.endswith('T00:00:00.000Z') else 'datetime')
+    dump(path,cache)
+
+def store_items(db, source, items, now):
+    """Persist collected entries with time evidence; returns the count of new items."""
+    new=0
+    for item in items:
+        key=hashlib.sha256(item.get('entry_key',item["url"]).encode()).hexdigest()[:20]
+        from freshness import time_evidence
+        evidence_path=ROOT/'data/time-evidence'/(key+'.json')
+        evidence=time_evidence(item,source)
+        # A refreshed feed must not make an existing URL younger.
+        if evidence_path.is_file():
+            previous=load(evidence_path)
+            from freshness import stamp
+            try:
+                old_stamp=stamp(previous['original_published_at'])
+                if not evidence.get('original_published_at') or old_stamp<=stamp(evidence['original_published_at']):evidence=previous
+            except (ValueError,TypeError,KeyError):pass
+        dump(evidence_path,evidence)
+        if source["group"]=="games":
+            from game_sources import archive
+            archive(ROOT,key,item,source)
+        existed=db.execute("SELECT id FROM items WHERE id=?",(key,)).fetchone()
+        new+=int(not existed)
+        db.execute('''INSERT INTO items VALUES(?,?,?,?,?,?,?,?,?,?,?)
+          ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen,
+          title=excluded.title,summary=excluded.summary,content_hash=excluded.content_hash,
+          published=COALESCE(excluded.published,items.published)''',
+          (key,source["id"],source["publisher"],source["group"],item["title"],item["url"],item["published"],item["summary"],now.isoformat(),now.isoformat(),hashlib.sha256((item["title"]+item["summary"]).encode()).hexdigest()))
+        db.execute("INSERT OR REPLACE INTO observations VALUES(?,?,?)",(key,source["id"],now.isoformat()))
+    return new
 
 def collect(kind):
     config(); now=dt.datetime.now(UTC); run_id=now.strftime("%Y%m%dT%H%M%S")+"_"+kind
@@ -244,7 +305,7 @@ def collect(kind):
                 ET.ElementTree(rss).write(directory/(source["id"]+".converted.xml"),encoding="utf-8",xml_declaration=True)
         except Exception as error: result.update(ok=False,error=str(error),items=[])
         return source,result
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: results=list(pool.map(one,[s for s in sources if s['type']!='skland_browser']))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool: results=list(pool.map(one,[s for s in sources if s['type'] not in {'skland_browser','skland_capture'}]))
     # One browser task at a time; stop failures per source, never rotate identity.
     browser_error=None
     for source in sources:
@@ -255,34 +316,15 @@ def collect(kind):
                 if not pair[1].get('ok'):browser_error=pair[1]['error']
     db=database(); reports=[]; new=0
     for source,result in results:
-        for item in result.pop("items"):
-            key=hashlib.sha256(item.get('entry_key',item["url"]).encode()).hexdigest()[:20]
-            from freshness import time_evidence
-            evidence_path=ROOT/'data/time-evidence'/(key+'.json')
-            evidence=time_evidence(item,source)
-            # A refreshed feed must not make an existing URL younger.
-            if evidence_path.is_file():
-                previous=load(evidence_path)
-                from freshness import stamp
-                try:
-                    old_stamp=stamp(previous['original_published_at'])
-                    if not evidence.get('original_published_at') or old_stamp<=stamp(evidence['original_published_at']):evidence=previous
-                except (ValueError,TypeError,KeyError):pass
-            dump(evidence_path,evidence)
-            if source["group"]=="games":
-                from game_sources import archive
-                archive(ROOT,key,item,source)
-            existed=db.execute("SELECT id FROM items WHERE id=?",(key,)).fetchone()
-            new+=int(not existed)
-            db.execute('''INSERT INTO items VALUES(?,?,?,?,?,?,?,?,?,?,?)
-              ON CONFLICT(id) DO UPDATE SET last_seen=excluded.last_seen,
-              title=excluded.title,summary=excluded.summary,content_hash=excluded.content_hash,
-              published=COALESCE(excluded.published,items.published)''',
-              (key,source["id"],source["publisher"],source["group"],item["title"],item["url"],item["published"],item["summary"],now.isoformat(),now.isoformat(),hashlib.sha256((item["title"]+item["summary"]).encode()).hexdigest()))
-            db.execute("INSERT OR REPLACE INTO observations VALUES(?,?,?)",(key,source["id"],now.isoformat()))
+        new+=store_items(db,source,result.pop("items"),now)
         reports.append(result)
     gaps=[dict(source_id=s['id'],status='disabled_source_gap',reason=s['disabled_reason']) for s in load(ROOT/'sources.json')
           if not s.get('enabled',True) and s.get('disabled_reason') and (kind=='all' or s['group']==kind)]
+    # Skland is read by the producer in the Claude built-in browser; collect only
+    # reports how fresh the last imported capture is, so a missing one is visible.
+    from skland_sources import capture_status
+    for s in sources:
+        if s['type']=='skland_capture':reports.append(capture_status(ROOT,s,now))
     report=dict(id=run_id,started=now.isoformat(),finished=dt.datetime.now(UTC).isoformat(),kind=kind,model_calls=0,new_items=new,sources=reports,source_gaps=gaps)
     db.execute("INSERT INTO runs VALUES(?,?,?,?,?)",(run_id,kind,report["started"],report["finished"],json.dumps(report,ensure_ascii=False))); db.commit();db.close()
     if kind in {'ai','games','all'} and config().get('x_enabled'):
@@ -409,11 +451,11 @@ def article(item_id,compact=False,max_chars=8000):
         return
     game_path=ROOT/'data/game-items'/(item_id+'.json')
     game_data=load(game_path) if game_path.exists() else {}
-    if game_data.get('source_type')=='skland_browser':
-        if config().get('game_news',{}).get('skland_mode')=='non_browser_only':
+    if game_data.get('source_type') in {'skland_browser','skland_capture'}:
+        if game_data.get('source_type')=='skland_capture' or config().get('game_news',{}).get('skland_mode')=='non_browser_only':
             cached=ROOT/'data/articles'/(item_id+'.json')
             if not cached.is_file() or not load(cached).get('body_complete'):
-                raise ValueError('SOURCE_GAP: no inspected cached Skland original; browser fallback is disabled')
+                raise ValueError('SOURCE_GAP: no complete Skland original; open the article in the built-in browser, run skland_capture.js and import it')
             data=load(cached)
             if compact:
                 print(json.dumps(dict(item_id=item_id,title=data['title'],published=data['published'],
@@ -494,7 +536,7 @@ def import_editorial(path):
             if row["kind"]=="games":
                 record=load(ROOT/"data/game-items"/(row["id"]+".json"))
                 if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
-                if record.get('source_type')=='skland_browser':
+                if record.get('source_type') in {'skland_browser','skland_capture'}:
                     inspected=ROOT/'data/articles'/(row['id']+'.json')
                     if not inspected.exists() or not load(inspected).get('body_complete'):
                         raise ValueError('Read full Skland official article before selecting it')
@@ -552,7 +594,41 @@ def import_editorial(path):
     dump(directory/"episode.json",episode)
     if media_audit:dump(directory/'scene-media.json',media_audit)
     (directory/"script.txt").write_text("\n".join(s["narration"] for s in episode["scenes"]),encoding="utf-8")
+    report=selection_report(episode)
+    dump(Path(path).parent/'selection-report.json',report);dump(directory/'selection-report.json',report)
     print(directory)
+
+def selection_report(episode):
+    """Why an edition is short: every fresh candidate with selected/rejected reason, plus source health."""
+    snapshot=load(ROOT/'data/candidates.json') if (ROOT/'data/candidates.json').is_file() else {}
+    chosen={s.get('item_id') for s in episode['scenes'] if s.get('item_id')}
+    chosen|={e.get('item_id') for s in episode['scenes'] for e in s.get('schedule_items',[])}
+    reasons=episode.get('rejections',{})
+    rows=snapshot.get('items',[])
+    def brief(r):return dict(id=r['id'],kind=r.get('kind'),source_id=r.get('source_id'),published=r.get('published'),title=(r.get('title') or '')[:90])
+    selected=[brief(r) for r in rows if r['id'] in chosen]
+    rejected=[dict(brief(r),reason=reasons.get(r['id'],'unreviewed')) for r in rows if r['id'] not in chosen]
+    db=database()
+    try:
+        runs={}
+        for kind in ('all','leaders'):
+            row=db.execute("SELECT report FROM runs WHERE kind=? ORDER BY started DESC LIMIT 1",(kind,)).fetchone()
+            if row:runs[kind]=json.loads(row['report'])
+    finally:db.close()
+    # Skland captures are imported after collect, so re-read their status now instead of the collect-time snapshot.
+    from skland_sources import capture_status
+    catalog={s['id']:s for s in load(ROOT/'sources.json')}
+    now=dt.datetime.now(UTC)
+    current=[capture_status(ROOT,catalog[s['source_id']],now) if s.get('source_type')=='skland_capture' and s.get('source_id') in catalog else s
+             for kind in ('all','leaders') for s in runs.get(kind,{}).get('sources',[])]
+    health=[dict(source_id=s.get('source_id'),ok=s.get('ok'),count=s.get('count',s.get('accepted')),error=s.get('error') or s.get('error_code'))
+            for s in current]
+    by=lambda key:dict(sorted({k:sum(1 for r in rows if r.get(key)==k) for k in {r.get(key) for r in rows}}.items(),key=lambda kv:-kv[1]))
+    return dict(episode_id=episode['id'],generated_at=dt.datetime.now(UTC).isoformat(),candidate_window_hours=snapshot.get('hours'),
+                candidates=len(rows),by_kind=by('kind'),by_source=by('source_id'),selected_count=len(selected),
+                unreviewed=sum(1 for r in rejected if r['reason']=='unreviewed'),selected=selected,rejected=rejected,
+                excluded_used=len(snapshot.get('excluded_used_news',[])),source_health=health,
+                failing_sources=[h['source_id'] for h in health if h['ok'] is False])
 
 def voice(episode_id):
     cfg=config(); directory=ROOT/"episodes"/episode_id
@@ -589,8 +665,16 @@ def voice(episode_id):
     with lock.open("x",encoding="utf-8") as handle: handle.write(str(os.getpid()))
     try:
         with (directory/"voice.log").open("w",encoding="utf-8") as log:
-            result=subprocess.run([str(executable),"-u","-B",str(worker),"--job",str(directory/"voice_job.json")],cwd=worker_cwd,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
-        if result.returncode: raise RuntimeError("Voice failed; inspect "+str(directory/"voice.log"))
+            flags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0
+            if backend=='qwen3' and context and v['qwen3'].get('unit_cache',True):
+                # Only changed paragraph units are synthesized; unchanged ones come from the cache (see voice_units.py).
+                from voice_units import generate as generate_units
+                try:report=generate_units(job,directory/'voice_job.json',executable,v['repository'],env,log,ROOT/'.cache/voice-units',flags)
+                except (subprocess.CalledProcessError,ValueError) as error:raise RuntimeError("Voice failed: "+str(error)+"; inspect "+str(directory/"voice.log")) from None
+                print(json.dumps(dict(voice_units=report),ensure_ascii=False))
+            else:
+                result=subprocess.run([str(executable),"-u","-B",str(worker),"--job",str(directory/"voice_job.json")],cwd=worker_cwd,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=flags)
+                if result.returncode: raise RuntimeError("Voice failed; inspect "+str(directory/"voice.log"))
     finally: lock.unlink(missing_ok=True)
     if backend=='gpt-sovits' and v.get("tail_style")=="crisp":
         with (directory/"crisp.log").open("w",encoding="utf-8") as log:
@@ -650,6 +734,18 @@ def doctor():
         if v.get('reference_sha256'):checks['qwen_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
+def game_schedule(days=14):
+    """Older official game announcements whose launch/event/maintenance may take
+    effect in this edition; the producer still quotes the time from the original."""
+    if not 1<=days<=30:raise ValueError('Use 1-30 days')
+    cutoff=(dt.datetime.now(UTC)-dt.timedelta(days=days)).isoformat()
+    db=database()
+    rows=[dict(r) for r in db.execute("SELECT id,source_id,title,published,summary FROM items WHERE kind='games' AND published>=? ORDER BY published DESC",(cutoff,))]
+    db.close()
+    times=re.compile(r'(\d{1,2}月\d{1,2}日[^，。；\n]{0,12}?\d{1,2}:\d{2}|\d{4}[/-]\d{1,2}[/-]\d{1,2}[^，。；\n]{0,8}?\d{1,2}:\d{2}|[A-Z][a-z]{2,8}\.? \d{1,2}(?:, \d{4})?,? \d{1,2}:\d{2})')
+    out=[dict(id=r['id'],source_id=r['source_id'],published=r['published'],title=r['title'][:90],time_mentions=list(dict.fromkeys(times.findall(r['summary'] or '')))[:6]) for r in rows]
+    print(json.dumps(dict(days=days,items=out),ensure_ascii=False))
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest="cmd",required=True)
     sub.add_parser("doctor")
@@ -658,6 +754,7 @@ def main():
     p=sub.add_parser("article");p.add_argument("id");p.add_argument("--compact",action="store_true");p.add_argument("--max-chars",type=int,default=8000)
     p=sub.add_parser("import-editorial");p.add_argument("path")
     p=sub.add_parser("voice");p.add_argument("episode")
+    p=sub.add_parser("game-schedule",help="Official game items of the last N days, for effective-time and schedule scenes");p.add_argument("--days",type=int,default=14)
     args=parser.parse_args()
     if args.cmd=="doctor": return 0 if doctor() else 1
     if args.cmd=="collect":collect(args.kind)
@@ -665,6 +762,7 @@ def main():
     elif args.cmd=="article":article(args.id,args.compact,args.max_chars)
     elif args.cmd=="import-editorial":import_editorial(args.path)
     elif args.cmd=="voice":voice(args.episode)
+    elif args.cmd=="game-schedule":game_schedule(args.days)
     return 0
 
 if __name__=="__main__":raise SystemExit(main())

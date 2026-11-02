@@ -52,6 +52,54 @@ def check(evidence,reference,hours=48):
         return dict(ok=True,reason='within_window')
     except (ValueError,TypeError,KeyError) as error:return dict(ok=False,reason='missing_or_invalid_original_time',detail=str(error))
 
+# --- Game effective-time basis (user decision 2026-11-02) -------------------
+# An official game announcement older than 48h may still lead a scene when the
+# thing it announces (launch, event/banner start, maintenance) takes effect in
+# the edition window. The time must be quoted from the archived official text.
+EFFECTIVE_SOURCES={'official_game_page','skland_capture','skland_browser','official_x'}
+
+def date_tokens(moment):
+    m,d=moment.month,moment.day
+    names=['January','February','March','April','May','June','July','August','September','October','November','December']
+    return {f'{m}月{d}日',f'{m:02d}月{d:02d}日',f'{m}月{d:02d}日',f'{m}/{d}',f'{m:02d}/{d:02d}',f'{moment.year}/{m}/{d}',
+            f'{moment.year}-{m:02d}-{d:02d}',f'{moment.year}年{m}月{d}日',f'{m}.{d}',f'{m:02d}.{d:02d}',
+            f'{names[m-1]} {d}',f'{names[m-1][:3]} {d}',f'{names[m-1][:3]}. {d}',f'{d} {names[m-1]}'}
+
+def official_text(root,item_id):
+    """Archived official wording for an item (inspected article, game record or X post)."""
+    root=Path(root);parts=[]
+    for folder,keys in [('articles',('text','summary')),('game-items',('summary','title','official_body')),('leader-posts',('original_text','summary'))]:
+        path=root/'data'/folder/(str(item_id)+'.json')
+        if path.is_file():
+            value=json.loads(path.read_text(encoding='utf-8'))
+            for k in keys:
+                v=value.get(k)
+                parts.extend(v if isinstance(v,list) else [v] if v else [])
+    return '\n'.join(map(str,parts))
+
+def effective_check(root,item_id,effective_at,quote,reference,before_hours,after_hours,max_age_days,evidence,source_type,cfg_types=None):
+    """Window check for an announced effective time; returns dict(ok, reason)."""
+    try:
+        if source_type not in (cfg_types or EFFECTIVE_SOURCES):return dict(ok=False,reason='effective_basis_not_official_game_source')
+        when=dt.datetime.fromisoformat(str(effective_at))
+        if when.tzinfo is None:return dict(ok=False,reason='effective_time_needs_timezone')
+        text=official_text(root,item_id)
+        if not quote or quote not in text:return dict(ok=False,reason='effective_quote_not_in_official_text')
+        if not any(t in quote for t in date_tokens(when)):return dict(ok=False,reason='effective_quote_lacks_effective_date')
+        published=stamp(evidence['original_published_at'])
+        if published<reference-dt.timedelta(days=max_age_days):return dict(ok=False,reason='announcement_too_old_for_effective_basis')
+        if published>reference:return dict(ok=False,reason='future_announcement')
+        utc=when.astimezone(UTC)
+        if not reference-dt.timedelta(hours=before_hours)<=utc<=reference+dt.timedelta(hours=after_hours):
+            return dict(ok=False,reason='effective_time_outside_window')
+        return dict(ok=True,reason='effective_time_within_window',effective_at=utc.isoformat())
+    except (ValueError,TypeError,KeyError) as error:return dict(ok=False,reason='invalid_effective_evidence',detail=str(error))
+
+def effective_policy(root):
+    path=Path(root)/'config.json'
+    cfg=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
+    return cfg.get('freshness',{}).get('effective_window',{})
+
 def enabled(root):
     path=Path(root)/'config.json'
     return path.is_file() and json.loads(path.read_text(encoding='utf-8')).get('freshness',{}).get('enabled',False)
@@ -82,6 +130,8 @@ def evidence_for(root,scene):
 def audit_episode(episode,root,reference=None,bind=False):
     if not enabled(root):return None
     reference=reference or dt.datetime.now(UTC);results=[]
+    schedules=[s for s in episode['scenes'] if s.get('freshness_basis')=='schedule']
+    if len(schedules)>effective_policy(root).get('max_schedule_scenes',1):raise ValueError('FRESHNESS: at most one schedule page per edition')
     from layout_policy import is_overview
     cfg=json.loads((Path(root)/'config.json').read_text(encoding='utf-8'))
     for scene in episode['scenes']:
@@ -93,9 +143,33 @@ def audit_episode(episode,root,reference=None,bind=False):
             policy='reset_alerts' if episode.get('alert_id') else 'model_alerts'
             hours=min(hours,cfg.get(policy,{}).get('max_age_hours',6))
         result=dict(item_id=scene.get('item_id'),hours=hours,evidence=evidence,**check(evidence,reference,hours))
+        basis=scene.get('freshness_basis')
+        if basis in {'effective_time','schedule'}:
+            policy=effective_policy(root)
+            if not policy.get('enabled') or scene.get('editorial_role')=='recap' or episode.get('edition_slot')=='temporary' or not scene.get('game'):
+                raise ValueError('FRESHNESS: '+str(scene.get('item_id'))+': effective/schedule basis is only for main-edition game scenes')
+        if basis=='effective_time' and not result['ok']:
+            # The original publication time is still recorded; the window applies to the announced effective time.
+            effective=effective_check(root,scene.get('item_id'),scene.get('effective_at'),scene.get('effective_quote'),reference,
+                                      policy.get('before_hours',24),policy.get('after_hours',24),policy.get('max_announcement_age_days',14),
+                                      evidence,scene.get('source_type'),set(policy.get('source_types',EFFECTIVE_SOURCES)))
+            result.update(effective,basis='effective_time',publication_check=result['reason'])
+        if basis=='schedule':
+            # One page listing official start/end times within the next 72h; each entry quotes its own announcement.
+            entries=scene.get('schedule_items') or []
+            checks=[]
+            for entry in entries:
+                ev=evidence_for(root,dict(item_id=entry.get('item_id')))
+                c=effective_check(root,entry.get('item_id'),entry.get('effective_at'),entry.get('effective_quote'),reference,
+                                  0,policy.get('schedule_hours',72),policy.get('schedule_max_announcement_age_days',30),ev,entry.get('source_type'),
+                                  set(policy.get('source_types',EFFECTIVE_SOURCES)))
+                checks.append(dict(item_id=entry.get('item_id'),**c))
+            ok=bool(entries) and all(c['ok'] for c in checks)
+            result.update(ok=ok,reason='schedule_entries_within_window' if ok else 'schedule_entry_invalid',basis='schedule',schedule_checks=checks)
         results.append(result)
         if not result['ok']:raise ValueError('FRESHNESS: '+str(scene.get('item_id'))+': '+result['reason'])
         if bind:
+            if result.get('basis'):scene['freshness_basis_audit']={k:v for k,v in result.items() if k not in {'evidence'}}
             scene['published']=evidence['original_published_at'];scene['published_precision']=evidence['precision']
             scene['publication_time_evidence']=evidence
             # The registered publisher/product supplies the overview subject;

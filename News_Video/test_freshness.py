@@ -96,3 +96,40 @@ class FreshnessChecks(unittest.TestCase):
             browser.assert_not_called()
 
 if __name__=='__main__':unittest.main()
+
+class EffectiveTimeChecks(unittest.TestCase):
+    """2026-11-02 decision: old game announcements may run when they take effect in the edition window."""
+    def setUp(self):self.now=dt.datetime(2026,11,1,10,tzinfo=f.UTC)
+    def episode(self,root,scene):
+        root=Path(root)
+        n.dump(root/'config.json',dict(freshness=dict(enabled=True,effective_window=dict(enabled=True,before_hours=24,after_hours=24,max_announcement_age_days=14))))
+        n.dump(root/'data/time-evidence/ann.json',dict(original_published_at='2026-10-30T04:00:00+00:00',precision='second',time_basis='original_publication',source_timezone='+00:00'))
+        n.dump(root/'data/game-items/ann.json',dict(title='11月01日06:00版本更新停机维护公告',summary='将于11月1日06:00进行停服维护，维护后开启SideStory「时间啊，向前！」'))
+        base=dict(item_id='ann',game='arknights',section='游戏资讯',source_type='official_game_page')
+        return dict(edition_slot='night',scenes=[dict(base,**scene)])
+    def audit(self,scene):
+        with tempfile.TemporaryDirectory() as tmp:return f.audit_episode(self.episode(tmp,scene),tmp,self.now)
+    def test_expired_announcement_needs_effective_basis(self):
+        with self.assertRaisesRegex(ValueError,'expired'):self.audit({})
+    def test_effective_time_in_window_passes_with_quoted_date(self):
+        result=self.audit(dict(freshness_basis='effective_time',effective_at='2026-11-01T06:00:00+08:00',effective_quote='将于11月1日06:00进行停服维护'))
+        self.assertEqual(result['items'][0]['basis'],'effective_time');self.assertTrue(result['items'][0]['ok'])
+    def test_quote_must_be_official_and_dated_and_in_window(self):
+        for at,quote,reason in [('2026-11-01T06:00:00+08:00','编辑自写的时间','effective_quote_not_in_official_text'),
+                                ('2026-11-01T06:00:00+08:00','开启SideStory「时间啊，向前！」','effective_quote_lacks_effective_date'),
+                                ('2026-11-03T06:00:00+08:00','将于11月1日06:00进行停服维护','effective_quote_lacks_effective_date'),
+                                ('2026-11-01T06:00:00','将于11月1日06:00进行停服维护','effective_time_needs_timezone')]:
+            with self.assertRaisesRegex(ValueError,reason):self.audit(dict(freshness_basis='effective_time',effective_at=at,effective_quote=quote))
+    def test_effective_basis_not_for_ai_or_temporary(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ep=self.episode(tmp,dict(game=None,freshness_basis='effective_time'))
+            with self.assertRaisesRegex(ValueError,'only for main-edition game'):f.audit_episode(ep,tmp,self.now)
+    def test_schedule_page_entries_within_72h(self):
+        entry=dict(item_id='ann',source_type='official_game_page',effective_at='2026-11-01T22:00:00+08:00',effective_quote='将于11月1日06:00进行停服维护')
+        result=self.audit(dict(freshness_basis='schedule',schedule_items=[entry]))
+        self.assertTrue(result['items'][0]['ok'])
+        with self.assertRaisesRegex(ValueError,'schedule_entry_invalid'):self.audit(dict(freshness_basis='schedule',schedule_items=[dict(entry,effective_at='2026-11-01T06:00:00+08:00')]))
+        with self.assertRaisesRegex(ValueError,'at most one schedule'):
+            with tempfile.TemporaryDirectory() as tmp:
+                ep=self.episode(tmp,dict(freshness_basis='schedule',schedule_items=[entry]));ep['scenes'].append(dict(ep['scenes'][0]))
+                f.audit_episode(ep,tmp,self.now)

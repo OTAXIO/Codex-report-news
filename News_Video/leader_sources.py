@@ -24,8 +24,14 @@ def normalize_post(item, source, now, hours=48):
     if not now-dt.timedelta(hours=hours)<=stamp<=now+dt.timedelta(minutes=15):
         raise ValueError('Outside fresh-news window')
     key=hashlib.sha256(url.encode()).hexdigest()[:20]
-    return dict(id=key,source_id=source['id'],publisher=source['name'],kind=source.get('group','ai'),
-                title=body[:180],url=url,published=published,summary=body,original_text=item.get('text',''),
+    # Weekly roundups often live in the quoted post; keep it as labelled context
+    # so the "thread not archived" case no longer discards the real content.
+    raw_quote=(item.get('raw') or {}).get('quoted_tweet') or {}
+    quoted=dict(author=raw_quote.get('author',''),text=raw_quote.get('text',''),
+                url=raw_quote.get('url') or ('https://x.com/'+raw_quote['author']+'/status/'+str(raw_quote['id']) if raw_quote.get('author') and raw_quote.get('id') else '')) if raw_quote.get('text') else None
+    summary=body+('\n[引用 @'+quoted['author']+'] '+n.text(quoted['text']) if quoted else '')
+    return dict(quoted=quoted,id=key,source_id=source['id'],publisher=source['name'],kind=source.get('group','ai'),
+                title=body[:180],url=url,published=published,summary=summary,original_text=item.get('text',''),
                 game=source.get('game'),game_region=source.get('game_region'),company=source['vendor'],handle=source['handle'],author=source['name'],
                 attribution=source['name']+' (@'+source['handle']+')',
                 source_type=source.get('type','leader_x'),requires_context=bool(item.get('is_reply') or item.get('is_repost') or item.get('is_quote') or item.get('raw',{}).get('quoted_tweet') or item.get('raw',{}).get('is_retweet')),
@@ -103,7 +109,7 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
     db=n.database()
     try:
         for source in accounts:
-            result=runner(executable,source,min(10,max(1,policy.get('limit_per_account',5))),policy.get('timeout_seconds',40)) if executable else dict(ok=False,error=dict(code='NEED_SETUP'))
+            result=runner(executable,source,min(20,max(1,source.get('limit',policy.get('limit_per_account',5)))),policy.get('timeout_seconds',40)) if executable else dict(ok=False,error=dict(code='NEED_SETUP'))
             status=dict(source_id=source['id'],handle=source['handle'],ok=result['ok'],accepted=0,rejected=0)
             # Only content fields are retained. Never persist raw backend/session dumps.
             if result.get('meta',{}).get('update'):report['update_available']=result['meta']['update'].get('latest')
@@ -144,7 +150,29 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
     finally:db.close();lock.unlink(missing_ok=True)
     return report
 
+def thread(item_id, executable=None, timeout=60):
+    """Append the author's own continuation posts to an archived X candidate."""
+    path=n.ROOT/'data/leader-posts'/(item_id+'.json')
+    post=n.load(path)
+    executable=executable or shutil.which(n.config().get('x_collection',{}).get('executable','agent-reach'))
+    env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
+    with quiet_reach():
+        process=subprocess.run([executable,'twitter','thread',post['url'],'--timeout',str(timeout)],capture_output=True,text=True,
+                               encoding='utf-8',errors='replace',timeout=timeout+15,env=env,**hidden_kwargs())
+    result=json.loads(process.stdout.lstrip('﻿'))
+    if not result.get('ok'):raise ValueError('Thread read failed: '+str(result.get('error',{}).get('code')))
+    own=[dict(url=i['url'],published_at=n.parse_date(i.get('published_at')),text=i.get('text',''))
+         for i in result.get('items',[]) if (i.get('author') or '').lower()==post['handle'].lower() and i.get('url','').rstrip('/').split('/')[-1]!=post['url'].split('/')[-1]]
+    own.sort(key=lambda x:x['published_at'] or '')
+    post['thread']=own;post['thread_checked_at']=dt.datetime.now(n.UTC).isoformat()
+    if own:post['summary']=post['summary'].split('\n[线程]')[0]+'\n[线程] '+'\n'.join(n.text(x['text']) for x in own)
+    n.dump(path,post)
+    return dict(item_id=item_id,thread_posts=len(own),quoted=bool(post.get('quoted')))
+
 if __name__=='__main__':
+    import sys
+    if len(sys.argv)>2 and sys.argv[1]=='thread':
+        print(json.dumps(thread(sys.argv[2]),ensure_ascii=False));raise SystemExit
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--hours',type=int,default=48);p.add_argument('--handle')
     p.add_argument('--resume-after-fix',action='store_true',help='Only after the user resolved login/verification; never bypasses rate-limit cooldown')
     a=p.parse_args();print(json.dumps(collect(a.hours,a.handle,resume_after_fix=a.resume_after_fix),ensure_ascii=False,indent=2))

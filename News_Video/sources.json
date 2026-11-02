@@ -35,7 +35,8 @@
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
     "region": "international",
-    "published_precision": "date"
+    "published_precision": "date",
+    "timezone": "America/Los_Angeles"
   },
   {
     "id": "deepseek",
@@ -48,7 +49,8 @@
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
     "region": "domestic",
-    "published_precision": "date"
+    "published_precision": "date",
+    "timezone": "Asia/Shanghai"
   },
   {
     "id": "minimax",
@@ -61,7 +63,8 @@
     "priority_tier": 1,
     "selection_policy": "product_and_model_updates_first",
     "region": "domestic",
-    "published_precision": "date"
+    "published_precision": "date",
+    "timezone": "Asia/Shanghai"
   },
   {
     "id": "deepmind",
@@ -175,7 +178,8 @@
     "selection_policy": "product_and_model_updates_first",
     "region": "domestic",
     "product": "ZCode",
-    "published_precision": "date"
+    "published_precision": "date",
+    "timezone": "Asia/Shanghai"
   },
   {
     "id": "google-ai",
@@ -212,7 +216,8 @@
     "group": "ai",
     "priority_tier": 1,
     "selection_policy": "major_models_and_product_updates",
-    "published_precision": "date"
+    "published_precision": "date",
+    "timezone": "Asia/Shanghai"
   },
   {
     "id": "codex-releases",
@@ -241,7 +246,8 @@
     "priority_tier": 1,
     "source_priority": 80,
     "published_precision": "date",
-    "selection_policy": "dated_product_updates; meaningful features first, no filler"
+    "selection_policy": "dated_product_updates; meaningful features first, no filler",
+    "timezone": "Asia/Shanghai"
   },
   {
     "id": "hunyuan-hy3-releases",
@@ -317,41 +323,125 @@
     "name": "森空岛 明日方舟Arknights 官方公告",
     "publisher": "明日方舟Arknights",
     "group": "games",
-    "type": "skland_browser",
+    "type": "skland_capture",
     "url": "https://www.skland.com/game/arknights?cateId=1",
     "game": "arknights",
     "game_region": "cn",
     "skland_game_id": 1,
     "skland_cate_id": 1,
     "official_authors": [
-      "明日方舟Arknights"
+      "明日方舟Arknights",
+      "森空岛泰拉信使公署"
     ],
-    "enabled": false,
+    "enabled": true,
     "source_priority": 0,
     "rss_verified": false,
     "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
-    "collect_trigger": "before_each_episode",
-    "disabled_reason": "Non-browser migration: no verified public feed/API yet; browser remains explicit opt-in only"
+    "collect_trigger": "before_each_episode"
   },
   {
     "id": "skland-endfield",
     "name": "森空岛 明日方舟终末地 官方公告",
     "publisher": "明日方舟终末地",
     "group": "games",
-    "type": "skland_browser",
+    "type": "skland_capture",
     "url": "https://www.skland.com/game/endfield?cateId=12",
     "game": "endfield",
     "game_region": "cn",
     "skland_game_id": 3,
     "skland_cate_id": 12,
     "official_authors": [
-      "明日方舟终末地"
+      "明日方舟终末地",
+      "森空岛泰拉信使公署"
     ],
-    "enabled": false,
+    "enabled": true,
     "source_priority": 0,
     "rss_verified": false,
     "identity_evidence": "森空岛官方分类+账号官方认证标记，详情再次核验原作者",
-    "collect_trigger": "before_each_episode",
-    "disabled_reason": "Non-browser migration: no verified public feed/API yet; browser remains explicit opt-in only"
+    "collect_trigger": "before_each_episode"
+  },
+  {
+    "id": "xai-news",
+    "name": "xAI News",
+    "publisher": "xAI",
+    "vendor": "xAI",
+    "region": "international",
+    "url": "https://x.ai/news",
+    "type": "official_page",
+    "group": "ai",
+    "priority_tier": 1,
+    "link_pattern": "x\\.ai/news/[a-z0-9-]+$",
+    "timezone": "America/Los_Angeles",
+    "selection_policy": "product_and_model_updates_first",
+    "checked_on": "2026-11-02"
+  },
+  {
+    "id": "mistral-news",
+    "name": "Mistral News",
+    "publisher": "Mistral AI",
+    "vendor": "Mistral",
+    "region": "international",
+    "url": "https://mistral.ai/news/rss",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
+    "selection_policy": "product_and_model_updates_first",
+    "checked_on": "2026-11-02"
+  },
+  {
+    "id": "gemini-blog",
+    "name": "Google Gemini Blog",
+    "publisher": "Google",
+    "vendor": "Google",
+    "product": "Gemini",
+    "region": "international",
+    "url": "https://blog.google/products/gemini/rss/",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 1,
+    "selection_policy": "user_visible_product_changes_only; skip tips/how-to posts",
+    "checked_on": "2026-11-02"
+  },
+  {
+    "id": "github-copilot-changelog",
+    "name": "GitHub Copilot Changelog",
+    "publisher": "GitHub",
+    "vendor": "GitHub",
+    "product": "Copilot",
+    "region": "international",
+    "url": "https://github.blog/changelog/label/copilot/feed/",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 2,
+    "selection_policy": "user_visible_product_changes_only",
+    "checked_on": "2026-11-02"
+  },
+  {
+    "id": "cursor-changelog",
+    "name": "Cursor Changelog",
+    "publisher": "Cursor",
+    "vendor": "Cursor",
+    "region": "international",
+    "url": "https://cursor.com/changelog",
+    "type": "official_page",
+    "group": "ai",
+    "priority_tier": 2,
+    "link_pattern": "cursor\\.com/changelog/[a-z0-9-]+$",
+    "timezone": "America/Los_Angeles",
+    "selection_policy": "user_visible_product_changes_only",
+    "checked_on": "2026-11-02"
+  },
+  {
+    "id": "nvidia-blog",
+    "name": "NVIDIA Blog",
+    "publisher": "NVIDIA",
+    "vendor": "NVIDIA",
+    "region": "international",
+    "url": "https://blogs.nvidia.com/feed/",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 3,
+    "selection_policy": "AI models/products only; skip gaming promos and customer stories",
+    "checked_on": "2026-11-02"
   }
 ]

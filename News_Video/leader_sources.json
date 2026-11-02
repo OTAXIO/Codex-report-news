@@ -306,7 +306,8 @@
       "priority_tier": 2,
       "source_priority": 100,
       "collection_trigger": "before_episode_only",
-      "model_release_alerts": false
+      "model_release_alerts": false,
+      "limit": 20
     },
     {
       "id": "x-official-akendfield",
@@ -323,7 +324,76 @@
       "priority_tier": 2,
       "source_priority": 100,
       "collection_trigger": "before_episode_only",
-      "model_release_alerts": false
+      "model_release_alerts": false,
+      "limit": 20
+    },
+    {
+      "id": "x-official-mistralai",
+      "name": "Mistral AI",
+      "handle": "MistralAI",
+      "vendor": "Mistral",
+      "region": "international",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/MistralAI (verified official profile, agent-reach profile check 2026-11-02)",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-02"
+    },
+    {
+      "id": "x-official-aiatmeta",
+      "name": "AI at Meta",
+      "handle": "AIatMeta",
+      "vendor": "Meta",
+      "region": "international",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/AIatMeta (verified official profile, agent-reach profile check 2026-11-02)",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-02"
+    },
+    {
+      "id": "x-official-geminiapp",
+      "name": "Google Gemini",
+      "handle": "GeminiApp",
+      "vendor": "Google",
+      "region": "international",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/GeminiApp (verified official profile, agent-reach profile check 2026-11-02)",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-02"
+    },
+    {
+      "id": "x-official-cursor_ai",
+      "name": "Cursor",
+      "handle": "cursor_ai",
+      "vendor": "Cursor",
+      "region": "international",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/cursor_ai (verified official profile, agent-reach profile check 2026-11-02)",
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-02"
     }
   ],
   "pending_company_leaders": [

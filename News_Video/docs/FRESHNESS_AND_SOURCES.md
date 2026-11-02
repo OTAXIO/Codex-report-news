@@ -27,3 +27,33 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 新导入设置overview_subject_policy=1。layout_policy根据游戏地区、公司、产品、人物和来源元数据生成subject，标题缺主体时只补主体，不编造动作。具体标题/事实说明缺失或只剩API额度、模型更新等泛称则要求补稿。Codex、ChatGPT、GPT/API不得混写。游戏明确国服/英文国际服/终末地。validate_overview在生成和封面/release/上传的lead契约中校验：标题+主体+说明+对应scene_id+首项对应正文01。正文是否确实支持动作/范围仍需语义核验。
 
 主片00口播和2s保留，3—4项重点；导航可以缩短但主体仍可辨识；reset临时稿无00不变。统一story_order和lead_event_id不变。
+
+## 2026-11-02内容增强（用户确认，当前有效）
+
+背景：10-29至11-02各期只有2—6条。原因是来源断裂而非选题过严：森空岛停用、Anthropic/MiniMax列表无日期、DeepMind RSS被gzip、X引用帖与线程正文未保存，以及国服版本公告在活动上线时已超48h。
+
+### 森空岛（内置浏览器捕获）
+
+- 制作者在Claude内置浏览器打开`https://www.skland.com/game/arknights?cateId=1`与`https://www.skland.com/game/endfield?cateId=12`，等页面渲染后用javascript_tool运行`skland_capture.js`全文，把返回的JSON原样保存为`data/skland-captures/<source>-<UTC时间>.json`，再`python -B skland_sources.py import <文件...>`。
+- 脚本只读取页面已渲染的条目（React props里的item/user），不发请求、不读Cookie、不签名、不重放；只保留72h内identity=2官方号，裁掉法律声明/FAQ等套话，正文上限1500字。导入时再核对官方作者白名单（明日方舟Arknights/明日方舟终末地/森空岛泰拉信使公署）、游戏与分区，按publishedAtTs定原始时间。
+- 正文完整的条目直接生成`data/articles/<id>.json`；正文为空（视频帖）或被截断时，打开文章页再运行同一脚本导入详情。`collect`报告里skland来源显示最近一次导入时间，超过3小时记CAPTURE_REQUIRED，不能写成“无新闻”。
+- 用户Chrome的BrowserSkill路径（skland_browser）仍为显式opt-in，不自动使用。B站、微博未登录被风控，默认不用；社区wiki不作新闻来源。
+
+### 游戏生效时间与活动日程【决策】
+
+- 官方游戏公告（官网、森空岛、官方X）原发布超过48h，但其生效时间落在核验时刻前24h至后24h内，可设`freshness_basis:"effective_time"`，并填`effective_at`（带时区ISO时间，按服务器时区）与`effective_quote`（官方原文中含该日期的原句）。freshness会核对原句确在归档原文中、包含该日期、公告不超过14天。口播写明公告发布日与生效日。
+- 每期最多1页`freshness_basis:"schedule"`活动日程，`schedule_items`每项含item_id、source_type、effective_at、effective_quote，只收核验时刻起72h内开始或结束的活动（公告≤30天）。没有就不出。
+- `python -B news_video.py game-schedule --days 14`列出近14天官方游戏条目及文中时间，供查找今日生效的旧公告。
+- 回顾、临时稿及AI新闻不适用；AI仍为原发布48h。
+
+### AI来源与X
+
+- Anthropic、MiniMax及registry中带`link_pattern`的列表页（xAI、Cursor）读取文章页结构化日期并缓存于`data/article-dates.json`（每次最多新读12篇）。新增RSS：Mistral、Gemini产品博客、GitHub Copilot changelog、NVIDIA博客（只取AI产品/模型）。字节Seed、智谱、阶跃官网为前端壳，暂未启用。
+- X新增已核验官方号MistralAI、AIatMeta、GeminiApp、cursor_ai；xai账号已迁至@SpaceXAI、ChatGPTapp不存在，未启用。游戏官方号每次读取20条。
+- 引用帖正文随采集写入leader-posts的`quoted`并进入summary；线程用`python -B leader_sources.py thread <item_id>`补作者本人后续帖。帖子只有链接时读链接官方原文，引用原句写入evidence。
+
+### 选题深度与复盘
+
+- 素材充足时每期6—10条、约3—5分钟（AI 3—5，游戏3—6）；不足时如实变短。每条读完整官方原文，口播150—250字、facts 3—4条，补原文中的背景、时间、适用范围和影响对象，不加原文没有的评价。
+- 游戏按“国服方舟/国际服方舟/终末地”三块检查：新版本或SideStory、新干员与卡池、活动规则、维护闪断、联动、直播前瞻、制作组通讯、创作活动。同一事件跨来源合并（如X只有标题、森空岛有全文），取最全官方原文。
+- editorial可写`rejections:{item_id:原因}`；import自动生成`selection-report.json`（期次data目录与episode目录各一份），列出全部候选的入选/落选原因、来源条数和失败来源，unreviewed越少越好。

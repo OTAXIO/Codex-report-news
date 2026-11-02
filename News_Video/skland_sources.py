@@ -1,7 +1,10 @@
-"""Read official announcement responses in the user's BrowserSkill session.
+"""Skland official announcements.
 
-The website performs its own authenticated requests. Never read cookies, sign
-requests, export profiles, replay API calls or bypass the site's login flow.
+Default path: the producer opens the official list/article page in the Claude
+built-in browser, runs skland_capture.js (reads only what the page rendered) and
+imports the saved JSON here. The BrowserReader (user's BrowserSkill session)
+stays an explicit opt-in. Never read cookies, sign requests, export profiles,
+replay API calls or bypass the site's login flow.
 """
 import datetime as dt,json,os,shutil,subprocess,time
 from pathlib import Path
@@ -20,11 +23,13 @@ def parse_rows(rows,source):
         if not stamp or not item.get('id') or not item.get('title'):continue
         published=dt.datetime.fromtimestamp(int(stamp),dt.timezone.utc).isoformat()
         images=[x['url'] for x in item.get('imageList',[]) if x.get('url')]
+        body=item.get('text') or ''
+        complete=bool(body) and not item.get('text_truncated')
         if item.get('cover',{}).get('url'):images=list(dict.fromkeys(images+[item['cover']['url']]))
         out.append(dict(title=item['title'],url='https://www.skland.com/article?id='+str(item['id']),
-                        published=published,published_precision='second',summary=item.get('brief') or item['title'],
-                        body_complete=False,images=images,game=source['game'],game_region=source['game_region'],
-                        game_topic=topic(item['title']),source_type='skland_browser',
+                        published=published,published_precision='second',summary=body or item.get('brief') or item['title'],
+                        body_complete=complete,images=images,game=source['game'],game_region=source['game_region'],
+                        game_topic=topic(item['title']+' '+body[:200]),source_type=source.get('type','skland_browser'),
                         original_author=user['nickname'],author_profile='https://www.skland.com/profile?id='+str(user['id']),
                         official_identity=2,identity_evidence=source['url'],skland_item_id=str(item['id'])))
     return out
@@ -131,3 +136,62 @@ class BrowserReader:
                     published=dt.datetime.fromtimestamp(int(item['publishedAtTs']),dt.timezone.utc).isoformat(),
                     published_precision='second',images=[i['url'] for i in item.get('imageList',[]) if i.get('url')])
         return data
+
+
+def capture_status(root,source,now,max_age_hours=3):
+    """Collect-report entry: age of the newest imported capture for this source."""
+    folder=Path(root)/'data/skland-captures';latest=None
+    for path in folder.glob('*.json') if folder.is_dir() else []:
+        try:data=json.loads(path.read_text(encoding='utf-8'))
+        except ValueError:continue
+        if data.get('source_id')==source['id'] and data.get('imported_at'):
+            stamp=dt.datetime.fromisoformat(data['imported_at'])
+            latest=max(latest,stamp) if latest else stamp
+    fresh=bool(latest) and now-latest<=dt.timedelta(hours=max_age_hours)
+    return dict(source_id=source['id'],source_type='skland_capture',model_calls=0,ok=fresh,
+                last_import=latest.isoformat() if latest else None,
+                **({} if fresh else dict(error='CAPTURE_REQUIRED: open '+source['url']+' in the Claude built-in browser, run skland_capture.js, save to data/skland-captures/ and import')))
+
+def capture_source(data,sources):
+    """Match a capture to its registered skland_capture source by page or by item game/category."""
+    page=urlparse(data.get('page',''))
+    if page.path=='/article':
+        ids={(r['item'].get('gameId'),r['item'].get('cateId')) for r in data.get('rows') or []}
+        return next((s for s in sources if (s['skland_game_id'],s['skland_cate_id']) in ids),None)
+    for source in sources:
+        listed=urlparse(source['url'])
+        if page.path==listed.path and parse_qs(page.query).get('cateId')==parse_qs(listed.query).get('cateId'):return source
+    return None
+
+def import_capture(path):
+    """Ingest a skland_capture.js result (list or article page) into the news DB."""
+    import hashlib
+    import news_video as n
+    from game_sources import article as game_article
+    path=Path(path);data=json.loads(path.read_text(encoding='utf-8'))
+    sources=[s for s in n.load(n.ROOT/'sources.json') if s.get('type')=='skland_capture' and s.get('enabled',True)]
+    source=capture_source(data,sources)
+    if not source:raise ValueError('Capture page is not a registered Skland official list/article: '+str(data.get('page')))
+    rows=data.get('rows') or [];entries=parse_rows(rows,source)
+    now=dt.datetime.now(dt.timezone.utc);db=n.database();complete=0
+    try:
+        new=n.store_items(db,source,entries,now);db.commit()
+        for entry in entries:
+            if not entry['body_complete']:continue
+            key=hashlib.sha256(entry['url'].encode()).hexdigest()[:20]
+            cached=n.ROOT/'data/articles'/(key+'.json')
+            previous=n.load(cached) if cached.is_file() else {}
+            # A longer article-page capture must not be overwritten by a list preview.
+            if len(previous.get('text',''))>len(entry['summary']):continue
+            record=dict(entry,item_id=key,text=entry['summary'],official_body=[entry['summary']],fetched_at=now.isoformat(),capture_file=path.name)
+            n.dump(cached,game_article(n.ROOT,key,record,''));complete+=1
+    finally:db.close()
+    data.update(source_id=source['id'],imported_at=now.isoformat());path.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding='utf-8')
+    return dict(source_id=source['id'],rows=len(rows),official=len(entries),new_items=new,complete_bodies=complete,
+                skipped_non_official=len(rows)-len(entries))
+
+if __name__=='__main__':
+    import argparse
+    p=argparse.ArgumentParser(description='Import Skland captures made with skland_capture.js')
+    p.add_argument('command',choices=['import']);p.add_argument('files',nargs='+')
+    for f in p.parse_args().files:print(json.dumps(import_capture(f),ensure_ascii=False))
