@@ -88,8 +88,12 @@ def fetch(url, timeout=22):
                 final = normalized_url(response.url)
                 body = response.read(4_000_000)
                 # Some CDNs (DeepMind RSS) gzip despite Accept-Encoding: identity.
+                # Decompress under the same 4 MB cap so a small gzip bomb cannot expand without limit.
                 if body[:2] == bytes((0x1f, 0x8b)):
-                    import gzip; body = gzip.decompress(body)
+                    import zlib
+                    inflater = zlib.decompressobj(16 + zlib.MAX_WBITS)
+                    body = inflater.decompress(body, 4_000_000)
+                    if inflater.unconsumed_tail: raise ValueError("Decompressed response exceeds 4 MB")
                 encoding = response.headers.get_content_charset() or "utf-8"
                 return body, final, encoding
         except Exception as error:
