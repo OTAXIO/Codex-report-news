@@ -1,4 +1,4 @@
-import json,tempfile,unittest
+import io,json,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -61,10 +61,18 @@ class RenderSelectionChecks(unittest.TestCase):
         r.save(self.episode/'release.json',dict(published=True))
         with self.assertRaisesRegex(ValueError,'Archived'):r.select_plan(self.root,self.episode)
     def test_json_protocol_uses_final_result_not_progress_messages(self):
-        p=SimpleNamespace(returncode=0,stdout='{"type":"progress","ok":false}\n{"type":"result","ok":true,"data":{}}\n',stderr='')
-        with patch.object(r.subprocess,'run',return_value=p):self.assertTrue(r.run_multiplane(self.root,'doctor')['ok'])
-        p.stdout='{"type":"progress","ok":true}\n'
-        with patch.object(r.subprocess,'run',return_value=p),self.assertRaisesRegex(RuntimeError,'missing_result'):r.run_multiplane(self.root,'doctor')
+        def fake(stdout,running=False):
+            return lambda *a,**k:SimpleNamespace(pid=1,returncode=None if running else 0,stdout=io.StringIO(stdout),stderr=io.StringIO(''),
+                                                 poll=lambda:None if running else 0,wait=lambda:0)
+        with patch.object(r.subprocess,'Popen',fake('{"type":"progress","ok":false}\n{"type":"result","ok":true,"data":{}}\n')):
+            self.assertTrue(r.run_multiplane(self.root,'doctor')['ok'])
+        with patch.object(r.subprocess,'Popen',fake('{"type":"progress","ok":true}\n')),self.assertRaisesRegex(RuntimeError,'missing_result'):
+            r.run_multiplane(self.root,'doctor')
+        # A job that never progresses is killed and reported as stalled, not awaited forever.
+        with patch.object(r.subprocess,'Popen',fake('',running=True)),patch.object(r,'watchdog_settings',return_value=dict(stall_seconds=0,render_retries=0)),\
+             patch.object(r,'kill_tree') as killed,patch.object(r.time,'sleep'),self.assertRaises(r.RenderStalled):
+            r.run_multiplane(self.root,'render')
+        killed.assert_called_once()
     def test_interrupted_job_is_not_silently_restarted(self):
         plan=r.select_plan(self.root,self.episode)
         r.save(self.episode/'timings.json',dict(duration=2));r.save(self.episode/'render-job.json',dict(ok=False,job_id='interrupted'))

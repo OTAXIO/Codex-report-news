@@ -308,6 +308,10 @@
       "encoder": "x264",
       "quality": "standard"
     },
+    "watchdog": {
+      "stall_seconds": 300,
+      "render_retries": 1
+    },
     "acceptance": {
       "date": "2026-10-27",
       "version": "0.3.13",

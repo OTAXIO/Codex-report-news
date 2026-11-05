@@ -1,9 +1,27 @@
 """Pinned render selection and local Multiplane jobs; publishing stays elsewhere."""
-import hashlib,json,os,shutil,subprocess
+import hashlib,json,os,shutil,subprocess,threading,time
 from pathlib import Path
 
 BACKENDS={'hyperframes','multiplane'}
 TEMPLATES={'editorial','graphic','persona'}
+
+class RenderStalled(RuntimeError):
+    """Multiplane emitted no new output for too long; its tree was killed."""
+
+def watchdog_settings(root):
+    # Operational limits, not pinned in render-plan: they never change the frames.
+    # Multiplane only warns (worker_stalled) and keeps waiting forever, so
+    # 2026-11-03 morning sat on frame 234/2228 for ~110 min before anyone noticed.
+    cfg=settings(root).get('watchdog',{})
+    return dict(stall_seconds=float(cfg.get('stall_seconds',300)),render_retries=int(cfg.get('render_retries',1)))
+
+def kill_tree(process):
+    if os.name=='nt':subprocess.run(['taskkill','/T','/F','/PID',str(process.pid)],capture_output=True)
+    else:
+        import signal
+        try:os.killpg(process.pid,signal.SIGKILL)
+        except ProcessLookupError:pass
+    process.wait()
 
 def load(path):return json.loads(Path(path).read_text(encoding='utf-8'))
 def save(path,data):
@@ -66,17 +84,37 @@ def run_multiplane(root,command,shot=None,extra=(),report=None,plan=None):
     temporary=root/'.cache/render-temp';temporary.mkdir(parents=True,exist_ok=True)
     env.update(TEMP=str(temporary),TMP=str(temporary))
     env['PLAYWRIGHT_BROWSERS_PATH']=str(root/'.cache/playwright')
-    result=subprocess.run(args,cwd=root,env=env,capture_output=True,text=True,encoding='utf-8',errors='replace')
+    limit=watchdog_settings(root)['stall_seconds']
+    process=subprocess.Popen(args,cwd=root,env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8',errors='replace',
+                             start_new_session=os.name!='nt')
+    lines,errors=[],[];state:dict={'seen':time.monotonic(),'mark':None}
+    def pump_stdout():
+        for line in process.stdout:
+            lines.append(line)
+            try:event=json.loads(line)
+            except json.JSONDecodeError:continue
+            # Warnings and status echoes are not progress; only new frames/phases are.
+            mark=(event.get('phase'),event.get('done')) if event.get('type')=='progress' else (event.get('type') if event.get('type')!='warning' else None)
+            if mark is not None and mark!=state['mark']:state.update(seen=time.monotonic(),mark=mark)
+    readers=[threading.Thread(target=pump_stdout,daemon=True),threading.Thread(target=lambda:errors.extend(process.stderr),daemon=True)]
+    for reader in readers:reader.start()
+    stalled=None
+    while process.poll() is None:
+        if time.monotonic()-state['seen']>limit:
+            stalled=dict(seconds=round(time.monotonic()-state['seen']),last=state['mark']);kill_tree(process);break
+        time.sleep(2)
+    for reader in readers:reader.join(10)
     events=[]
-    for line in result.stdout.splitlines():
+    for line in lines:
         try:events.append(json.loads(line))
         except json.JSONDecodeError:pass
-    final=next((e for e in reversed(events) if e.get('type')=='result'),None)
+    final=next((e for e in reversed(events) if e.get('type')=='result'),None);stderr=''.join(errors)
     if report:
-        report=Path(report);save(report,dict(command=args,exit_code=result.returncode,result=final,events=events))
-        report.with_suffix('.stderr.log').write_text(result.stderr,encoding='utf-8')
-    if result.returncode or not final or final.get('ok') is not True:
-        raise RuntimeError('Multiplane '+command+' failed: '+str((final or {}).get('code','missing_result'))+'; '+str((final or {}).get('message',result.stderr[-500:])))
+        report=Path(report);save(report,dict(command=args,exit_code=process.returncode,result=final,stalled=stalled,events=events))
+        report.with_suffix('.stderr.log').write_text(stderr,encoding='utf-8')
+    if stalled:raise RenderStalled(f'Multiplane {command} stalled: no progress for {stalled["seconds"]}s after {stalled["last"]}; process tree killed')
+    if process.returncode or not final or final.get('ok') is not True:
+        raise RuntimeError('Multiplane '+command+' failed: '+str((final or {}).get('code','missing_result'))+'; '+str((final or {}).get('message',stderr[-500:])))
     return final
 
 def check_multiplane(root,episode,plan):
@@ -128,7 +166,18 @@ def render_multiplane(root,episode,plan,resume=False):
     check_multiplane(root,episode,plan)
     args=['--audio',str(audio),'--out',str(output),'--workers',str(options.get('workers',2)),
           '--encoder',options.get('encoder','x264'),'--quality',options.get('quality','standard')]
-    try:result=run_multiplane(root,'render',shot,args,episode/'multiplane-render.json',plan)
+    retries=watchdog_settings(root)['render_retries']
+    try:
+        for attempt in range(int(retries)+1):
+            # A stalled job is killed, not stored for --resume-render: resuming
+            # the same hung worker state would just stall again. Start clean.
+            try:result=run_multiplane(root,'render',shot,args,episode/'multiplane-render.json',plan);break
+            except RenderStalled as error:
+                stalls=load(episode/'render-stalls.json') if (episode/'render-stalls.json').exists() else []
+                stalls.append(dict(attempt=attempt+1,at=time.strftime('%Y-%m-%dT%H:%M:%S%z'),error=str(error)));save(episode/'render-stalls.json',stalls)
+                print(f'[render] {error}; '+('retrying fresh render' if attempt<retries else 'giving up'),flush=True)
+                if attempt==retries:raise
+    except RenderStalled:raise
     except RuntimeError:
         report=load(episode/'multiplane-render.json')
         event=next((e for e in reversed(report['events']) if e.get('jobId')),{} )

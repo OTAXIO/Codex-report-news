@@ -5,7 +5,7 @@
 
 > 2026-10-30 当前排序：早报morning默认AI动态→游戏资讯，晚报night默认游戏资讯→AI动态。00导览后正文01仍为真实封面头条，其他核实重大消息随后置顶，再按本期时段排列剩余栏目；无重大消息从该时段首栏目选头条，素材不足可由另一栏目开场。统一story_order与lead_event_id，详见GAMES_FIRST.md。已有任务按固化顺序恢复，已发布不重做。
 
-> 2026-11-02 早晚报由Claude Code制作（DSH停止）。主片前除collect外，还须在内置浏览器捕获并导入森空岛两个官方区，补全X线程/链接原文，查`news_video.py game-schedule`；目标6—10条、3—5分钟，不足如实变短；import生成selection-report.json。
+> 2026-11-05 早晚报交回DSH制作（Claude Code停止，见DSH_PROMPT.md）。主片前除collect外，还须在内置浏览器捕获并导入森空岛两个官方区，补全X线程/链接原文，查`news_video.py game-schedule`；目标6—10条、3—5分钟，不足如实变短；import生成selection-report.json。
 
 # 当前执行入口（2026-10-29）
 

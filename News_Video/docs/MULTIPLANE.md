@@ -25,6 +25,7 @@ python -B render_sample.py EPISODE
 
 完整技术样片使用--preview，或usage_tracking=false/local_sample标记；这些标记会强制preview并阻止resume-export进入发布。技术样片不写已用新闻日志、不上传。正式稿沿用已有release/自动投稿授权，不加每期人工确认关卡。
 
+停滞保护（2026-11-03）：Multiplane worker卡死时只发`worker_stalled`警告并无限等待（当日早报卡在234/2228帧约110分钟）。现由renderer_backends.run_multiplane监看输出：连续`rendering.watchdog.stall_seconds`（默认300秒）无新帧/新阶段即结束整个进程树（node、无头Chromium、ffmpeg）并报RenderStalled；render阶段自动全新重渲`render_retries`次（默认1），每次停滞记入episodes/<ID>/render-stalls.json及multiplane-render.json的stalled字段。停滞作业不写入render-job.json、不走--resume-render；重试仍失败则停在渲染阶段报告。参数只影响运维，不进render-plan，不改变画面。
 中断渲染先查render-job.json及Multiplane作业状态；使用render_sample.py EPISODE --resume-render。上游拒绝续传时保留作业，按具体inputs/environment原因修复或新建修订，不能静默启动重复作业。渲染已成功但应用层质检失败，修好验证后可复用成片重新质检；不会再渲同一片。完成后上传阶段中断仍使用既有--resume-export/recover，unknown先回查。
 
 ## 数据与边界

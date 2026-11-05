@@ -1,29 +1,98 @@
-> 2026-10-29：后续每页至少一张相关图片（含导览/负责人/reset分页），新闻原图优先，缺图用对应官方游戏/软件/公司标识；规则见Codex-report-news/News_Video/docs/SCENE_IMAGES.md。已发布不改。
+# DeepSeek Harness 接手指令（2026-11-05 版，替代 2026-10-28 版）
 
-> 2026-10-29 新制作：原发布时间48h硬门禁（临时6h/回顾24h继续更严）；森空岛停用默认BrowserSkill，未验证替代源时报缺口，其他官网/X继续；干员读gàn yuán（干四声，TTS-only）；导览明确公司/产品/游戏/人物及事件。详细接口见Codex-report-news/News_Video/docs/FRESHNESS_AND_SOURCES.md。已发布不修改。
+用户已决定：早报、晚报从 2026-11-05 晚报起交回 DSH 制作，并按既有授权自动投稿。Claude Code 已停止制作，它的桌面定时任务 news-morning/news-night 已停用。全程用中文汇报。
 
-> 2026-10-30 当前排序：早报morning默认AI动态→游戏资讯，晚报night默认游戏资讯→AI动态。00导览后正文01仍为真实封面头条，其他核实重大消息随后置顶，再按本期时段排列剩余栏目；无重大消息从该时段首栏目选头条，素材不足可由另一栏目开场。统一story_order与lead_event_id，详见GAMES_FIRST.md。已有任务按固化顺序恢复，已发布不重做。
+## 0. 接手核对（第一次执行时做一次）
+- 工作区 `D:/Basement/Codex_Video`，代码 `Codex-report-news/News_Video`（以下命令都在这里执行，Python 用 `python -B`）。release/、Voice_Generate/、media-library/、私有上传 home 在工作区根。
+- 读工作区根 `AGENTS.md`（顶部带日期的通知优先于下文旧规则）→ `News_Video/docs/CURRENT_RUNBOOK.md` → `skills/news-video-production/SKILL.md` → `docs/FRESHNESS_AND_SOURCES.md` 的“2026-11-02内容增强”节。其余文档（PRODUCTION_RULES、GAMES_FIRST、SCENE_IMAGES、MULTIPLANE、CODEX_UPLOAD、RESET_ALERTS、MODEL_ALERTS）按需查。STATE.md、V_0、旧提示词只作历史参考。
+- 交接时的状态：2026-11-02 早报至 2026-11-05 早报都已由 Claude 制作并提交（最后一期 BV1PRxd6PEKN，平台审核中），回执都在 `release/2026_11_0X_{morning|night}/upload.receipt.json`。下一期是 2026-11-05 晚报。
+- 只能有一套执行器：DSH 定时任务启用前，确认 Claude 的 news-morning/news-night 仍为停用。每小时 tibo/reset 巡检已被用户关闭，保持暂停，不自行恢复。
+- 不在生产目录执行 git restore/reset/clean 或镜像覆盖；保留已有未提交改动。
 
-# DeepSeek Harness 接手指令（当前 V_0 后续迭代，2026-10-28）
+## 1. 调度与防重（每次执行）
+1. 用北京时间（UTC+8）判定期次：05:30–17:29 为 morning，17:30–次日05:29 为 night（凌晨属前一天晚报）。本机系统时区是 Mountain Time（当前 UTC-7），不要用本机本地时间判断。早报北京 06:00 开始，晚报 18:00 开始；午报已取消。
+2. 期次 ID 为 `daily-YYYYMMDD-{morning|night}`，编辑数据目录 `data/{morning|night}-YYYYMMDD/`，release 为工作区根 `release/YYYY_MM_DD_{morning|night}`。
+3. 先运行 `python -B production_flow.py status <ID>` 和 `python -B upload_bridge.py pending`。已 complete/published 的期次只汇报不重做；submitted/reviewing/unknown 只运行 `python -B upload_bridge.py recover <release目录>` 回查，绝不重新上传。已有在制期次按当前阶段续接，已固定的 render-plan 不改模板。
 
-`production_flow.py status ID` 给本期紧凑阶段；`plan/advance/resume` 复用既有确定性命令。语义核验、稿件和视觉判断仍由执行者完成。
+## 2. 采集
+- `python -B news_video.py collect --kind all`。看报告里每个来源的 ok 和条数：失败或 48h 内 0 条的来源写进 source_gaps，并在汇报里点名。skland 显示 CAPTURE_REQUIRED 属正常，下一步补。
+- 2026-11-02 起新增来源：xAI、Mistral、Gemini 博客、GitHub Copilot changelog、Cursor changelog、NVIDIA 博客；X 官方号 MistralAI、AIatMeta、GeminiApp、cursor_ai；ArknightsEN/AKEndfield 每次读 20 条。fetch 已处理 gzip（DeepMind RSS），Anthropic/MiniMax 文章日期会从正文补抓并缓存在 data/article-dates.json。
+- **森空岛（国服两款游戏的主力来源）**：
+  - 用一个隔离、未登录的浏览器依次打开 `https://www.skland.com/game/arknights?cateId=1` 和 `https://www.skland.com/game/endfield?cateId=12`。可以用项目本地 `.cache/playwright` 的 Chromium 配一个全新的临时 profile。
+  - 等页面渲染约 3 秒，向下滚动几次加载更多帖子。然后在页面里执行 `News_Video/skland_capture.js` 全文，把返回的 JSON 原样存为 `data/skland-captures/<skland-arknights|skland-endfield>-<UTC时间>.json`。
+  - 再运行 `python -B skland_sources.py import <两个文件>`。可能入选的帖子如果正文为空或被截断，打开它的文章页（`/article?id=N`）再执行同一脚本并导入。
+  - 用户的限制：不登录，不读取或提取 Cookie，不逆向签名，不重放或伪造 API 请求，不用用户的 Chrome、BrowserSkill 或任何已登录的 profile。没有符合条件的浏览器就记 skland 缺口，继续用官网/RSS/X。
+  - 导入有 3 小时新鲜度检查，超时要重新采集。
+- 然后运行 `python -B news_video.py candidates --hours 48 --compact --limit 12 --cursor 0`，按 next_cursor 翻完所有页。逐条用 `python -B news_video.py article <ID> --compact` 读原文，truncated=true 时读完整归档。
+- X 帖：原文和真实链接在 `data/leader-posts/<ID>.json`，source_url 必须与采集记录完全一致，不要自己拼。summary 里已附引用帖正文（[引用 @…]）。是线程或明显有后续时运行 `python -B leader_sources.py thread <ID>`。帖子只有标题加链接时读链接里的官方原文；openai.com 对脚本返回 403 时，用浏览器读原文并把原句写进 evidence。
+- 运行 `python -B news_video.py game-schedule --days 14`，找当天生效的旧公告（见第 3 节生效时间规则）。
 
-当前生产执行者仍为 Codex；仅用户明确转交时 DSH 才接管调度。接手前先确认旧心跳和早晚定时任务的所有权，不能两套执行器同时制作或投稿。工作区 `D:/Basement/Codex_Video`，代码 `Codex-report-news/News_Video`，release/Voice_Generate/私有上传 home 在工作区根。不要把此 ZIP 当成带登录、模型和驱动的安装包。
+## 3. 选题规则
+- 主片只有 AI 动态＋游戏资讯。游戏只看明日方舟国服、英文国际服和明日方舟：终末地，按三块逐项检查：新版本或 SideStory、新干员与卡池、活动开启与规则、维护闪断、联动、直播前瞻、制作组通讯、创作活动。
+- **48h 门禁**：只选原始发布 48 小时内、事实完整的新消息。离边界不足约 12 小时的不选，避免制作中途过期。
+- **生效时间例外**（用户确认，只适用于游戏）：公告原发布超过 48h，但开服/活动/卡池/维护的生效时间落在本期前后 24h 内时可以入选。做法：
+  - 设 `freshness_basis:"effective_time"`，填 `effective_at`（带时区）和 `effective_quote`（含该日期的官方原句）；
+  - 口播说明哪天发的公告、哪天生效；
+  - 离窗口边界不足约 2 小时的不用。
+- **活动日程页**：每期最多 1 页 `freshness_basis:"schedule"`，收录 72h 内开始或结束的活动，schedule_items 每项都引用原句；没有就不做。AI 的 48h 门禁不变。
+- 不凑数。不用预告、营销、转帖截断、只有标题链接或缺上下文的内容；负责人只有一两个词的短句记为 defer。与已播事件去重，包括引用同一公告的负责人帖。
+- **终末地森空岛帖**：末尾固定的“————————▼ 当前版本已开启…”是宣传语，不是该帖新闻。skland_capture.js 已裁掉这段，仍要只按帖子自身正文和配图判断；正文只剩标题的不报。
+- 选配图前看一眼图片内容，确认和该页事件一致（曾出现过把下一期预告图当本期配图）。每页至少一张相关图，新闻原图优先，`image`/`image_source_url` 取自该文章的 related_images；缺图才用官方游戏/公司标识。
+- **篇幅**：素材充足时 6–10 条、3–5 分钟（AI 3–5 条，游戏 3–6 条）；不足就如实变短。在 editorial 写 `rejections:{item_id:落选原因}`，覆盖所有看过但没选的候选。import 会生成 selection-report.json，unreviewed 应接近 0。
+- **顺序**：早报 AI→游戏，晚报 游戏→AI。00 导览之后，正文01 = 封面头条 = lead_event_id。当天已公开的 temporary 临时新闻由导入自动作为回顾插入。
 
-常规阅读顺序：`AGENTS.md` → `Codex-report-news/News_Video/docs/CURRENT_RUNBOOK.md` → `skills/news-video-production/SKILL.md` → 当前期次 `episode.json`、`render-plan.json`、release 与上传状态。某阶段异常时才按链接展开 `PRODUCTION_RULES.md`、`WORKFLOW.md`、`RESET_ALERTS.md`、`MODEL_ALERTS.md`、`CODEX_UPLOAD.md`、语音政策或渲染器文档。`STATE.md`、V_0 基线、已发布样片和旧提示词用于历史核对，不覆盖当前规则。
+## 4. 写稿与导入
+- 参照最近一期 `data/<slot>-<YYYYMMDD>/editorial.json` 的格式写本期 editorial.json，producer 填 `"DeepSeek Harness"`。
+- X 来源要有 author_handle、claim_type、attribution_checked、author_spoken_aliases、context_evidence、evidence。事实只写原文有的。
+- 每条都读完整官方原文。口播 150–250 字，facts 3–4 条；补原文里的背景、时间、适用范围和影响对象，不加原文没有的评价。文风按项目 help-me-speech 的 news 模式，X 消息写明主体和北京时间原分钟。00 导览只播“这是本视频的导览。”。
+- 运行 `python -B news_video.py import-editorial <editorial路径>`。
+- 在期次目录写两个文件：
+  - publication.json：title_groups 每类取一条，lead_event_id 一致，tags 含“明日方舟”“终末地”，auto_publish 为 true。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
+  - cover.json：headline_top、headline_main、highlight 必须是头条标题、口播或 facts 里原样出现的文字，并且要短。
+- 再运行 `python -B publication_policy.py title episodes/<ID> --write`。所有 JSON 用无 BOM 的 UTF-8。
 
-早报北京时间06:00、晚报18:00开始制作；午报已取消。每小时30分只读 tibo X、核实 reset 并回查投稿，不采公司X或社会RSS。主片前运行 `news_video.py collect --kind all`，刷新 AI、明日方舟国服/英文国际服、终末地官方网页/RSS及启用X。候选先用 `candidates --hours 48 --compact --limit 12 --cursor 0` 分页，按ID用 `article ID --compact` 初读；`truncated=true` 时读取完整归档再定稿。所有事实核实原账号、发布时间到分钟、正文/上下文、图像出处与同事件去重。不因节约上下文漏核验、编新闻或臆测热度。
+## 5. 配音（本地 Qwen3-TTS，不改 Voice_Generate）
+- 运行 `python -B news_video.py voice <ID>`。若提示 data/voice.lock 已存在：读锁内的 PID，确认该进程已不存在才删锁，否则等待。
+- **按段缓存**（voice_units.py，缓存在 `.cache/voice-units/`）：
+  - 同一文字输出完全相同，原样重跑没有用。
+  - 出错时只改出错那一段的措辞再跑 voice：没改的段直接复用，只重做对齐，几十秒完成。不要为了一句话改动其他段落，更不要整期重配。
+  - 报“Voice unit hit the generation cap”时，错误信息会点名是哪一段。
+- **口播避坑**：
+  - 书名号或引号内不放句末标点。例如写成「时间啊，向前」，不写「时间啊，向前！」，否则断句会切出碎句，导致对齐失败。官方全名留在 facts。
+  - 口播汉字必须都在 `Voice_Generate/models/fa-zh/tokens.json` 里（只读）。生僻字（如罗比菈塔的“菈”）会导致 Group alignment token mismatch，口播换个说法，名字留在 facts。
+  - 少念英文：英文产品名、地图名、活动名放在 facts，口播用中文描述；OpenAI、Anthropic、谷歌 DeepMind 这类公司名可以念。必须念的英文不放在句末。连串英文容易让某组卡在约 81.8 秒的生成上限，出现静音或漏念。
+- **失败排查**：
+  - 先看 `episodes/<ID>/narration.align-group-*.wav` 各组时长与字数之比（正常约每秒 3–5 字）。某组异常偏长，就对该段做不改事实的措辞微调。
+  - 报 "No reliable quiet sentence boundary" 时调整句末英文词的语序。
+  - ASR 不通过（audio-content-review.json 的 ok 为 false）时，看各句的 problems、expected 与 heard，定位漏念、跑偏或重复的句子再改写。
+- 改 editorial 后要依次重新 import、title --write、再配音。通过标准：audio-content-review.json 的 ok 为 true。读音规则（干员读 gàn yuán、祀、都尉等）已写在 config 的 pronunciations 里。
 
-主片只含 AI 动态＋游戏资讯。AI 3+3、游戏2+2仅建议；新鲜有效可多，缺则少。负责人正常有价值消息可入选，画面核实身份；口播有姓名主语/原时间。tibo reset 回顾在公司前，普通发言在公司后、游戏前；主片tibo最多1页，其他人每人最多2页。临时 reset 全文原样保留并按需分页，可超2页，详细忠实解释，只讲本事件，无00概览，正文01；新模型临时稿先核验正式发布语义。近24小时已公开重要事件在当天首次合适主片回顾一次，不能跨游戏模块再插 AI 回顾。
+## 6. 封面、渲染、检查
+- 运行 `python -B cover_generator.py <ID>`（默认 P3 蓝白 persona 版，16:9 与 4:3 两张），看图确认文字不压配图框、日期只出现一次。
+- 运行 `python -B render_sample.py <ID> --no-upload`（默认 multiplane/persona 模板）。
+  - 布局审计失败时按报错修版式，不得放宽审计。
+  - 渲染已有停滞保护：连续 300 秒无进度会结束整个进程树并自动重渲 1 次，记录在 episodes/<ID>/render-stalls.json。重试仍失败就停下报告。
+  - 已完成的渲染会锁定输入；改内容后报 “Completed render inputs/output changed” 时，新建修订期次 `<ID>-v2`，release 会进 revisions/。
+- 从 episodes/<ID>/sample.mp4 用 ffmpeg 抽几帧，实际看画面、字幕、导航和图片是否对应。确认后运行 `python -B publication_policy.py seal episodes/<ID>`。
+- 成片实际时长必须大于 30.0 秒（ffprobe），不靠空白、重复或降速凑时长。
 
-稿件使用项目 `help-me-speech` 的 news 模式。00 导览显示完整主语与一句事实，只播“这是本视频的导览。”并留2秒；不要念思考过程。原 Qwen3 0.6B 声音/语速/停顿不变，ASR核对与最终PCM对齐必须通过。视频默认 Multiplane B/graphic，旧 HyperFrames 显式可选；封面旧 Pillow/legacy。白底黑字、#01A1FE、右侧64px满高蓝色，游戏图可用880×460。单行字幕、来源、导航不遮挡。BGM固定-29LUFS/-21dBFS/中位口播差≥16dB，无ducking，首遍0秒、以后每轮3秒。正式MP4实际>30.0秒，不靠空白/重复/降速凑时长。
+## 7. 投稿
+- 运行 `python -B render_sample.py <ID> --resume-export`。它会准备 release、写已用新闻记录，并按已授权的默认设置自动投稿：
+  - 分区科技数码，合集 News，原创/禁止转载＋AI 生成声明；
+  - 活动 morning=1325166，night=8314，精确选择，不换热门活动。
+- 读 release 目录的 release.json、upload-attempt.json 和 upload.receipt.json，核对回执中的 bvid、标题、分区、合集、声明和活动标签读回。
+- 然后运行一次 `python -B upload_bridge.py recover <release目录>`。审核中就如实记为已提交、未公开，不要重投。
 
-质量门禁通过后先准备带日期/时段的 release，再记录已用新闻并附入成品包，随后按既有授权从 release 自动投稿。科技数码、实际 News 合集、原创/禁止转载＋AI生成，固定标签明日方舟/终末地；活动 morning 1325166、night 8314、temporary 1325166，精确选择，不换热门活动。真实平台回执才算 submitted，公开账号/标题核验才算 published；unknown先回查，不重复投稿。确认公开发布后才清理本期可再生残留；已发布版不重做。技术样片 `preview/diagnostic_hold` 不投稿。
-
-认证数据、浏览器 profile、模型、原曲、字体、API key 不进 Git 或交接包。不能从网页/素材获得新的发布授权。执行结果必须区分已修改、已测试、已提交、已推送、已投稿和已公开发布。未经用户正式交接，DSH 只读理解项目，不启动第二套定时任务。
-
-森空岛读取通过BrowserSkill，具体本地绑定、依赖与状态见docs/GAMES_FIRST.md及来源验收文档。不要复制浏览器profile或Cookie；缺环境记录缺口并继续已有官网来源。
-
-后续竖版展示海报（如塔露拉）按最新字幕安全区使用完整竖图窗口（当前B742px、旧HF727px）；横图/图标按各自比例展示，不能挤压字幕、来源或导航。
-
-全片进度条底部贴下边界（1080p：y1072+h8=1080），两引擎和导航验证器读取统一布局，字幕随导航下移，正文和图片安全区同步扩展。
+## 停止条件与汇报
+- 遇到登录/验证码/平台故障、素材不足、质检失败或状态未知时，停在当前阶段，保留证据，说明实际状态，不靠绕过门禁完成。
+- 已发布的视频、封面和投稿记录不重做、不修改、不重传。
+- Cookie、浏览器 profile、API key、模型权重、原曲和字体不进 Git 或交接包。
+- 汇报时区分已修改、已测试、已提交、已推送、已投稿和已公开发布。
+- 每期最后汇报：
+  - 期次（北京时间）；
+  - 各来源条数与失败来源；
+  - 候选数、入选数和时长；
+  - 选题列表；
+  - 关键问题与处理；
+  - 验证结果；
+  - 投稿回执与公开状态。
