@@ -8,6 +8,10 @@ ROOT=Path(__file__).parent
 BLUE='#01A1FE';BLACK='#101218'
 LABELS={'morning':'早间新闻','noon':'午间新闻','night':'晚间新闻','temporary':'临时新闻','preview':'新闻样片'}
 
+def slot_label(ep):
+    from edition_series import label
+    return label(ep,LABELS[ep['edition_slot']])
+
 def font(size,bold=True):return ImageFont.truetype('C:/Windows/Fonts/'+('msyhbd.ttc' if bold else 'msyh.ttc'),size)
 
 def fitted(draw,text,initial,width,bold=True):
@@ -42,7 +46,7 @@ def cover_art(brief,size):
 def make_hyperframes(episode_id):
     out,ep,brief=load_brief(episode_id)
     logo=cover_art(brief,480)
-    label=LABELS[ep['edition_slot']];date=ep['edition_date'][5:].replace('-','.')
+    label=slot_label(ep);date=ep['edition_date'][5:].replace('-','.')
     image=Image.new('RGB',(1920,1080),'white');d=ImageDraw.Draw(image)
     d.polygon([(1840,0),(1920,0),(1920,1080),(1770,1080)],fill=BLUE)
     d.polygon([(1880,0),(1920,0),(1920,180),(1860,120)],fill=BLACK)
@@ -107,7 +111,7 @@ def persona_canvas(ep,brief,height):
         label=tag(brief['image_label'],font(38),'white',BLACK,shadow=BLUE,offset=6,padx=22,pady=8)
         image.paste(label,(cx-label.width//2,cy+framed.height//2-34),label)
     # Headline stack: slot tag, subject, black title bar, oversized highlight.
-    slot=tag(LABELS[ep['edition_slot']],font(54),BLUE,'white',shadow=BLACK,offset=8,padx=26,pady=10)
+    slot=tag(slot_label(ep),font(54),BLUE,'white',shadow=BLACK,offset=8,padx=26,pady=10)
     image.paste(slot,(104,70+dy//2),slot)
     y=200+dy
     if brief.get('headline_top'):
@@ -122,7 +126,7 @@ def persona_canvas(ep,brief,height):
     date=ep['edition_date'][5:].replace('-','.')
     stamp=tag(date,display(140),BLACK,None);image.paste(stamp,(110,H-188),stamp)
     footer=cover_footer(brief)
-    if footer!=LABELS[ep['edition_slot']]:
+    if footer!=slot_label(ep):
         note=tag(footer,fitted(d,footer,44,760,False),BLACK,None);image.paste(note,(110+stamp.width+40,H-112),note)
     return image
 

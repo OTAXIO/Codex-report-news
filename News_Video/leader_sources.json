@@ -394,6 +394,66 @@
       "selection_policy": "official_attribution_required",
       "collection_trigger": "before_episode_with_ai_rss",
       "role_checked_on": "2026-11-02"
+    },
+    {
+      "id": "x-official-xiaomimimo",
+      "name": "Xiaomi MiMo",
+      "handle": "XiaomiMiMo",
+      "vendor": "Xiaomi",
+      "region": "domestic",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/XiaomiMiMo (verified official profile, agent-reach profile check 2026-11-06)",
+      "product_scope": [
+        "MiMo 大模型"
+      ],
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required; AI models/products only",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-06"
+    },
+    {
+      "id": "x-official-stepfun_ai",
+      "name": "阶跃星辰",
+      "handle": "StepFun_ai",
+      "vendor": "StepFun",
+      "region": "domestic",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/StepFun_ai (verified official profile, agent-reach profile check 2026-11-06)",
+      "product_scope": [
+        "阶跃星辰模型与产品"
+      ],
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required; AI models/products only",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-06"
+    },
+    {
+      "id": "x-official-baidu_inc",
+      "name": "百度",
+      "handle": "Baidu_Inc",
+      "vendor": "Baidu",
+      "region": "domestic",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "https://x.com/Baidu_Inc (verified official profile, agent-reach profile check 2026-11-06)",
+      "product_scope": [
+        "文心/百度 AI；公司账号，只选 AI 模型与产品"
+      ],
+      "priority_tier": 2,
+      "source_priority": 100,
+      "selection_policy": "official_attribution_required; AI models/products only",
+      "collection_trigger": "before_episode_with_ai_rss",
+      "role_checked_on": "2026-11-06"
     }
   ],
   "pending_company_leaders": [

@@ -338,15 +338,19 @@ def collect(kind):
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return report
 
-def candidates(hours=48,compact=False,limit=12,cursor=0):
+def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
     if limit<1 or limit>50 or cursor<0:raise ValueError('Use limit 1-50 and a nonnegative cursor')
+    from edition_series import accepts_candidate,SERIES
+    if series is not None and series not in SERIES:raise ValueError('Unknown series; use ai, arknights or endfield')
+    # The snapshot always keeps every fresh candidate; --series only narrows what is listed.
+    view=lambda items:[r for r in items if accepts_candidate(series,r)]
     if not 0<hours<=48:raise ValueError('Formal candidates require a window of 1-48 hours')
     snapshot=ROOT/'data/candidates.json'
     if cursor:
         if not snapshot.is_file():raise ValueError('Start candidate pagination with cursor 0')
         payload=load(snapshot)
         if payload.get('hours')!=hours:raise ValueError('Candidate window changed; restart cursor 0')
-        rows=payload['items'];selected=rows[cursor:cursor+limit]
+        rows=view(payload['items']);selected=rows[cursor:cursor+limit]
         if compact:
             print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
                                   items=[{k:v for k,v in item.items() if k not in {'summary','content_hash'}} for item in selected],
@@ -386,6 +390,8 @@ def candidates(hours=48,compact=False,limit=12,cursor=0):
             item['event_key']=item['source_id']+':'+item['title']
         item['priority_tier']=source.get('priority_tier',2)
         item['selection_policy']=source.get('selection_policy','standard')
+        # Media/aggregator feeds only point at news; the scene must cite the official original.
+        if source.get('lead_only'):item['lead_only']=True
         from editorial_policy import region_of
         item['region']=region_of(item,sources,config().get('editorial',{}))
         if source.get('published_precision')=='date' or source.get('id')=='kimi-blog':item['published_precision']='date'
@@ -418,9 +424,10 @@ def candidates(hours=48,compact=False,limit=12,cursor=0):
     from leader_editorial import review_leader_candidates
     payload['leader_review_candidates']=review_leader_candidates(rows,ROOT)
     dump(ROOT/"data/candidates.json",payload)
+    rows=view(rows)
     if compact:
         selected=rows[cursor:cursor+limit]
-        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path') if item.get(k) is not None} for item in selected]
+        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path','lead_only') if item.get(k) is not None} for item in selected]
         print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
                               items=brief,excluded_used_count=len(excluded),full_file='data/candidates.json',
                               game_coverage=payload['game_coverage'],
@@ -459,7 +466,8 @@ def article(item_id,compact=False,max_chars=8000):
         if game_data.get('source_type')=='skland_capture' or config().get('game_news',{}).get('skland_mode')=='non_browser_only':
             cached=ROOT/'data/articles'/(item_id+'.json')
             if not cached.is_file() or not load(cached).get('body_complete'):
-                raise ValueError('SOURCE_GAP: no complete Skland original; open the article in the built-in browser, run skland_capture.js and import it')
+                raise ValueError('SOURCE_GAP: no complete Skland original; open the article in the built-in browser, run skland_capture.js and import it. '
+                                 'If the official post is image-only (empty text), run: python -B skland_sources.py ocr '+item_id+' and check the OCR text against the images')
             data=load(cached)
             if compact:
                 print(json.dumps(dict(item_id=item_id,title=data['title'],published=data['published'],
@@ -497,6 +505,10 @@ def article(item_id,compact=False,max_chars=8000):
 
 def import_editorial(path):
     cfg=config(); episode=load(path)
+    from edition_series import series_of,label as series_label,includes_ai
+    if series_of(episode):
+        # The on-screen edition label is the series name, e.g. 明日方舟情报.
+        episode['footer_tag']=series_label(episode)
     if cfg.get('freshness',{}).get('enabled'):episode['overview_subject_policy']=1
     episode['audio_content_review_required']=True
     from production_policy import ORDER_VERSION,validate_content
@@ -507,7 +519,8 @@ def import_editorial(path):
         episode['background_music_requirement']={k:bgm[k] for k in ['sha256','repeat_from_seconds','reference_voice_gap_db','voice_gap_measure','music_peak_dbfs']}
     source_catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
     from important_events import prepare_main_recaps
-    if cfg.get('editorial',{}).get('include_important_recaps',True):prepare_main_recaps(episode,ROOT)
+    # Temporary alerts are AI news; only the AI video recaps them.
+    if cfg.get('editorial',{}).get('include_important_recaps',True) and includes_ai(episode):prepare_main_recaps(episode,ROOT)
     from leader_editorial import apply_leader_identity_and_speech,prepare_main_leaders
     apply_leader_identity_and_speech(episode,ROOT)
     leader_audit=prepare_main_leaders(episode,ROOT)
@@ -531,12 +544,16 @@ def import_editorial(path):
         validate_temporary(episode)
     if episode.get('producer') not in cfg.get('editorial',{}).get('allowed_producers',['Codex current conversation','DeepSeek Harness','manual editor']):raise ValueError('Producer must be disclosed using an allowed producer name')
     db=database(); selected=[];selected_rows=[]
+    registry=ROOT/'sources.json'
+    lead_only={s['id'] for s in load(registry) if s.get('lead_only')} if registry.is_file() else set()
     for scene in episode["scenes"]:
         if scene.get("item_id"):
             row=db.execute("SELECT * FROM items WHERE id=?",(scene["item_id"],)).fetchone()
             if not row: raise ValueError("Editorial refers to unknown collected candidate")
             row=dict(row)
             if row["kind"]=="social":raise ValueError("Social stories removed from new editions")
+            if row['source_id'] in lead_only:
+                raise ValueError('LEAD_ONLY_SOURCE: '+row['source_id']+' is a discovery lead; find the official original (company site/X), collect it and cite that item instead')
             if row["kind"]=="games":
                 record=load(ROOT/"data/game-items"/(row["id"]+".json"))
                 if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
@@ -569,7 +586,7 @@ def import_editorial(path):
     _,already_used,_=exclude_used(selected_rows,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
     if already_used:raise ValueError('News already used in another completed edition: '+', '.join(x['id'] for x in already_used))
     selection_audit=None
-    if episode.get('edition_slot') in {'morning','noon','night'} and cfg.get('editorial',{}).get('ai_coverage'):
+    if episode.get('edition_slot') in {'morning','noon','night'} and cfg.get('editorial',{}).get('ai_coverage') and includes_ai(episode):
         from editorial_policy import audit_selection
         sources={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').exists() else {}
         if cfg.get('x_enabled'):
@@ -608,7 +625,9 @@ def selection_report(episode):
     chosen={s.get('item_id') for s in episode['scenes'] if s.get('item_id')}
     chosen|={e.get('item_id') for s in episode['scenes'] for e in s.get('schedule_items',[])}
     reasons=episode.get('rejections',{})
-    rows=snapshot.get('items',[])
+    from edition_series import accepts_candidate,series_of
+    series=series_of(episode)
+    rows=[r for r in snapshot.get('items',[]) if accepts_candidate(series,r)]
     def brief(r):return dict(id=r['id'],kind=r.get('kind'),source_id=r.get('source_id'),published=r.get('published'),title=(r.get('title') or '')[:90])
     selected=[brief(r) for r in rows if r['id'] in chosen]
     rejected=[dict(brief(r),reason=reasons.get(r['id'],'unreviewed')) for r in rows if r['id'] not in chosen]
@@ -628,7 +647,7 @@ def selection_report(episode):
     health=[dict(source_id=s.get('source_id'),ok=s.get('ok'),count=s.get('count',s.get('accepted')),error=s.get('error') or s.get('error_code'))
             for s in current]
     by=lambda key:dict(sorted({k:sum(1 for r in rows if r.get(key)==k) for k in {r.get(key) for r in rows}}.items(),key=lambda kv:-kv[1]))
-    return dict(episode_id=episode['id'],generated_at=dt.datetime.now(UTC).isoformat(),candidate_window_hours=snapshot.get('hours'),
+    return dict(episode_id=episode['id'],edition_series=series,generated_at=dt.datetime.now(UTC).isoformat(),candidate_window_hours=snapshot.get('hours'),
                 candidates=len(rows),by_kind=by('kind'),by_source=by('source_id'),selected_count=len(selected),
                 unreviewed=sum(1 for r in rejected if r['reason']=='unreviewed'),selected=selected,rejected=rejected,
                 excluded_used=len(snapshot.get('excluded_used_news',[])),source_health=health,
@@ -754,7 +773,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest="cmd",required=True)
     sub.add_parser("doctor")
     p=sub.add_parser("collect");p.add_argument("--kind",choices=["social","games","ai","all"],required=True)
-    p=sub.add_parser("candidates");p.add_argument("--hours",type=int,default=48);p.add_argument("--compact",action="store_true");p.add_argument("--limit",type=int,default=12);p.add_argument("--cursor",type=int,default=0)
+    p=sub.add_parser("candidates");p.add_argument("--hours",type=int,default=48);p.add_argument("--compact",action="store_true");p.add_argument("--limit",type=int,default=12);p.add_argument("--cursor",type=int,default=0);p.add_argument("--series",choices=["ai","arknights","endfield"],help="List only this video's candidates")
     p=sub.add_parser("article");p.add_argument("id");p.add_argument("--compact",action="store_true");p.add_argument("--max-chars",type=int,default=8000)
     p=sub.add_parser("import-editorial");p.add_argument("path")
     p=sub.add_parser("voice");p.add_argument("episode")
@@ -762,7 +781,7 @@ def main():
     args=parser.parse_args()
     if args.cmd=="doctor": return 0 if doctor() else 1
     if args.cmd=="collect":collect(args.kind)
-    elif args.cmd=="candidates":candidates(args.hours,args.compact,args.limit,args.cursor)
+    elif args.cmd=="candidates":candidates(args.hours,args.compact,args.limit,args.cursor,args.series)
     elif args.cmd=="article":article(args.id,args.compact,args.max_chars)
     elif args.cmd=="import-editorial":import_editorial(args.path)
     elif args.cmd=="voice":voice(args.episode)

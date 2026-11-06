@@ -192,6 +192,11 @@ def import_capture(path):
 
 if __name__=='__main__':
     import argparse
-    p=argparse.ArgumentParser(description='Import Skland captures made with skland_capture.js')
-    p.add_argument('command',choices=['import']);p.add_argument('files',nargs='+')
-    for f in p.parse_args().files:print(json.dumps(import_capture(f),ensure_ascii=False))
+    p=argparse.ArgumentParser(description='Import Skland captures made with skland_capture.js; ocr fills image-only official posts')
+    p.add_argument('command',choices=['import','ocr']);p.add_argument('values',nargs='+',help='capture files (import) or item_id / Skland article id (ocr)')
+    args=p.parse_args()
+    if args.command=='ocr':
+        from image_ocr import ocr_article,item_key
+        for value in args.values:print(json.dumps(ocr_article(item_key(value)),ensure_ascii=False))
+    else:
+        for f in args.values:print(json.dumps(import_capture(f),ensure_ascii=False))

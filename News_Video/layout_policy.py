@@ -120,6 +120,14 @@ def prepare_overview(ep,preferred=True):
                lead=overview_lead(body,ep.get('edition_slot')=='temporary'),facts=facts,narration='这是本视频的导览。',
                hold_after_seconds=2.0,show_source=False,overview_generated=True,overview_schema_version=2,
                total_stories=count,footer_note='本页展示本期重点，其余内容可通过底部导航查看。' if count>len(facts) else '本期重点将按正文顺序展开。')
+    from edition_series import series_of
+    if series_of(ep):
+        # Series videos open on the headline itself, not on "this is the guide":
+        # the first seconds decide whether a viewer stays.
+        hook=re.sub(r'\s+','',str(ep.get('hook') or ''))
+        if not 8<=len(hook)<=45 or '导览' in hook or not hook.endswith(('。','！','？')):
+            raise ValueError('HOOK_REQUIRED: editorial needs "hook", one 8-45 character sentence stating the lead news, ending in punctuation')
+        guide.update(narration=hook,lead=hook,hold_after_seconds=0.8)
     if existing:existing.update(guide)
     else:scenes.insert(0,guide)
     validate_overview(ep)

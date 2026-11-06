@@ -27,6 +27,8 @@ def review_candidates(items,root):
     return result
 
 def prepare_main_tibo(ep,root,now=None):
+    from edition_series import includes_ai
+    if not includes_ai(ep):return None  # leaders and Tibo belong to the AI video only
     if ep.get('edition_slot') not in {'morning','noon','night'}:return None
     from used_news import recent_records,exclude_used
     from layout_policy import is_overview
@@ -143,6 +145,8 @@ def apply_leader_identity_and_speech(ep,root):
 
 
 def prepare_main_leaders(ep,root,now=None):
+    from edition_series import includes_ai
+    if not includes_ai(ep):return None  # leaders and Tibo belong to the AI video only
     if ep.get('edition_slot') not in {'morning','noon','night'}:return None
     from used_news import recent_records,exclude_used
     root=Path(root);now=now or dt.datetime.now(dt.timezone.utc);registry=leader_registry(root)

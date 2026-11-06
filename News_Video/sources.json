@@ -443,5 +443,19 @@
     "priority_tier": 3,
     "selection_policy": "AI models/products only; skip gaming promos and customer stories",
     "checked_on": "2026-11-02"
+  },
+  {
+    "id": "qbitai-leads",
+    "name": "量子位（线索）",
+    "group": "ai",
+    "publisher": "量子位",
+    "vendor": "量子位",
+    "url": "https://www.qbitai.com/feed",
+    "type": "rss",
+    "region": "domestic",
+    "priority_tier": 3,
+    "lead_only": true,
+    "selection_policy": "lead_only: discovery of Chinese AI news; never cite as the source; find and collect the company official page/X post, then cite that",
+    "checked_on": "2026-11-06"
   }
 ]

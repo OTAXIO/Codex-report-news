@@ -75,7 +75,7 @@ def publish_ready(directory,root=ROOT):
     validate_video(root,release_movie(directory))
     if not (directory/'used-news-record.json').is_file():
         return dict(ok=False,error=dict(code='EXPORT_LEDGER_REQUIRED',message='Resume the validated export before uploading'))
-    pub['tags']=tags(pub.get('tags',[]));save(directory/'publication.json',pub)
+    pub['tags']=tags(pub.get('tags',[]),load(directory/'episode.json') if (directory/'episode.json').is_file() else None);save(directory/'publication.json',pub)
     (directory/'tags.txt').write_text('\n'.join(pub['tags'])+'\n',encoding='utf-8')
     # Refresh authorized defaults even for an already prepared, unsubmitted release.
     # State guards above prevent changing submitted/unknown attempts.

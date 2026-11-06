@@ -1,3 +1,5 @@
+> 2026-11-07 系列拆分（当前有效，覆盖本页“早报AI→游戏/晚报游戏→AI”“活动morning 1325166、night 8314”“固定标签明日方舟/终末地”）：morning只出AI早报（edition_series=ai），night出明日方舟情报（arknights）与终末地情报（endfield）两条独立视频，各自ID/编辑目录/release/投稿；分区、活动、固定标签由上传器按edition_series选择（ai：科技数码+热度最高活动most_popular_free；arknights：游戏+8314；endfield：游戏+1325166）。editorial顶层须有edition_series与hook；`candidates --series`只列本系列；无合格消息当期不出。纯长图森空岛官方帖用`skland_sources.py ocr <id>`；qbitai-leads只作线索（lead_only）。详见workspace-context/DSH_PROMPT.md（2026-11-07版）。
+
 > 每个新视频页面至少1张相关图片，含00、负责人和reset分页；新闻原图优先，缺图用对应游戏/软件/公司官方图标，本地保存来源与hash；无相关素材先补图，不能空白或用无关图凑数。详见SCENE_IMAGES.md。
 
 

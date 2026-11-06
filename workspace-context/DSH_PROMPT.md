@@ -1,6 +1,20 @@
-# DeepSeek Harness 接手指令（2026-11-05 版，替代 2026-10-28 版）
+# DeepSeek Harness 接手指令（2026-11-07 版，替代 2026-11-05 版）
 
 用户已决定：早报、晚报从 2026-11-05 晚报起交回 DSH 制作，并按既有授权自动投稿。Claude Code 已停止制作，它的桌面定时任务 news-morning/news-night 已停用。全程用中文汇报。
+
+**2026-11-07 起拆成三个系列（用户确认，覆盖下文及旧文档里“一期混合 AI＋游戏”的写法）**：
+
+| 系列 `edition_series` | 时段 | 期次 ID | 编辑目录 | release 目录 | 内容 | 投稿分区 | 活动 | 固定标签 |
+|---|---|---|---|---|---|---|---|---|
+| `ai`「AI早报」 | morning 06:00 | `daily-YYYYMMDD-morning` | `data/morning-YYYYMMDD/` | `release/YYYY_MM_DD_morning` | 只做 AI（含 tibo/负责人、临时新闻回顾） | 科技数码 | 可参加的免费活动里热度最高的（`most_popular_free`，不限题材，没有就不挂） | AI |
+| `arknights`「明日方舟情报」 | night 18:00 | `daily-YYYYMMDD-night-arknights` | `data/night-arknights-YYYYMMDD/` | `release/YYYY_MM_DD_night_arknights` | 只做明日方舟（国服＋英文国际服） | 游戏 | 8314 明日方舟创作者应援计划（精确） | 明日方舟 |
+| `endfield`「终末地情报」 | night 18:00 | `daily-YYYYMMDD-night-endfield` | `data/night-endfield-YYYYMMDD/` | `release/YYYY_MM_DD_night_endfield` | 只做明日方舟：终末地 | 游戏 | 1325166 明日方舟终末地创作者应援计划（精确） | 明日方舟终末地、终末地 |
+
+- 晚上的两条各自独立制作、配音、release、投稿，先做完一条再做另一条（配音锁只允许一个）。
+- 某个系列 48h 内没有合格新消息，本期就不出这一条，在汇报里说明，不凑数、不拿另一系列的内容补。
+- 活动、分区、固定标签由上传器按 `edition_series` 自动选择，不要手动改；分区名“游戏”若与平台界面不一致，上传器会在提交前以 PARTITION_MISMATCH 停下，此时停止并汇报，不换分区重试。
+- 代码会拦截：系列和时段不符（SERIES_SLOT_MISMATCH）、ID 不符（SERIES_ID_MISMATCH）、混入别的系列的新闻（SERIES_SCENE_MISMATCH）、缺 hook（HOOK_REQUIRED）。按报错修 editorial，不要绕过。
+- 2026-11-05 版之前的已发布期次（混合版 morning/night）保持原样，不重做、不重传。
 
 ## 0. 接手核对（第一次执行时做一次）
 - 工作区 `D:/Basement/Codex_Video`，代码 `Codex-report-news/News_Video`（以下命令都在这里执行，Python 用 `python -B`）。release/、Voice_Generate/、media-library/、私有上传 home 在工作区根。
@@ -11,8 +25,8 @@
 
 ## 1. 调度与防重（每次执行）
 1. 用北京时间（UTC+8）判定期次：05:30–17:29 为 morning，17:30–次日05:29 为 night（凌晨属前一天晚报）。本机系统时区是 Mountain Time（当前 UTC-7），不要用本机本地时间判断。早报北京 06:00 开始，晚报 18:00 开始；午报已取消。
-2. 期次 ID 为 `daily-YYYYMMDD-{morning|night}`，编辑数据目录 `data/{morning|night}-YYYYMMDD/`，release 为工作区根 `release/YYYY_MM_DD_{morning|night}`。
-3. 先运行 `python -B production_flow.py status <ID>` 和 `python -B upload_bridge.py pending`。已 complete/published 的期次只汇报不重做；submitted/reviewing/unknown 只运行 `python -B upload_bridge.py recover <release目录>` 回查，绝不重新上传。已有在制期次按当前阶段续接，已固定的 render-plan 不改模板。
+2. morning 只做 `ai` 一条；night 依次做 `arknights` 和 `endfield` 两条。ID、编辑目录、release 目录见上方表格。
+3. 对本时段的每条 ID 都先运行 `python -B production_flow.py status <ID>` 和 `python -B upload_bridge.py pending`。已 complete/published 的期次只汇报不重做；submitted/reviewing/unknown 只运行 `python -B upload_bridge.py recover <release目录>` 回查，绝不重新上传。已有在制期次按当前阶段续接，已固定的 render-plan 不改模板。
 
 ## 2. 采集
 - `python -B news_video.py collect --kind all`。看报告里每个来源的 ok 和条数：失败或 48h 内 0 条的来源写进 source_gaps，并在汇报里点名。skland 显示 CAPTURE_REQUIRED 属正常，下一步补。
@@ -21,14 +35,18 @@
   - 用一个隔离、未登录的浏览器依次打开 `https://www.skland.com/game/arknights?cateId=1` 和 `https://www.skland.com/game/endfield?cateId=12`。可以用项目本地 `.cache/playwright` 的 Chromium 配一个全新的临时 profile。
   - 等页面渲染约 3 秒，向下滚动几次加载更多帖子。然后在页面里执行 `News_Video/skland_capture.js` 全文，把返回的 JSON 原样存为 `data/skland-captures/<skland-arknights|skland-endfield>-<UTC时间>.json`。
   - 再运行 `python -B skland_sources.py import <两个文件>`。可能入选的帖子如果正文为空或被截断，打开它的文章页（`/article?id=N`）再执行同一脚本并导入。
+  - **只有长图、没有文字的官方帖**（如「卫戍协议：规程」玩法介绍）不要直接放弃：运行 `python -B skland_sources.py ocr <item_id或森空岛文章数字id>`，用本机 Windows 中文 OCR 把官方长图读成正文（记录 text_source=image_ocr，图存在 assets/game-news/）。OCR 会认错数字、日期和名字：写进口播和 facts 的每一项都要打开对应图片核对，对不上就不用；配图用该帖 related_images。OCR 报“too little readable text”就记为缺口。
   - 用户的限制：不登录，不读取或提取 Cookie，不逆向签名，不重放或伪造 API 请求，不用用户的 Chrome、BrowserSkill 或任何已登录的 profile。没有符合条件的浏览器就记 skland 缺口，继续用官网/RSS/X。
   - 导入有 3 小时新鲜度检查，超时要重新采集。
-- 然后运行 `python -B news_video.py candidates --hours 48 --compact --limit 12 --cursor 0`，按 next_cursor 翻完所有页。逐条用 `python -B news_video.py article <ID> --compact` 读原文，truncated=true 时读完整归档。
+- 采集每个时段都跑一次 `collect --kind all`（AI 和游戏都采，供去重与回顾使用）。
+- 2026-11-07 新增：X 官方号 XiaomiMiMo、StepFun_ai、Baidu_Inc（百度是公司号，只选 AI 模型与产品）；量子位 RSS `qbitai-leads` 是**线索源**，候选里带 `lead_only:true`，只能用来发现国内 AI 新闻，必须找到公司官网或官方 X 原文、采集后引用那一条，直接引用会被 import 以 LEAD_ONLY_SOURCE 拒绝。
+- 然后按系列列候选：`python -B news_video.py candidates --hours 48 --compact --limit 12 --cursor 0 --series <ai|arknights|endfield>`，按 next_cursor 翻完所有页。逐条用 `python -B news_video.py article <ID> --compact` 读原文，truncated=true 时读完整归档。
 - X 帖：原文和真实链接在 `data/leader-posts/<ID>.json`，source_url 必须与采集记录完全一致，不要自己拼。summary 里已附引用帖正文（[引用 @…]）。是线程或明显有后续时运行 `python -B leader_sources.py thread <ID>`。帖子只有标题加链接时读链接里的官方原文；openai.com 对脚本返回 403 时，用浏览器读原文并把原句写进 evidence。
 - 运行 `python -B news_video.py game-schedule --days 14`，找当天生效的旧公告（见第 3 节生效时间规则）。
 
 ## 3. 选题规则
-- 主片只有 AI 动态＋游戏资讯。游戏只看明日方舟国服、英文国际服和明日方舟：终末地，按三块逐项检查：新版本或 SideStory、新干员与卡池、活动开启与规则、维护闪断、联动、直播前瞻、制作组通讯、创作活动。
+- 每条视频只讲本系列：ai 只选 kind=ai；arknights 只选明日方舟（国服、英文国际服）；endfield 只选终末地。游戏按这些逐项检查：新版本或 SideStory、新玩法（如卫戍协议规程）、新干员与卡池、活动开启与规则、福利兑换补偿、维护闪断、联动、直播前瞻、制作组通讯、创作活动。“维护结束”“服饰上架”“音乐上架”“创作集锦”这类小消息默认不单独成条。
+- 游戏新闻写清玩家要做什么：开始/截止时间、能领什么、需要准备什么、是否限时；只从官方原文推导，不评价强度，不建议抽不抽。
 - **48h 门禁**：只选原始发布 48 小时内、事实完整的新消息。离边界不足约 12 小时的不选，避免制作中途过期。
 - **生效时间例外**（用户确认，只适用于游戏）：公告原发布超过 48h，但开服/活动/卡池/维护的生效时间落在本期前后 24h 内时可以入选。做法：
   - 设 `freshness_basis:"effective_time"`，填 `effective_at`（带时区）和 `effective_quote`（含该日期的官方原句）；
@@ -38,16 +56,18 @@
 - 不凑数。不用预告、营销、转帖截断、只有标题链接或缺上下文的内容；负责人只有一两个词的短句记为 defer。与已播事件去重，包括引用同一公告的负责人帖。
 - **终末地森空岛帖**：末尾固定的“————————▼ 当前版本已开启…”是宣传语，不是该帖新闻。skland_capture.js 已裁掉这段，仍要只按帖子自身正文和配图判断；正文只剩标题的不报。
 - 选配图前看一眼图片内容，确认和该页事件一致（曾出现过把下一期预告图当本期配图）。每页至少一张相关图，新闻原图优先，`image`/`image_source_url` 取自该文章的 related_images；缺图才用官方游戏/公司标识。
-- **篇幅**：素材充足时 6–10 条、3–5 分钟（AI 3–5 条，游戏 3–6 条）；不足就如实变短。在 editorial 写 `rejections:{item_id:落选原因}`，覆盖所有看过但没选的候选。import 会生成 selection-report.json，unreviewed 应接近 0。
-- **顺序**：早报 AI→游戏，晚报 游戏→AI。00 导览之后，正文01 = 封面头条 = lead_event_id。当天已公开的 temporary 临时新闻由导入自动作为回顾插入。
+- **篇幅**：AI早报素材充足时 6–12 条、3–5 分钟；游戏情报 3–8 条，宁缺毋滥；不足就如实变短（成片仍须 >30 秒）。在 editorial 写 `rejections:{item_id:落选原因}`，覆盖本系列所有看过但没选的候选。import 会生成本系列的 selection-report.json，unreviewed 应接近 0。
+- **头条**：按影响力选正文01——新模型/大版本/新玩法 > 价格、额度、可用性变化 > 卡池与新干员 > 福利活动 > 其他；同分时国内厂商、国服优先。正文01 = 封面头条 = lead_event_id。当天已公开的 temporary 临时新闻由导入自动作为回顾插入（仅 AI早报）。
 
 ## 4. 写稿与导入
-- 参照最近一期 `data/<slot>-<YYYYMMDD>/editorial.json` 的格式写本期 editorial.json，producer 填 `"DeepSeek Harness"`。
+- 参照最近一期 editorial.json 的格式，在本系列的编辑目录写 editorial.json，producer 填 `"DeepSeek Harness"`。顶层必须有：
+  - `"id"`（见表格）、`"edition_date"`、`"edition_slot"`（ai 填 morning，两款游戏填 night）、`"edition_series"`（ai / arknights / endfield）；
+  - `"hook"`：一句 8–45 字、以句号/叹号/问号结尾的头条句，直接说当天最重要的事，例如“卫戍协议改为赛季制常驻，每周期两个序列。”。它替代过去的“这是本视频的导览。”，作为开场口播；不能含“导览”二字，内容必须来自正文01的原文事实。
 - X 来源要有 author_handle、claim_type、attribution_checked、author_spoken_aliases、context_evidence、evidence。事实只写原文有的。
-- 每条都读完整官方原文。口播 150–250 字，facts 3–4 条；补原文里的背景、时间、适用范围和影响对象，不加原文没有的评价。文风按项目 help-me-speech 的 news 模式，X 消息写明主体和北京时间原分钟。00 导览只播“这是本视频的导览。”。
+- 每条都读完整官方原文。口播 150–250 字，facts 3–4 条；补原文里的背景、时间、适用范围和影响对象，不加原文没有的评价。文风按项目 help-me-speech 的 news 模式，X 消息写明主体和北京时间原分钟。三个系列的 00 页开场口播都由 hook 生成，不再播“这是本视频的导览。”；系列内只有一个栏目，正文不再加“先来看/接下来是”的栏目过渡。
 - 运行 `python -B news_video.py import-editorial <editorial路径>`。
 - 在期次目录写两个文件：
-  - publication.json：title_groups 每类取一条，lead_event_id 一致，tags 含“明日方舟”“终末地”，auto_publish 为 true。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
+  - publication.json：title_groups 只能有一组，kind 为本系列的类别（ai 填 `ai`，两款游戏填 `games`），event_ids 放 1–2 条（第一条是头条），lead_event_id 一致，auto_publish 为 true。生成的标题形如“头条事件标题、次要事件标题｜明日方舟情报 11.7”（直接取正文页 title），不带“AI：/游戏：”前缀，超过 60 字会报 TITLE_TOO_LONG，请把正文标题写短。tags 只填本期事实相关的词，系列固定标签由代码自动放在最前面。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
   - cover.json：headline_top、headline_main、highlight 必须是头条标题、口播或 facts 里原样出现的文字，并且要短。
 - 再运行 `python -B publication_policy.py title episodes/<ID> --write`。所有 JSON 用无 BOM 的 UTF-8。
 
@@ -78,8 +98,8 @@
 
 ## 7. 投稿
 - 运行 `python -B render_sample.py <ID> --resume-export`。它会准备 release、写已用新闻记录，并按已授权的默认设置自动投稿：
-  - 分区科技数码，合集 News，原创/禁止转载＋AI 生成声明；
-  - 活动 morning=1325166，night=8314，精确选择，不换热门活动。
+  - 合集 News，原创/禁止转载＋AI 生成声明；
+  - 分区与活动按系列自动选择（见文首表格）：ai 投科技数码、挂当时热度最高的可参加活动；arknights 投游戏、精确挂 8314；endfield 投游戏、精确挂 1325166。游戏两条找不到指定活动就停止，不换别的活动。
 - 读 release 目录的 release.json、upload-attempt.json 和 upload.receipt.json，核对回执中的 bvid、标题、分区、合集、声明和活动标签读回。
 - 然后运行一次 `python -B upload_bridge.py recover <release目录>`。审核中就如实记为已提交、未公开，不要重投。
 

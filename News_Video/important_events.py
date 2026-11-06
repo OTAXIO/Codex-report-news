@@ -114,6 +114,8 @@ def prepare_main_recaps(ep,root=None):
 
 def validate_recap(scene,ep,root=None):
     if ep.get('edition_slot') not in {'morning','noon','night'}:raise ValueError('Recaps are for scheduled main editions only')
+    from edition_series import includes_ai
+    if not includes_ai(ep):raise ValueError('Recaps of AI alerts belong to the AI video only')
     event=next((e for e in recap_candidates(root) if e['event_key']==scene.get('event_key') and e['url']==scene.get('recap_of')),None)
     if not event or event['scene']['item_id']!=scene.get('item_id'):raise ValueError('Recap requires a verified published temporary event within 24 hours')
     if not recap_allowed_for_event(event,ep,root):raise ValueError('This event has already appeared in another main video on this Beijing date')

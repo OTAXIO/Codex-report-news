@@ -15,6 +15,8 @@ def title_for(episode, publication):
         if not is_overview(scene):stories.setdefault(event_id(scene), scene)
     groups=publication.get('title_groups')
     if not isinstance(groups,list) or not groups:raise ValueError('TITLE_CONTENT_REQUIRED: select final events in title_groups')
+    from edition_series import spec
+    series=spec(episode)
     parts=[];seen=set();kinds=set()
     for group in groups:
         kind=group.get('kind');ids=group.get('event_ids')
@@ -29,8 +31,15 @@ def title_for(episode, publication):
             seen.add(key);title=scene['title'].strip()
             if not title or re.search(r'[|｜\n\r]',title):raise ValueError('TITLE_STORY_SEPARATOR_INVALID')
             titles.append(title)
-        parts.append(('游戏：' if kind=='games' else 'AI：')+'、'.join(titles))
+        # A single-audience series needs no category prefix; its name ends the title.
+        parts.append('、'.join(titles) if series else ('游戏：' if kind=='games' else 'AI：')+'、'.join(titles))
     if episode['lead_event_id'] not in seen:raise ValueError('TITLE_LEAD_MISSING')
+    if series:
+        if kinds-set(series['kinds']):raise ValueError('TITLE_CATEGORY_OUTSIDE_SERIES')
+        date=episode['edition_date']
+        title='｜'.join(parts+[f"{series['label']} {int(date[5:7])}.{int(date[8:10])}"])
+        if len(title)>60:raise ValueError('TITLE_TOO_LONG: pick one or two events in title_groups (series titles stay within 60 characters)')
+        return title
     date=episode['edition_date'];slot={'morning':'早报','night':'晚报'}[episode['edition_slot']]
     return '｜'.join(parts+[f'{int(date[5:7])}月{int(date[8:10])}日{slot}'])
 

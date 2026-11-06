@@ -12,6 +12,13 @@ def edition_order(episode,root=None):
     # Persisted plans stay stable when a default changes during recovery.
     planned=(episode.get('story_order') or {}).get('default_order')
     configured=config(root).get('editorial',{}).get('story_order',{}).get('by_slot',{}) if root is not None else {}
+    from edition_series import spec
+    single=spec(episode)
+    if single:
+        # A single-audience series has one module; an old mixed plan cannot apply.
+        order=list(single['kinds'])
+        if planned and list(planned)!=order:raise ValueError('Story order does not match edition_series')
+        return order
     order=planned or configured.get(episode['edition_slot']) or EDITION_ORDER[episode['edition_slot']]
     if len(order)!=2 or set(order)!={'ai','games'}:
         raise ValueError('Story order must contain ai and games exactly once')
@@ -75,6 +82,7 @@ def apply_story_order(episode,root=None):
         ai.extend(related);leaders=[k for k in leaders if k not in related]
     ai+=leaders
     modules_by_kind={'games':games,'ai':ai}
+    single_module=len(default_order)==1
     order=list(dict.fromkeys([lead]+major+[key for kind in default_order for key in modules_by_kind[kind]]))
     body=[s for key in order for s in groups[key]]
     for scene in body:
@@ -89,7 +97,8 @@ def apply_story_order(episode,root=None):
             # Do not duplicate an authored or old generated module preamble.
             if group=='games':intro=('先来看游戏资讯。' if previous is None else '接下来是游戏资讯。')
             elif group=='ai':intro=('先来看AI动态。' if previous is None else '接下来是AI动态。')
-            if intro and not scene.get('narration','').startswith(('接下来是游戏资讯','先来看游戏资讯','接下来是AI动态','先来看AI动态')):
+            # A single-audience video needs no module announcement.
+            if intro and not single_module and not scene.get('narration','').startswith(('接下来是游戏资讯','先来看游戏资讯','接下来是AI动态','先来看AI动态')):
                 scene['module_intro_text']=intro;scene['narration']=intro+scene.get('narration','')
         previous=group
     episode['scenes']=guides+body
@@ -121,9 +130,11 @@ def config(root):
     path=Path(root)/'config.json'
     return json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
 
-def tags(values):
-    # Reserve two mandatory tags and one platform activity slot.
-    return FIXED_TAGS+list(dict.fromkeys(t for t in values if t not in FIXED_TAGS))[:7]
+def tags(values,episode=None):
+    # Reserve the series' mandatory tags and one platform activity slot (10 total).
+    from edition_series import fixed_tags
+    fixed=fixed_tags(episode)
+    return fixed+list(dict.fromkeys(t for t in values if t not in fixed))[:9-len(fixed)]
 
 def validate_video(root,video):
     cfg=config(root)
@@ -143,6 +154,8 @@ def validate_content(episode):
     if episode.get('edition_slot') not in {'morning','night'}:return
     body=[s for s in episode['scenes'] if s.get('scene_type')!='overview']
     if any(s.get('section','').startswith(('国内','国际')) for s in body):raise ValueError('New main editions contain AI and game news only; social news removed')
+    from edition_series import validate as validate_series
+    validate_series(episode)
     seen={}
     for s in body:
         event=s.get('event_key') or s.get('item_id') or s.get('id')

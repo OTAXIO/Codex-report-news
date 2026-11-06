@@ -24,10 +24,17 @@ def digest(path):
         for chunk in iter(lambda:f.read(1024*1024),b''):h.update(chunk)
     return h.hexdigest()
 
-def naming(date,slot,edition_timestamp=None,alert_id=None):
+def naming(date,slot,edition_timestamp=None,alert_id=None,series=None):
     date=dt.date.fromisoformat(date)
     if slot not in SLOTS:raise ValueError('Unknown edition slot')
     folder=f'{date:%Y_%m_%d}_{slot}'
+    label=SLOTS[slot]
+    if series:
+        from edition_series import SERIES
+        if SERIES[series]['slot']!=slot:raise ValueError('Edition series does not belong to this slot')
+        # Morning keeps its historical folder; each evening game gets its own.
+        if series!='ai':folder+='_'+series
+        label=SERIES[series]['label']
     if slot=='temporary':
         if not edition_timestamp or not re.fullmatch(r'[a-f0-9]{12,64}',alert_id or ''):
             raise ValueError('Temporary news requires timestamp and stable alert ID')
@@ -36,7 +43,7 @@ def naming(date,slot,edition_timestamp=None,alert_id=None):
         when=when.astimezone(dt.timezone(dt.timedelta(hours=8)))
         if when.date()!=date:raise ValueError('Temporary edition date mismatch')
         folder+='_'+when.strftime('%H%M%S')+'_'+alert_id
-    return folder,f'{folder}_{SLOTS[slot]}.mp4'
+    return folder,f'{folder}_{label}.mp4'
 
 def infer_slot(ep):
     if ep.get('edition_slot') in SLOTS:return ep['edition_slot']
@@ -46,7 +53,7 @@ def infer_slot(ep):
     raise ValueError('Set edition_slot to morning, noon, night or temporary')
 
 def release_target(root,ep,slot):
-    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'));target=release_root(root)/folder
+    folder,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'),ep.get('edition_series'));target=release_root(root)/folder
     if (target/'release.json').exists():
         previous=json.loads((target/'release.json').read_text(encoding='utf-8'))
         if previous.get('episode_id')!=ep['id']:
@@ -79,7 +86,7 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     from production_policy import validate_lead_contract
     cover_path=source/'cover.json'
     validate_lead_contract(ep,publication,json.loads(cover_path.read_text(encoding='utf-8')) if cover_path.exists() else {})
-    publication['tags']=tags(publication.get('tags',[]))
+    publication['tags']=tags(publication.get('tags',[]),ep)
     (source/'publication.json').write_text(json.dumps(publication,ensure_ascii=False,indent=2),encoding='utf-8')
     check=json.loads((source/'check.json').read_text(encoding='utf-8-sig'))
     if not check.get('ok'):raise ValueError('Video check has not passed')
@@ -123,7 +130,7 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     publication=json.loads((source/'publication.json').read_text(encoding='utf-8'))
     (target/'title.txt').write_text(publication['title']+'\n',encoding='utf-8')
     (target/'tags.txt').write_text('\n'.join(publication.get('tags',[]))+'\n',encoding='utf-8')
-    receipt=dict(state='ready_for_upload',published=False,episode_id=episode_id,edition_slot=slot,
+    receipt=dict(state='ready_for_upload',published=False,episode_id=episode_id,edition_slot=slot,edition_series=ep.get('edition_series'),
         edition_date=ep['edition_date'],directory=str(target),relative_directory=target.relative_to(release_root(root)).as_posix(),video_filename=video_name,
         prepared_at=dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).isoformat(),archive_files=files,
         duration=timing['duration'],upload_source='release only',
@@ -161,7 +168,7 @@ def attach_used_record(directory,source):
 def migrate_video_name(directory):
     directory=Path(directory).resolve();receipt=json.loads((directory/'release.json').read_text(encoding='utf-8'))
     ep=json.loads((directory/'episode.json').read_text(encoding='utf-8'))
-    slot=infer_slot(ep);_,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'))
+    slot=infer_slot(ep);_,name=naming(ep['edition_date'],slot,ep.get('edition_timestamp'),ep.get('temporary_event_id') or ep.get('alert_id'),ep.get('edition_series'))
     old_name=receipt.get('video_filename','sample.mp4');source=directory/old_name;target=directory/name
     if source!=target and source.exists():
         before=digest(source)
