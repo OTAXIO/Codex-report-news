@@ -559,6 +559,10 @@ def import_editorial(path):
     apply_story_order(episode,ROOT)
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
+    from community_sources import assign_image
+    for scene in episode['scenes']:
+        # 玩家热议 pages show the discussed video's cover, never the game logo.
+        if scene.get('segment')=='community' and scene.get('item_id'):assign_image(scene,ROOT)
     from scene_media import prepare as prepare_scene_media
     media_audit=prepare_scene_media(episode,ROOT)
     if episode.get('edition_slot')=='temporary':
@@ -603,7 +607,7 @@ def import_editorial(path):
                     if not inspected.exists() or not load(inspected).get('body_complete'):
                         raise ValueError('Read full Skland official article before selecting it')
                     scene['published']=load(inspected)['published'];scene['published_precision']=load(inspected)['published_precision']
-            if scene.get("image") and row["kind"]=="games":
+            if scene.get("image") and row["kind"]=="games" and segment!='community':
                 article_path=ROOT/"data/articles"/(row["id"]+".json")
                 if not article_path.exists() or not any(x.get("file")==scene["image"] and x.get("source_url")==scene.get("image_source_url") for x in load(article_path).get("related_images",[])):raise ValueError("Game picture must match the inspected official article and recorded source URL")
             if scene.get("source_url") != row["url"]: raise ValueError("Source URL does not match collected candidate")

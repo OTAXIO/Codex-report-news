@@ -90,6 +90,25 @@ def fitted_tag(text,initial,width,**style):
         if layer.width<=width:return layer
     raise ValueError('Cover text is too long; shorten the factual headline')
 
+def art_panel(brief,max_w,max_h,border=10):
+    """News pictures fill a frame of their own aspect (clamped to 3:4..2:1, centre-cropped beyond);
+    logos keep a white square so their artwork has a clean background."""
+    from PIL import ImageOps
+    path=(ROOT/brief['image']).resolve()
+    if '/logos/' in path.as_posix():
+        side=min(max_w,max_h)-40;art=cover_art(brief,side-120)
+        inner=Image.new('RGBA',(side,side),'white');inner.paste(art,((side-art.width)//2,(side-art.height)//2),art)
+    else:
+        art=cover_art(brief,4096).convert('RGB')
+        ratio=min(max(art.width/art.height,0.75),2.0)
+        w=min(max_w-2*border,round((max_h-2*border)*ratio));h=round(w/ratio)
+        inner=ImageOps.fit(art,(w,h),Image.Resampling.LANCZOS).convert('RGBA')
+    framed=Image.new('RGBA',(inner.width+2*border+6+22,inner.height+2*border+6+22),(0,0,0,0));fd=ImageDraw.Draw(framed)
+    W,H=inner.width+2*border+6,inner.height+2*border+6
+    fd.rectangle((22,22,W+21,H+21),fill=BLACK);fd.rectangle((0,0,W-1,H-1),fill=BLACK)
+    fd.rectangle((3,3,W-4,H-4),fill='white');framed.paste(inner,(3+border,3+border),inner)
+    return framed.rotate(3,resample=Image.Resampling.BICUBIC,expand=True)
+
 def persona_canvas(ep,brief,height):
     """Video-matching P3 blue/white cover; 4:3 is laid out natively, not letterboxed."""
     W,H=1920,height;dy=(H-1080)//2
@@ -101,26 +120,25 @@ def persona_canvas(ep,brief,height):
     d.polygon([(0,edge(0,band)-30),(W,edge(W,band)-30),(W,edge(W,band)-20),(0,edge(0,band)-20)],fill=NAVY)
     d.polygon([(0,edge(0,band)-12),(W,edge(W,band)-12),(W,edge(W,band)),(0,edge(0,band))],fill=BLACK)
     d.polygon([(0,edge(0,band)),(W,edge(W,band)),(W,H),(0,H)],fill='white')
-    # Verified art in a tilted white frame with an ink outline and hard shadow.
-    art=cover_art(brief,520);frame=Image.new('RGBA',(600,600),'white');frame.paste(art,((600-art.width)//2,(600-art.height)//2),art)
-    framed=Image.new('RGBA',(640,640),(0,0,0,0));fd=ImageDraw.Draw(framed)
-    fd.rectangle((28,28,639,639),fill=BLACK);fd.rectangle((0,0,611,611),fill=BLACK);framed.paste(frame,(6,6))
-    framed=framed.rotate(4,resample=Image.Resampling.BICUBIC,expand=True)
-    cx,cy=1450,440+dy;image.paste(framed,(cx-framed.width//2,cy-framed.height//2),framed)
+    # Verified art in a tilted frame with an ink outline and hard shadow. The frame takes the
+    # picture's own shape and fills the right column (2026-11-09: a fixed square left wide
+    # news pictures as a thin strip in white space).
+    framed=art_panel(brief,820,620 if H==1080 else 860)
+    cx,cy=1460,(445 if H==1080 else 600);image.paste(framed,(cx-framed.width//2,cy-framed.height//2),framed)
     if brief.get('image_label'):
-        label=tag(brief['image_label'],font(38),'white',BLACK,shadow=BLUE,offset=6,padx=22,pady=8)
-        image.paste(label,(cx-label.width//2,cy+framed.height//2-34),label)
+        label=tag(brief['image_label'],font(40),'white',BLACK,shadow=BLUE,offset=6,padx=22,pady=8)
+        image.paste(label,(cx+framed.width//2-label.width-30,cy+framed.height//2-40),label)
     # Headline stack: slot tag, subject, black title bar, oversized highlight.
     slot=tag(slot_label(ep),font(54),BLUE,'white',shadow=BLACK,offset=8,padx=26,pady=10)
     image.paste(slot,(104,70+dy//2),slot)
     y=200+dy
     if brief.get('headline_top'):
-        top=fitted_tag(brief['headline_top'],150,960,fg='white',bg=None,outline=BLACK,offset=10)
+        top=fitted_tag(brief['headline_top'],150,900,fg='white',bg=None,outline=BLACK,offset=10)
         image.paste(top,(104,y),top);y+=top.height+24
-    main=fitted_tag(brief['headline_main'],110,980,fg='white',bg=BLACK,shadow='white',offset=12,padx=28,pady=14)
+    main=fitted_tag(brief['headline_main'],110,900,fg='white',bg=BLACK,shadow='white',offset=12,padx=28,pady=14)
     image.paste(main,(96,y),main);y+=main.height+34
     if brief.get('highlight'):
-        hi=fitted_tag(brief['highlight'],170,960,fg=BLUE,bg='white',shadow=BLACK,offset=14,padx=30,pady=6)
+        hi=fitted_tag(brief['highlight'],170,900,fg=BLUE,bg='white',shadow=BLACK,offset=14,padx=30,pady=6)
         image.paste(hi,(110,min(y,band-hi.height-70)),hi)
     # The edition date appears exactly once, on the white band.
     date=ep['edition_date'][5:].replace('-','.')

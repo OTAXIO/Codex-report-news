@@ -183,6 +183,24 @@ class CommunityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'COMMUNITY_SUBJECT_MISMATCH'):
                 bad=self.scene(game='arknights',subject=dict(game='arknights',entity_type='character',entity_name='阿米娅'));cs.validate_scene(bad,self.episode([bad]),root)
 
+    def test_page_picture_is_the_discussed_video_cover(self):
+        from PIL import Image
+        with Root() as root:
+            snap=self.snapshot(root,titles=('明河配队心得【终末地】','终末地活动奖励一览'),
+                               texts=None)
+            snap['videos'][1]['comments_hot']=[dict(text=f'明河第{i}条讨论',likes=1,sort='hot') for i in range(20)]
+            for v in snap['videos']:
+                path=root/'assets/community'/(v['bvid']+'.jpg');path.parent.mkdir(parents=True,exist_ok=True)
+                Image.new('RGB',(640,360),'red').save(path)
+                v.update(cover='assets/community/'+v['bvid']+'.jpg',cover_sha256=cs.hashlib.sha256(path.read_bytes()).hexdigest())
+            n.dump(root/'data/community/snap1.json',snap)
+            sc=self.scene(videos=['BV0','BV1'])
+            self.assertEqual(cs.assign_image(sc,root),'BV1')  # most mentions of 明河
+            self.assertEqual((sc['image'],sc['image_source_url']),('assets/community/BV1.jpg','https://www.bilibili.com/video/BV1'))
+            with self.assertRaisesRegex(ValueError,'COMMUNITY_IMAGE'):cs.assign_image(self.scene(image='assets/logos/endfield-identity.png'),root)
+            (root/'assets/community/BV0.jpg').write_bytes(b'x')
+            with self.assertRaisesRegex(ValueError,'COMMUNITY_IMAGE'):cs.assign_image(self.scene(videos=['BV0'],image='assets/community/BV0.jpg'),root)
+
     def test_wrong_game_video_and_thin_samples_are_rejected(self):
         with Root() as root:
             self.snapshot(root,titles=('危机合约新赛季【明日方舟】',))

@@ -92,6 +92,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 **玩家热议**（`scene_type:"community_pulse"`，每期最多 3 页）：
 - 填 `item_id`（快照ID）、`game`、`subject:{game, entity_type, entity_name}`（entity_type 取 glossary 的 character/event/mode/banner/item/place）、`videos:[bvid]`（来自快照且标题属于本游戏）、`sample_count`（所引视频去重后的评论＋弹幕总条数，须 ≥30 且其中提到该对象的 ≥5 条；填错时报错信息会给出正确数字，口播里用阿拉伯数字原样写出）、可选 `quotes`（≤3 条、每条 ≤20 字，从样本原样照抄）。
 - 口播必须说明是玩家看法（“玩家……认为/觉得/吐槽/期待”），并念出样本条数；不点名用户、不带 @，不放粗口、引战和剧透。
+- 配图不用填：导入时自动取所引视频里提到该对象最多的那个视频封面（采集时已保存）。若自己指定 `image`，必须是所引视频之一的封面，不能用游戏图标或无关图片。
 
 ## 4. 写稿与导入
 - 参照最近一期 editorial.json 的格式，在本系列的编辑目录写 editorial.json，producer 填 `"DeepSeek Harness"`。顶层必须有：

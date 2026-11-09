@@ -81,3 +81,5 @@ B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并
 阅读区坐标、单行字幕、导航采样坐标与B版共用，DOM审计及最终MP4蓝色验收不放宽。编号字体为本机Impact，与微软雅黑一样仅本地复制进期次visuals目录，不进Git/交接包。用户确认样片后设为默认：config.rendering.default_template=persona，新早晚主片与临时新闻均使用；B（graphic）仍可首次构建显式`--template graphic`选择。已有render-plan的在制期次沿用原模板，已发布不重做。用户已逐轮确认静帧样例；隔离样片persona-preview-20261031复用10月31日晚报已发布素材，preview/diagnostic_hold，不写已用新闻、不投稿。
 
 封面同日改为P3蓝白版并设为默认：config.cover_generation.style=persona，仍是cover_generator.py <id>的Pillow路径，与视频render-plan相互独立。#01A1FE底配深蓝速度线；左侧依次为时段白色斜切标签、白色大字主体（墨黑硬投影）、黑底白字headline_main标题条、白底蓝字highlight；右侧为斜放白框配图（墨黑描边与投影）及image_label标签；底部白色斜切色带只放一次大日期（footnote与时段相同则不重复）。16:9与4:3分别排版，cover-bilibili.jpg仍由4:3缩放。cover.json字段、lead_event_id、文字须见于头条的发布校验均不变。`--style legacy`可显式生成旧版；样例见persona-preview-20261031与cover-sample-20261031-morning（后者仅复制早报已发布元数据出封面，不渲染、不投稿）。
+
+2026-11-09 封面配图放大（用户反馈配图太小）：右侧配图框改为跟随图片本身比例（限制在3:4到2:1之间，超出部分居中裁切），最大约820×620（4:3版约820×860），去掉方形白框里的大片留白；标题三行最大宽度相应收到900，避免压到配图。logo类图片仍放在白色方框内。仅作用于之后新制作的封面，已发布封面不重做。

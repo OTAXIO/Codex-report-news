@@ -54,3 +54,5 @@ News_Video/out/
 
 # Downloaded official game media is local production material.
 News_Video/assets/game-news/
+# B站 video covers for 玩家热议 pages are local production material.
+News_Video/assets/community/

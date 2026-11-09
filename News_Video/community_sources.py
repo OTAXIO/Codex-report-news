@@ -113,12 +113,30 @@ def search_jobs(series,now,root=None):
     hot=[dict(label='hot',url=f'{base}&pubtime_begin_s={begin}&pubtime_end_s={end}'+(f'&page={p}' if p>1 else '')) for p in range(1,pages+1)]
     return hot+[dict(label='newest',url=f'{base}&order=pubdate')]
 
+HEAD={'User-Agent':'Mozilla/5.0','Referer':'https://www.bilibili.com'}
+
+def view(bvid):
+    """Public video facts (cid, cover); anonymous and read-only."""
+    import urllib.request
+    return json.loads(urllib.request.urlopen(urllib.request.Request('https://api.bilibili.com/x/web-interface/view?bvid='+bvid,headers=HEAD),timeout=20).read())['data']
+
+def save_cover(bvid,root=None,fetch_view=view):
+    """The video's own cover is the page picture for a topic about that video (2026-11-09 user decision:
+    community pages show what players discuss, not the game logo). Stored under assets/ like news images."""
+    import io,urllib.request
+    from PIL import Image
+    root=Path(root or n.ROOT);url=fetch_view(bvid)['pic'].replace('http://','https://')
+    raw=urllib.request.urlopen(urllib.request.Request(url,headers=HEAD),timeout=30).read()
+    with Image.open(io.BytesIO(raw)) as im:
+        im=im.convert('RGB');im.thumbnail((1600,1600))
+        target=root/'assets/community'/(bvid+'.jpg');target.parent.mkdir(parents=True,exist_ok=True);im.save(target,quality=90)
+    return dict(cover=target.relative_to(root).as_posix(),cover_url=url,cover_sha256=hashlib.sha256(target.read_bytes()).hexdigest())
+
 def danmaku(bvid,limit=200):
     """Public danmaku; anonymous and read-only."""
-    head={'User-Agent':'Mozilla/5.0','Referer':'https://www.bilibili.com'}
     import urllib.request
-    view=json.loads(urllib.request.urlopen(urllib.request.Request('https://api.bilibili.com/x/web-interface/view?bvid='+bvid,headers=head),timeout=20).read())
-    raw=urllib.request.urlopen(urllib.request.Request(f"https://comment.bilibili.com/{view['data']['cid']}.xml",headers=head),timeout=20).read()
+    head=HEAD;info=view(bvid)
+    raw=urllib.request.urlopen(urllib.request.Request(f"https://comment.bilibili.com/{info['cid']}.xml",headers=head),timeout=20).read()
     try:raw=zlib.decompress(raw,-zlib.MAX_WBITS)
     except zlib.error:pass
     import html
@@ -134,7 +152,7 @@ def clean(items,root=None):
         kept.append(dict(item,text=text))
     return kept,dropped
 
-def collect(series,root=None,reader=run_reader,read_danmaku=danmaku,now=None):
+def collect(series,root=None,reader=run_reader,read_danmaku=danmaku,now=None,cover=save_cover):
     if series not in SERIES:raise ValueError('Use --series arknights or endfield')
     root=Path(root or n.ROOT);now=now or dt.datetime.now(n.UTC)
     report=dict(kind='community',series=series,started=now.isoformat(),ok=False)
@@ -154,6 +172,8 @@ def collect(series,root=None,reader=run_reader,read_danmaku=danmaku,now=None):
         video['comment_header']=page.get('header')
         try:video['danmaku'],d=clean([dict(text=t) for t in read_danmaku(video['bvid'])],root);dropped+=d
         except Exception as error:video['danmaku']=[];video['danmaku_error']=type(error).__name__
+        try:video.update(cover(video['bvid'],root))
+        except Exception as error:video['cover_error']=type(error).__name__
     key=hashlib.sha256(f'community-{series}:{now.isoformat()}'.encode()).hexdigest()[:20]
     title={'arknights':'明日方舟','endfield':'明日方舟：终末地'}[series]+' B站玩家热议素材'
     snapshot=dict(id=key,source_id='community-'+series,game=series,game_region='cn',game_topic='other',source_type='community',
@@ -173,6 +193,23 @@ def collect(series,root=None,reader=run_reader,read_danmaku=danmaku,now=None):
     finally:db.close()
     report.update(ok=True,item_id=key,videos=len(videos),samples=sum(len(v['comments_hot'])+len(v['comments_newest'])+len(v['danmaku']) for v in videos),dropped_by_filter=dropped)
     return report
+
+def assign_image(scene,root=None):
+    """Page picture = cover of the cited video with the most mentions of the topic.
+    A picture chosen by the editor must be one of the cited videos' covers."""
+    root=Path(root or n.ROOT);snap=snapshot(scene['item_id'],root);name=(scene.get('subject') or {}).get('entity_name') or ''
+    cited=[v for v in snap['videos'] if v['bvid'] in set(scene.get('videos') or []) and v.get('cover')]
+    if scene.get('image'):
+        match=next((v for v in cited if v['cover']==scene['image']),None)
+        if not match:raise ValueError('COMMUNITY_IMAGE: use the cover of a cited video, not a logo or unrelated picture')
+    else:
+        if not cited:return None
+        match=max(cited,key=lambda v:sum(name in s['text'] for s in samples(snap,{v['bvid']})))
+        scene['image']=match['cover']
+    path=root/match['cover']
+    if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest()!=match['cover_sha256']:raise ValueError('COMMUNITY_IMAGE: cover file missing or changed')
+    scene['image_source_url']='https://www.bilibili.com/video/'+match['bvid']
+    return match['bvid']
 
 # --- Topics & import gate ---------------------------------------------------------
 def snapshot(item_id,root=None):
