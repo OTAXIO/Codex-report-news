@@ -410,6 +410,8 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
                         segment='rumor',evidence_path='data/rumors/'+item['id']+'.json')
         elif source.get('rumor'):item.update(rumor=True,source_type='rumor_'+source.get('rumor_platform','feed'),rumor_tier=source.get('tier','C'),segment='rumor')
         elif source.get('tier')=='media':item.update(media=True,segment='media')
+        elif item['source_id']=='github-trending':item.update(segment='github',evidence_path='data/github-trending/items/'+item['id']+'.json')
+        elif item['source_id'].startswith('community-'):item.update(segment='community',evidence_path='data/community/'+item['id']+'.json')
         elif item['kind']=='ai':item['segment']='official'
         from editorial_policy import region_of
         item['region']=region_of(item,sources,config().get('editorial',{}))
