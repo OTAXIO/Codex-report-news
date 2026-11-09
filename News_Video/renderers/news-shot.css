@@ -48,7 +48,7 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 .has-diagram .brand b{display:none}
 /* Tall posters use the full reading height instead of a shallow landscape window. */
 .portrait-media .photo,.game.portrait-media .photo{left:1080px;top:112px;width:560px;height:calc(700px + var(--content-extra-y,0px))}
-.portrait-media .photo img{object-fit:contain}
+.portrait-media .photo img{object-fit:cover;object-position:top}
 .portrait-media h1,.graphic .portrait-media h1{width:940px}
 .portrait-media .facts,.game.portrait-media .facts,.original.portrait-media .facts{width:900px}
 .portrait-media .source,.portrait-media .identity{width:900px}
