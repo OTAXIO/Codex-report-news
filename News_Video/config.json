@@ -254,7 +254,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "172385ddf4feaac5f571ab69247709e5a8d85090079c51cfea0e42792ab3a7e4",
+    "implementation_sha256": "dee90ca1ef83540f1f84a742eed8258961a20e314edf95447980f06d40c1ffbe",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -263,7 +263,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "5d5ef52c439c8d9b52461988d6ce6aa4ac83178302f46fd4fb1120a9a021b20e"
+    "validation_sha256": "fc09ba060ff17d092294e98d6c5b64714aec1d2d2acf2dc6fb0787827f7e3b29"
   },
   "workspace_directory": "../..",
   "presentation": {
