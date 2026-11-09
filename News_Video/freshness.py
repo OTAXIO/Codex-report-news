@@ -95,6 +95,29 @@ def effective_check(root,item_id,effective_at,quote,reference,before_hours,after
         return dict(ok=True,reason='effective_time_within_window',effective_at=utc.isoformat())
     except (ValueError,TypeError,KeyError) as error:return dict(ok=False,reason='invalid_effective_evidence',detail=str(error))
 
+def window_check(root,item_id,start_at,end_at,quote,reference,ahead_days,max_age_days,evidence,source_type,cfg_types=None):
+    """An ongoing activity: official announcement within max_age_days whose quoted
+    start-end window overlaps [reference, reference+ahead_days] (2026-11-09)."""
+    try:
+        if source_type not in (cfg_types or EFFECTIVE_SOURCES):return dict(ok=False,reason='active_window_not_official_game_source')
+        start=dt.datetime.fromisoformat(str(start_at));end=dt.datetime.fromisoformat(str(end_at))
+        if start.tzinfo is None or end.tzinfo is None:return dict(ok=False,reason='active_window_needs_timezone')
+        if end<=start:return dict(ok=False,reason='active_window_end_before_start')
+        text=official_text(root,item_id)
+        if not quote or quote not in text:return dict(ok=False,reason='active_window_quote_not_in_official_text')
+        if not any(t in quote for t in date_tokens(start)) or not any(t in quote for t in date_tokens(end)):
+            return dict(ok=False,reason='active_window_quote_lacks_start_and_end_dates')
+        published=stamp(evidence['original_published_at'])
+        if published<reference-dt.timedelta(days=max_age_days):return dict(ok=False,reason='announcement_too_old_for_active_window')
+        if published>reference:return dict(ok=False,reason='future_announcement')
+        horizon=reference+dt.timedelta(days=ahead_days)
+        if end.astimezone(UTC)<reference or start.astimezone(UTC)>horizon:return dict(ok=False,reason='activity_outside_window')
+        state='ending' if end.astimezone(UTC)<=reference+dt.timedelta(days=3) else 'ongoing' if start.astimezone(UTC)<=reference else 'upcoming'
+        return dict(ok=True,reason='activity_within_window',state=state,start_at=start.astimezone(UTC).isoformat(),end_at=end.astimezone(UTC).isoformat())
+    except (ValueError,TypeError,KeyError) as error:return dict(ok=False,reason='invalid_active_window_evidence',detail=str(error))
+
+ACTIVITY_STATE_ORDER={'ending':0,'ongoing':1,'upcoming':2}
+
 def effective_policy(root):
     path=Path(root)/'config.json'
     cfg=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {}
@@ -144,7 +167,7 @@ def audit_episode(episode,root,reference=None,bind=False):
             hours=min(hours,cfg.get(policy,{}).get('max_age_hours',6))
         result=dict(item_id=scene.get('item_id'),hours=hours,evidence=evidence,**check(evidence,reference,hours))
         basis=scene.get('freshness_basis')
-        if basis in {'effective_time','schedule'}:
+        if basis in {'effective_time','schedule','active_window'}:
             policy=effective_policy(root)
             if not policy.get('enabled') or scene.get('editorial_role')=='recap' or episode.get('edition_slot')=='temporary' or not scene.get('game'):
                 raise ValueError('FRESHNESS: '+str(scene.get('item_id'))+': effective/schedule basis is only for main-edition game scenes')
@@ -166,6 +189,24 @@ def audit_episode(episode,root,reference=None,bind=False):
                 checks.append(dict(item_id=entry.get('item_id'),**c))
             ok=bool(entries) and all(c['ok'] for c in checks)
             result.update(ok=ok,reason='schedule_entries_within_window' if ok else 'schedule_entry_invalid',basis='schedule',schedule_checks=checks)
+        if basis=='active_window':
+            # Activity overview page: 2-3 official activities running now or within 7 days,
+            # each with its quoted start and end, ordered ending -> ongoing -> upcoming.
+            entries=scene.get('activity_items') or []
+            window=policy.get('active_window',{})
+            if not 1<=len(entries)<=window.get('max_items_per_page',3):raise ValueError('FRESHNESS: an activity overview page lists 1-3 activities')
+            checks=[]
+            for entry in entries:
+                ev=evidence_for(root,dict(item_id=entry.get('item_id')))
+                c=window_check(root,entry.get('item_id'),entry.get('start_at'),entry.get('end_at'),entry.get('window_quote'),reference,
+                               window.get('ahead_days',7),window.get('max_announcement_age_days',30),ev,entry.get('source_type'),
+                               set(policy.get('source_types',EFFECTIVE_SOURCES)))
+                checks.append(dict(item_id=entry.get('item_id'),name=entry.get('name'),**c))
+            ok=all(c['ok'] for c in checks)
+            if ok:
+                order=[ACTIVITY_STATE_ORDER[c['state']] for c in checks]
+                if order!=sorted(order):raise ValueError('FRESHNESS: list activities ending soon first, then ongoing, then upcoming')
+            result.update(ok=ok,reason='activities_within_window' if ok else 'activity_entry_invalid',basis='active_window',activity_checks=checks)
         results.append(result)
         if not result['ok']:raise ValueError('FRESHNESS: '+str(scene.get('item_id'))+': '+result['reason'])
         if bind:

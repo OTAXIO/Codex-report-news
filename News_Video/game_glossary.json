@@ -1,0 +1,477 @@
+{
+ "version": 1,
+ "policy": "Discussion subjects must resolve to one game. A term must be reviewed (from an official post) to anchor a topic; a term listed for both games (e.g. 危机合约) only counts when every supporting video title names this game. Refresh with: python -B community_sources.py glossary-candidates",
+ "games": {
+  "arknights": {
+   "names": [
+    "明日方舟",
+    "方舟"
+   ],
+   "exclude_title_terms": [
+    "终末地"
+   ],
+   "terms": [
+    {
+     "name": "罗德岛",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "博士",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "阿米娅",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "凯尔希",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "塔露拉",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "维伊",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "可露希尔",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "嘉辛塔",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "奥尔佳",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "贝洛内",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "凯尔希·思衡托",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "乌啾",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "伯塔尼",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "缪尔赛思",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "凛御银灰",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "银灰",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "松桐",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "镜匠",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "能天使",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "时间啊，向前！",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "卫戍协议",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "将雪投火",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "冻土与火种",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "怒潮凛冬",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "溯光星源",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "月行水上",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "大炎巨侠2",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "恒远津梁",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "感谢庆典",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "危机合约",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "集成战略",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "保全派驻",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "生息演算",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "悖论模拟",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "公开招募",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "拟生态",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "干员密录",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "限定寻访",
+     "type": "banner",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "庆典寻访",
+     "type": "banner",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    }
+   ]
+  },
+  "endfield": {
+   "names": [
+    "终末地",
+    "明日方舟：终末地",
+    "明日方舟终末地"
+   ],
+   "exclude_title_terms": [],
+   "terms": [
+    {
+     "name": "管理员",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "明河",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "陈千语",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "汤汤",
+     "type": "character",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "丹青渡",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "烟火邀星河",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "星河共我",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "月映申领",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "浸蓝测试作战",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "万物有灵",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "归野",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "战争回响",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "百趣演武",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "溯始先声",
+     "type": "event",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "危机合约",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "武库申领",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "集成配额交易",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "协议通行证",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "作战演练",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "武库交易所",
+     "type": "mode",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "特许寻访",
+     "type": "banner",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "干员寻访",
+     "type": "banner",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "基础寻访",
+     "type": "banner",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "唤月",
+     "type": "item",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "玉中身",
+     "type": "item",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "落草",
+     "type": "item",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "嵌晶玉",
+     "type": "item",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "塔卫二",
+     "type": "place",
+     "reviewed": true,
+     "source": "official announcements 2026-09-10..2026-11-09"
+    },
+    {
+     "name": "夜明河",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "怒骊",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "弭弗",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "伊冯",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "梨诺",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "佩丽卡",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "祀诀",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    },
+    {
+     "name": "洁梨",
+     "type": "character",
+     "reviewed": false,
+     "source": "seen in B站 community titles/comments 2026-11-09; confirm against an official post, then set reviewed=true"
+    }
+   ]
+  }
+ }
+}

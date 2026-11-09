@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "policy": "2026-11-09 user decision: AI editions report unofficial rumors first, new-model rumors with priority. A rumor is never presented as fact: every scene attributes its source and states the official status. Accounts are read-only through Agent Reach; never log in for the user or rotate accounts.",
+  "tiers": {
+    "A": "Repeated, checkable finds from primary artifacts (app/web code strings, API listings, feature tests). A single A-tier post may qualify on its own.",
+    "B": "Frequent model leaks with a mixed record. Needs a second independent source or an artifact.",
+    "C": "Aggregators or unknown authors (all search results default to C). Needs a second independent source or an artifact."
+  },
+  "watch_accounts": [
+    {"id": "rumor-x-btibor91", "handle": "btibor91", "name": "Tibor Blaho", "tier": "A", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 8,
+     "track_record": "Editorial default: posts app/web teardown strings and screenshots (artifact evidence). Re-tier with evidence if wrong."},
+    {"id": "rumor-x-testingcatalog", "handle": "testingcatalog", "name": "TestingCatalog News", "tier": "A", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 8,
+     "track_record": "Editorial default: tests unreleased features and model endpoints, usually with screenshots."},
+    {"id": "rumor-x-legit_api", "handle": "legit_api", "name": "Legit", "tier": "B", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 8,
+     "track_record": "Editorial default: frequent model-name leaks; mixed record."},
+    {"id": "rumor-x-chetaslua", "handle": "chetaslua", "name": "Chetaslua", "tier": "B", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 8,
+     "track_record": "Editorial default: tests new models at launch and posts early sightings; mixed record."},
+    {"id": "rumor-x-apples_jimmy", "handle": "apples_jimmy", "name": "Jimmy Apples", "tier": "B", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 6,
+     "track_record": "Editorial default: anonymous OpenAI-focused rumors; vague posts are rejected by the claim rule."},
+    {"id": "rumor-x-kimmonismus", "handle": "kimmonismus", "name": "Chubby", "tier": "C", "enabled": true, "identity_checked": true, "checked_on": "2026-11-09", "limit": 6,
+     "track_record": "Aggregator; useful for discovery, never a sole source."}
+  ],
+  "model_watchlist": [
+    {"family": "GPT", "vendor": "OpenAI", "terms": ["GPT-6", "GPT-6.2", "OpenAI new model"]},
+    {"family": "Claude", "vendor": "Anthropic", "terms": ["Claude Opus 6", "Claude 6", "Anthropic new model"]},
+    {"family": "Gemini", "vendor": "Google", "terms": ["Gemini 4", "Gemini new model"]},
+    {"family": "Grok", "vendor": "xAI", "terms": ["Grok 6", "Grok new model"]},
+    {"family": "DeepSeek", "vendor": "DeepSeek", "terms": ["DeepSeek V5", "DeepSeek R3", "DeepSeek new model"]},
+    {"family": "Qwen", "vendor": "Qwen", "terms": ["Qwen4", "Qwen new model"]},
+    {"family": "Kimi", "vendor": "Kimi", "terms": ["Kimi K3", "Kimi new model"]},
+    {"family": "GLM", "vendor": "Z.ai", "terms": ["GLM-6", "GLM new model"]},
+    {"family": "MiniMax", "vendor": "MiniMax", "terms": ["MiniMax M3", "MiniMax new model"]},
+    {"family": "Seed", "vendor": "ByteDance", "terms": ["Doubao Seed", "豆包 新模型"]},
+    {"family": "Hunyuan", "vendor": "Tencent", "terms": ["Hunyuan", "混元 新模型"]},
+    {"family": "ERNIE", "vendor": "Baidu", "terms": ["ERNIE 6", "文心 新模型"]}
+  ],
+  "search": {
+    "signals": ["leak", "leaked", "spotted", "灰度", "曝光", "泄露"],
+    "limit_per_query": 8,
+    "max_queries_per_run": 8,
+    "min_engagement": {"likes": 20},
+    "spacing_seconds": 10,
+    "note": "One query per model family: (term OR term) (signal OR signal). Families rotate across runs so every family is searched within two runs."
+  }
+}

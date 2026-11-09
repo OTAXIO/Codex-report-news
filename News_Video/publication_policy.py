@@ -5,6 +5,35 @@ from production_policy import event_id, is_game, validate_lead_contract
 from layout_policy import is_overview
 
 
+def normalize(value):
+    return re.sub(r'[\W_]+','',str(value),flags=re.UNICODE).casefold()
+
+
+def describe(episode, publication, timings=None):
+    """Description for upload: chapter list, sources, rumor disclaimer (2026-11-09).
+    A producer-written description wins; the result is never empty."""
+    written=str(publication.get('description') or '').strip()
+    if written:
+        text=written
+    else:
+        lines=[]
+        starts={}
+        for row in (timings or {}).get('sentences',[]):starts.setdefault(row['scene_id'],row['start'])
+        for scene in episode['scenes']:
+            if is_overview(scene):continue
+            stamp=starts.get(scene['id'])
+            label=(f'{int(stamp)//60:02}:{int(stamp)%60:02} ' if stamp is not None else '')+scene['title']
+            if lines and lines[-1].endswith(scene['title']):continue
+            lines.append(label)
+        sources=list(dict.fromkeys(s.get('source_url') for s in episode['scenes'] if s.get('source_url') and not is_overview(s)))
+        text='\n'.join(lines)
+        if sources:text+='\n\n来源：\n'+'\n'.join(sources[:12])
+        if any(s.get('scene_type')=='rumor' for s in episode['scenes']):text+='\n\n传闻内容未经官方证实，请以官方公告为准。'
+        if any(s.get('scene_type')=='community_pulse' for s in episode['scenes']):text+='\n玩家热议为B站公开评论的归纳，代表玩家个人看法。'
+    if not text.strip() or len(text)>2000:raise ValueError('DESCRIPTION_REQUIRED: description must be 1-2000 characters')
+    return text
+
+
 def digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
@@ -37,7 +66,22 @@ def title_for(episode, publication):
     if series:
         if kinds-set(series['kinds']):raise ValueError('TITLE_CATEGORY_OUTSIDE_SERIES')
         date=episode['edition_date']
+        hook=str(publication.get('title_hook') or '').strip()
+        if hook:
+            # 2026-11-09: a short hook may open the title; it must restate facts of the chosen stories.
+            if len(hook)>16 or re.search(r'[|｜\n\r]',hook):raise ValueError('TITLE_HOOK_INVALID: at most 16 characters, no separators')
+            body=normalize(' '.join(stories[k].get('title','')+' '+stories[k].get('narration','')+' '+json.dumps(stories[k].get('facts',[]),ensure_ascii=False) for k in seen))
+            anchors=publication.get('title_hook_evidence') or []
+            if not anchors or any(not normalize(a) or normalize(a) not in body or normalize(a) not in normalize(hook) for a in anchors):
+                raise ValueError('TITLE_HOOK_UNSUPPORTED: list title_hook_evidence phrases that appear in both the hook and the chosen stories')
+            parts=[hook+' '+parts[0]]+parts[1:]
+        rumor=any(stories[k].get('scene_type')=='rumor' for k in seen)
+        from content_rules import check_public_words,RUMOR_MARKERS
+        for k in seen:
+            if stories[k].get('scene_type')=='rumor' and not any(m in stories[k]['title'] for m in RUMOR_MARKERS):
+                raise ValueError('TITLE_RUMOR_MARKER: a rumor in the title must say 曝/传/疑似 in its story title: '+k)
         title='｜'.join(parts+[f"{series['label']} {int(date[5:7])}.{int(date[8:10])}"])
+        check_public_words(title,rumor=rumor)
         if len(title)>60:raise ValueError('TITLE_TOO_LONG: pick one or two events in title_groups (series titles stay within 60 characters)')
         return title
     date=episode['edition_date'];slot={'morning':'早报','night':'晚报'}[episode['edition_slot']]
@@ -62,7 +106,12 @@ def snapshot(episode, publication, cover, directory):
         path=Path(directory)/name
         if not path.is_file():raise ValueError('COVER_PIXELS_REQUIRED: '+name)
         images[name]=hashlib.sha256(path.read_bytes()).hexdigest()
+    if lead.get('scene_type')=='rumor':
+        from content_rules import RUMOR_MARKERS
+        if not any(m in cover.get('headline_main','')+cover.get('headline_top','') for m in RUMOR_MARKERS):
+            raise ValueError('COVER_RUMOR_MARKER: a rumor cover headline says 曝/传/疑似')
     promises={key:publication.get(key) for key in ['title','title_groups','lead_event_id']}
+    if publication.get('title_hook'):promises['title_hook']=publication['title_hook']
     return dict(version=1,content=digest(episode),publication=digest(promises),cover=digest(cover),images=images)
 
 

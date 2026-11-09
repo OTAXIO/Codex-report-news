@@ -7,6 +7,12 @@ FIXED_TAGS=['明日方舟','终末地']
 ORDER_VERSION=4
 EDITION_ORDER={'morning':['ai','games'],'night':['games','ai']}
 MAJOR_CATEGORIES={'model_release','product_launch','quota_reset','game_update'}
+# Segment rank inside a single-audience series (2026-11-09 user decision).
+SEGMENT_ORDER={'ai':{'rumor':0,'media':1,'official':2,'github':3},
+               'games':{'official':0,'activities':1,'community':2}}
+SEGMENT_GROUP={'rumor':{'ai':'rumor'},'media':{'ai':'media'},'official':{'ai':'ai','games':'games'},'github':{'ai':'github'},
+               'activities':{'games':'activities'},'community':{'games':'community'}}
+GROUP_LABELS={'headline':'头条','games':'游戏资讯','ai':'AI 动态','rumor':'传闻','media':'媒体报道','github':'GitHub热门','activities':'活动一览','community':'玩家热议'}
 
 def edition_order(episode,root=None):
     # Persisted plans stay stable when a default changes during recovery.
@@ -84,9 +90,23 @@ def apply_story_order(episode,root=None):
     modules_by_kind={'games':games,'ai':ai}
     single_module=len(default_order)==1
     order=list(dict.fromkeys([lead]+major+[key for kind in default_order for key in modules_by_kind[kind]]))
+    segmented=single_module and any(pages[0].get('segment') for pages in groups.values())
+    if segmented:
+        # 2026-11-09 series order: AI rumor -> media -> official -> GitHub (always last);
+        # games official -> activities -> community. The lead opens the video, then segments.
+        ranks=SEGMENT_ORDER[default_order[0]]
+        segment=lambda key:groups[key][0].get('segment') or 'official'
+        if segment(lead)=='github' and len(groups)>1:raise ValueError('LEAD_SEGMENT: the GitHub trending page closes the video; pick a news story as lead')
+        if requested is None and segment(lead)!=min((segment(k) for k in groups),key=lambda s:ranks.get(s,9)) and not major:
+            lead=min(groups,key=lambda k:(ranks.get(segment(k),9),list(groups).index(k)))
+        rest=[k for k in order if k!=lead]
+        position={k:i for i,k in enumerate(rest)}  # list.sort empties the list while sorting
+        rest.sort(key=lambda k:(ranks.get(segment(k),9),0 if k in major else 1,position[k]))
+        order=[lead]+rest
     body=[s for key in order for s in groups[key]]
     for scene in body:
-        scene['navigation_group']='headline' if event_id(scene) in major else 'games' if is_game(scene) else 'ai'
+        if segmented:scene['navigation_group']=SEGMENT_GROUP.get(scene.get('segment') or 'official',{}).get(default_order[0],'ai')
+        else:scene['navigation_group']='headline' if event_id(scene) in major else 'games' if is_game(scene) else 'ai'
         old=scene.pop('module_intro_text',None)
         if old and scene.get('narration','').startswith(old):scene['narration']=scene['narration'][len(old):]
     previous=None
@@ -175,9 +195,9 @@ def validate_content(episode):
 
 def modules(episode,offsets,duration):
     if episode.get('edition_slot')=='temporary':return [('temporary','临时新闻',0,duration)]
-    if any(is_game(s) for s in episode['scenes']):
+    if any(is_game(s) or s.get('navigation_group') in {'rumor','media','github'} for s in episode['scenes']):
         from layout_policy import is_overview
-        labels={'headline':'头条','games':'游戏资讯','ai':'AI 动态'};runs=[]
+        labels=GROUP_LABELS;runs=[]
         for i,s in enumerate(episode['scenes']):
             if is_overview(s):continue
             key=s.get('navigation_group') or ('games' if is_game(s) else 'ai')

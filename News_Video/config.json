@@ -254,7 +254,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "dee90ca1ef83540f1f84a742eed8258961a20e314edf95447980f06d40c1ffbe",
+    "implementation_sha256": "0150c194d9b0f186a49e0947f85642fdb76163cc4277fb2c446c25f9d7d69e2c",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -263,7 +263,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "fc09ba060ff17d092294e98d6c5b64714aec1d2d2acf2dc6fb0787827f7e3b29"
+    "validation_sha256": "bcd4b59080684b5dc0fd46f1deddb2907f7a8bfdfbf52af87681a9d3f53ffcc9"
   },
   "workspace_directory": "../..",
   "presentation": {
@@ -387,7 +387,37 @@
         "skland_capture",
         "skland_browser",
         "official_x"
-      ]
+      ],
+      "active_window": {
+        "decided": "2026-11-09 用户确认：游戏视频加“进行中活动一览”，30天内官方公告、活动起止覆盖本期至7天后任一点，每页2-3个，不再限1页",
+        "ahead_days": 7,
+        "max_announcement_age_days": 30,
+        "max_items_per_page": 3
+      }
     }
+  },
+  "rumors": {
+    "enabled": true,
+    "decided": "2026-11-09 用户确认：AI早报加入非官方传闻（新模型优先），非官方在前官方在后；必须标注来源与官方状态",
+    "registry": "rumor_sources.json"
+  },
+  "github_trending": {
+    "enabled": true,
+    "decided": "2026-11-09 用户确认：AI早报片尾放当天GitHub热门（AI/开发工具，安全过滤）",
+    "source": "https://github.com/trending?since=daily"
+  },
+  "community": {
+    "enabled": true,
+    "decided": "2026-11-09 用户确认：游戏视频加玩家热议，B站登录（小号）读取已渲染评论，按播放量和时间挑最热和最新视频",
+    "profile_directory": "../../.community-reader-private/chrome-profile",
+    "max_searches_per_game": 2,
+    "max_videos_per_game": 8,
+    "min_plays_newest": 200,
+    "min_comments_newest": 10,
+    "page_interval_seconds": [
+      3,
+      5
+    ],
+    "minimum_samples": 30
   }
 }

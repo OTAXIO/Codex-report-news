@@ -1,4 +1,6 @@
-# DeepSeek Harness 接手指令（2026-11-07 版，替代 2026-11-05 版）
+# DeepSeek Harness 接手指令（2026-11-09 版，替代 2026-11-07 版）
+
+> **2026-11-09 内容改版（用户确认）**：AI早报加入“传闻”“媒体报道”“GitHub 今日热门”三个栏目，两条游戏情报加入“活动一览”和“玩家热议”（B站评论归纳）。**覆盖旧规则“传闻不报”**：传闻可以报，但只能按第 3a 节的门槛和措辞报。量子位改为普通媒体源，不再是线索源。规则细节见第 3a 节与 `News_Video/docs/FRESHNESS_AND_SOURCES.md` 的“2026-11-09 内容改版”节。
 
 用户已决定：早报、晚报从 2026-11-05 晚报起交回 DSH 制作，并按既有授权自动投稿。Claude Code 已停止制作，它的桌面定时任务 news-morning/news-night 已停用。全程用中文汇报。
 
@@ -39,7 +41,15 @@
   - 用户的限制：不登录，不读取或提取 Cookie，不逆向签名，不重放或伪造 API 请求，不用用户的 Chrome、BrowserSkill 或任何已登录的 profile。没有符合条件的浏览器就记 skland 缺口，继续用官网/RSS/X。
   - 导入有 3 小时新鲜度检查，超时要重新采集。
 - 采集每个时段都跑一次 `collect --kind all`（AI 和游戏都采，供去重与回顾使用）。
-- 2026-11-07 新增：X 官方号 XiaomiMiMo、StepFun_ai、Baidu_Inc（百度是公司号，只选 AI 模型与产品）；量子位 RSS `qbitai-leads` 是**线索源**，候选里带 `lead_only:true`，只能用来发现国内 AI 新闻，必须找到公司官网或官方 X 原文、采集后引用那一条，直接引用会被 import 以 LEAD_ONLY_SOURCE 拒绝。
+- 2026-11-07 新增：X 官方号 XiaomiMiMo、StepFun_ai、Baidu_Inc（百度是公司号，只选 AI 模型与产品）。
+- 2026-11-09 新增（都由 `collect --kind all` 自动采集，失败只记缺口、不中断）：
+  - **媒体源**：量子位 `qbitai-leads`（不再是 lead_only）、TechCrunch AI、The Verge AI、IT之家（只收 AI 相关标题）。候选里带 `media:true, segment:"media"`。
+  - **传闻**：X 爆料账号 btibor91、testingcatalog（A 级），legit_api、chetaslua、apples_jimmy（B 级），kimmonismus（C 级），以及按 12 个模型家族轮换的关键词搜索（每次最多 8 次搜索、间隔 10 秒；搜索来的 C 级帖要 ≥20 赞）；Reddit r/singularity（C 级）。原帖存 `data/rumors/<ID>.json`，候选里带 `rumor:true, rumor_tier, likes`。遇到 RATE_LIMITED/PLATFORM_BLOCKED/NEED_LOGIN 会自动停掉本轮并冷却，不要换账号或后端重试。
+  - **GitHub 今日热门**：读 github.com/trending，自动跳过与 AI/开发工具无关或用途有害（人肉、开盒、盗号、外挂、破解、deepfake 等）的仓库，保留至多 3 个候选，item 存 `data/github-trending/items/<ID>.json`。
+- **玩家热议（仅两条游戏情报，各自采集）**：`python -B community_sources.py collect --series <arknights|endfield>`。
+  - 用独立的阅读 profile（`../../.community-reader-private/chrome-profile`，与上传器 profile 分开）只读 B站页面：近 48h 播放最多的 5 个视频＋最新的 3 个（有播放/评论下限），每个读最热和最新评论，另读弹幕。不导出 Cookie、不直接调评论或搜索 API、不逆向 WBI、不重放请求，不读用户名。
+  - 首次使用或报 COMMUNITY_LOGIN_REQUIRED：停下这一栏目，请用户本人运行 `python -B community_sources.py login` 用小号登录一次（程序不代登），本期照常出片、不做玩家热议。报 PLATFORM_BLOCKED 同样跳过并汇报，不重试。
+  - 采集后运行 `python -B community_sources.py topics <快照ID>` 看各讨论对象的提及数；对象必须是 `game_glossary.json` 里本游戏 `reviewed:true` 的词。`python -B community_sources.py glossary-candidates` 列出常被提到但没收录的词，只汇报给用户，不要自己把 reviewed 改成 true。
 - 然后按系列列候选：`python -B news_video.py candidates --hours 48 --compact --limit 12 --cursor 0 --series <ai|arknights|endfield>`，按 next_cursor 翻完所有页。逐条用 `python -B news_video.py article <ID> --compact` 读原文，truncated=true 时读完整归档。
 - X 帖：原文和真实链接在 `data/leader-posts/<ID>.json`，source_url 必须与采集记录完全一致，不要自己拼。summary 里已附引用帖正文（[引用 @…]）。是线程或明显有后续时运行 `python -B leader_sources.py thread <ID>`。帖子只有标题加链接时读链接里的官方原文；openai.com 对脚本返回 403 时，用浏览器读原文并把原句写进 evidence。
 - 运行 `python -B news_video.py game-schedule --days 14`，找当天生效的旧公告（见第 3 节生效时间规则）。
@@ -59,6 +69,30 @@
 - **篇幅**：AI早报素材充足时 6–12 条、3–5 分钟；游戏情报 3–8 条，宁缺毋滥；不足就如实变短（成片仍须 >30 秒）。在 editorial 写 `rejections:{item_id:落选原因}`，覆盖本系列所有看过但没选的候选。import 会生成本系列的 selection-report.json，unreviewed 应接近 0。
 - **头条**：按影响力选正文01——新模型/大版本/新玩法 > 价格、额度、可用性变化 > 卡池与新干员 > 福利活动 > 其他；同分时国内厂商、国服优先。正文01 = 封面头条 = lead_event_id。当天已公开的 temporary 临时新闻由导入自动作为回顾插入（仅 AI早报）。
 
+## 3a. 新栏目（2026-11-09）
+import 会按来源给每页自动分栏（`segment`）并加角标，再按栏目排序。头条（lead_event_id）仍按第 3 节影响力手选，放在最前；其余按下面顺序：
+- AI早报：传闻 → 媒体报道 → 官方动态 → GitHub 今日热门（固定最后，每期最多 1 条，不能当头条）。
+- 游戏情报：官方消息 → 活动一览 → 玩家热议。
+栏目都是“有合格素材才做”，没有就不做，不凑数。
+
+**传闻**（`scene_type:"rumor"`，item_id 为某条传闻帖）：
+- 门槛（`evidence_type` 三选一）：`tierA_source`（引用里有 A 级账号）；`two_independent`（≥2 个不同作者，用 `rumor_sources:[其他传闻ID]` 补充）；`artifact`（代码/API 列表/页面截图等实物，填 `artifact:{kind, quote}`，quote 必须是原帖里的原文）。
+- 还要填：`claim`（一句话说传的是什么）、`credibility`（较可信/待观察/存疑；两条都是 C 级时不能写较可信）、`unknowns`（还不知道的事，至少一项）、`official_status`（未回应/已否认/已部分确认）、`rumor_safety_checked:true`（确认不涉及私生活、未成年人和人身攻击）。
+- 口播：第一句点名来源并用“称/爆料/透露/发现”等转述词（如“X 上爆料账号 btibor91 称……”）；最后一句写官方状态（如“目前 OpenAI 官方尚未回应。”）；除非已部分确认，不得出现“确认、证实、实锤、官宣”等定论词。
+- 标题：传闻页的 title 要带“曝/传/疑似”；传闻当头条时，封面 headline_main 或 headline_top 也要带。
+- 可选 `quote_card:{account, time_label, excerpt, translation}`：画面上的原帖卡片，excerpt ≤90 字且必须从原帖照抄。
+- 去重：`data/rumor-ledger.jsonl` 记录已播传闻（`python -B rumor_sources.py ledger` 查看未结案的）。7 天内同一传闻没有新来源会被 RUMOR_REPEATED 拒绝。后来官方证实或否认时，在官方/媒体那页加 `resolves_rumor:{key, status:"confirmed"|"denied"}`，口播要回扣（如“此前传闻的……今天官宣了”）。
+
+**媒体报道**（媒体源条目）：口播前两句里必须有“据＋媒体名”（如“据 TechCrunch 报道”），只转述报道内容，不当作官方确认。
+
+**GitHub 今日热门**（`scene_type:"github_trending"`）：填 `repo`（owner/name）、`stars_today`（与采集一致）；口播 90–280 字，含仓库短名和“GitHub”，讲清它是做什么的、谁做的、今天涨了多少星。配图自动用仓库卡片。同一仓库 7 天内不重复。
+
+**活动一览**（`scene_type:"activity_overview"`，`freshness_basis:"active_window"`）：一页列 1–3 个正在进行或 7 天内开始的官方活动，`activity_items` 每项填 `item_id、name、start_at、end_at（带时区）、window_quote（含起止日期的官方原句）、source_type`。公告发布超过 30 天的不用；顺序必须是即将结束 → 进行中 → 即将开始。
+
+**玩家热议**（`scene_type:"community_pulse"`，每期最多 3 页）：
+- 填 `item_id`（快照ID）、`game`、`subject:{game, entity_type, entity_name}`（entity_type 取 glossary 的 character/event/mode/banner/item/place）、`videos:[bvid]`（来自快照且标题属于本游戏）、`sample_count`（所引视频去重后的评论＋弹幕总条数，须 ≥30 且其中提到该对象的 ≥5 条；填错时报错信息会给出正确数字，口播里用阿拉伯数字原样写出）、可选 `quotes`（≤3 条、每条 ≤20 字，从样本原样照抄）。
+- 口播必须说明是玩家看法（“玩家……认为/觉得/吐槽/期待”），并念出样本条数；不点名用户、不带 @，不放粗口、引战和剧透。
+
 ## 4. 写稿与导入
 - 参照最近一期 editorial.json 的格式，在本系列的编辑目录写 editorial.json，producer 填 `"DeepSeek Harness"`。顶层必须有：
   - `"id"`（见表格）、`"edition_date"`、`"edition_slot"`（ai 填 morning，两款游戏填 night）、`"edition_series"`（ai / arknights / endfield）；
@@ -68,6 +102,8 @@
 - 运行 `python -B news_video.py import-editorial <editorial路径>`。
 - 在期次目录写两个文件：
   - publication.json：title_groups 只能有一组，kind 为本系列的类别（ai 填 `ai`，两款游戏填 `games`），event_ids 放 1–2 条（第一条是头条），lead_event_id 一致，auto_publish 为 true。生成的标题形如“头条事件标题、次要事件标题｜明日方舟情报 11.7”（直接取正文页 title），不带“AI：/游戏：”前缀，超过 60 字会报 TITLE_TOO_LONG，请把正文标题写短。tags 只填本期事实相关的词，系列固定标签由代码自动放在最前面。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
+    - 2026-11-09：可加 `title_hook`（≤16 字，放在标题最前）和 `title_hook_evidence:[短语]`。每个短语必须同时出现在 hook 和所选正文里，否则报 TITLE_HOOK_UNSUPPORTED。标题和封面不得使用“震惊、炸裂、惊呆、速看、必看、绝了、吊打、跪了”（PUBLIC_WORD_BANNED）。
+    - 简介：publication.json 写了 `description` 就用它；没写时 release 会自动生成（章节时间点、来源链接，有传闻或玩家热议时附免责声明）。
   - cover.json：headline_top、headline_main、highlight 必须是头条标题、口播或 facts 里原样出现的文字，并且要短。
 - 再运行 `python -B publication_policy.py title episodes/<ID> --write`。所有 JSON 用无 BOM 的 UTF-8。
 
@@ -98,13 +134,14 @@
 
 ## 7. 投稿
 - 运行 `python -B render_sample.py <ID> --resume-export`。它会准备 release、写已用新闻记录，并按已授权的默认设置自动投稿：
-  - 合集 News，原创/禁止转载＋AI 生成声明；
+  - 合集按题材自动选择：AI早报进 AI-News，两条游戏情报进 Game-News；原创/禁止转载＋AI 生成声明。找不到合集时上传器会停下，不要自己新建合集；
   - 分区与活动按系列自动选择（见文首表格）：ai 投科技数码、挂当时热度最高的可参加活动；arknights 投游戏、精确挂 8314；endfield 投游戏、精确挂 1325166。游戏两条找不到指定活动就停止，不换别的活动。
 - 读 release 目录的 release.json、upload-attempt.json 和 upload.receipt.json，核对回执中的 bvid、标题、分区、合集、声明和活动标签读回。
 - 然后运行一次 `python -B upload_bridge.py recover <release目录>`。审核中就如实记为已提交、未公开，不要重投。
 
 ## 停止条件与汇报
 - 遇到登录/验证码/平台故障、素材不足、质检失败或状态未知时，停在当前阶段，保留证据，说明实际状态，不靠绕过门禁完成。
+- 例外：传闻、GitHub、玩家热议这些补充栏目的采集失败（含 COMMUNITY_LOGIN_REQUIRED、PLATFORM_BLOCKED、冷却中）只让该栏目本期不做，正片照常制作，汇报里写明原因。
 - 已发布的视频、封面和投稿记录不重做、不修改、不重传。
 - Cookie、浏览器 profile、API key、模型权重、原曲和字体不进 Git 或交接包。
 - 汇报时区分已修改、已测试、已提交、已推送、已投稿和已公开发布。

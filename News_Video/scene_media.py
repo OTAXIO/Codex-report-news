@@ -23,7 +23,7 @@ def identity_key(scene):
     if scene.get('game') in {'arknights','endfield'}:return scene['game']
     aliases=[('openai',r'Open\s*AI|ChatGPT|Codex|thsottiaux|\btibo\b'),('anthropic',r'Anthropic|Claude'),('deepseek',r'DeepSeek'),
              ('qwen',r'Qwen|千问|通义'),('google',r'Google|Gemini|DeepMind'),('minimax',r'MiniMax'),
-             ('kimi',r'Kimi|Moonshot|月之暗面'),('glm',r'GLM|智谱|ZCode|Z\.ai'),('tencent',r'Tencent|腾讯|WorkBuddy|混元|Hunyuan'),('ai2',r'\bai2\b|AllenAI')]
+             ('kimi',r'Kimi|Moonshot|月之暗面'),('glm',r'GLM|智谱|ZCode|Z\.ai'),('tencent',r'Tencent|腾讯|WorkBuddy|混元|Hunyuan'),('ai2',r'\bai2\b|AllenAI'),('github',r'^GitHub$')]
     if scene.get('company'):
         return next((key for key,pattern in aliases if re.search(pattern,str(scene['company']),re.I)),None)
     for field in ['publisher','product','speaker_name','author_handle','title']:
