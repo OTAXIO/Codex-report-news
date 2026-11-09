@@ -214,6 +214,17 @@ class CommunityTests(unittest.TestCase):
             self.assertEqual((reasons['BV2'],reasons['BV3'],reasons['BV4'],reasons['BV5']),('other_topic','content_filter','outside_48h','below_engagement_floor'))
             self.assertFalse(cs.title_matches('arknights','明日方舟：终末地 新版本',root))
             self.assertEqual(cs.count('1.2万'),12000)
+            self.assertEqual(cs.card_time('2天前',NOW),NOW-cs.dt.timedelta(days=2))
+
+    def test_hot_search_keeps_the_48h_filter(self):
+        """B站 drops pubtime_* under order=click, so hot pages must use the default order."""
+        with Root() as root:
+            jobs=cs.search_jobs('endfield',NOW,root)
+            hot=[j['url'] for j in jobs if j['label']=='hot']
+            self.assertGreaterEqual(len(hot),2)
+            self.assertTrue(all('pubtime_begin_s=' in u and 'order=click' not in u for u in hot))
+            self.assertEqual(len(set(hot)),len(hot))
+            self.assertEqual([j['label'] for j in jobs][-1],'newest')
 
 class TitleAndDescriptionTests(unittest.TestCase):
     def episode(self,lead_type=None,lead_title='曝GPT-6.2 Sol灰度'):

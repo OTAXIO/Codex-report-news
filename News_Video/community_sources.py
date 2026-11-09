@@ -70,6 +70,8 @@ def card_time(text,now):
     if m:return now-dt.timedelta(minutes=int(m.group(1)))
     m=re.fullmatch(r'(\d+)\s*小时前',text)
     if m:return now-dt.timedelta(hours=int(m.group(1)))
+    m=re.fullmatch(r'(\d+)\s*天前',text)
+    if m:return now-dt.timedelta(days=int(m.group(1)))
     if text.startswith('昨天'):return (local-dt.timedelta(days=1)).replace(hour=12,minute=0,second=0,microsecond=0)
     m=re.fullmatch(r'(\d{4})[-年](\d{1,2})[-月](\d{1,2})日?',text) or re.fullmatch(r'(\d{1,2})[-月](\d{1,2})日?',text)
     if m:
@@ -101,10 +103,15 @@ def choose_videos(series,searches,now,root=None):
     return (hot+newest)[:pol.get('max_videos_per_game',8)],report
 
 def search_jobs(series,now,root=None):
+    """B站 ignores pubtime_* when order=click (verified 2026-11-09: all-time PVs come back),
+    so 'hot' reads the default order inside the 48h window over a few pages and
+    choose_videos ranks by plays itself. One page of the newest videos follows."""
     keyword=glossary(root)[series]['names'][0]
     q=urllib.parse.quote(keyword);end=int(now.timestamp());begin=end-48*3600
-    return [dict(label='hot',url=f'https://search.bilibili.com/video?keyword={q}&order=click&pubtime_begin_s={begin}&pubtime_end_s={end}'),
-            dict(label='newest',url=f'https://search.bilibili.com/video?keyword={q}&order=pubdate')][:policy(root).get('max_searches_per_game',2)]
+    base=f'https://search.bilibili.com/video?keyword={q}'
+    pages=max(1,policy(root).get('max_searches_per_game',4)-1)
+    hot=[dict(label='hot',url=f'{base}&pubtime_begin_s={begin}&pubtime_end_s={end}'+(f'&page={p}' if p>1 else '')) for p in range(1,pages+1)]
+    return hot+[dict(label='newest',url=f'{base}&order=pubdate')]
 
 def danmaku(bvid,limit=200):
     """Public danmaku; anonymous and read-only."""

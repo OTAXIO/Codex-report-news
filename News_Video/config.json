@@ -410,7 +410,7 @@
     "enabled": true,
     "decided": "2026-11-09 用户确认：游戏视频加玩家热议，B站登录（小号）读取已渲染评论，按播放量和时间挑最热和最新视频",
     "profile_directory": "../../.community-reader-private/chrome-profile",
-    "max_searches_per_game": 2,
+    "max_searches_per_game": 4,
     "max_videos_per_game": 8,
     "min_plays_newest": 200,
     "min_comments_newest": 10,
