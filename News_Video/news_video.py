@@ -297,6 +297,8 @@ def collect(kind):
                 from game_sources import parse,decode
                 entries=parse(decode(body,encoding),source)
             else:entries=parse_feed(body,source) if source["type"]=="rss" else official_bridge(body,source,encoding)
+            # General media feeds (IT之家) keep only their AI/company items.
+            if source.get('include_pattern'):entries=[e for e in entries if re.search(source['include_pattern'],e['title']+' '+e.get('summary','')[:400],re.I)]
             result.update(ok=True, final_url=final, items=entries, count=len(entries))
             if source["type"]=="official_page":
                 rss=ET.Element("rss",version="2.0"); channel=ET.SubElement(rss,"channel")
@@ -334,6 +336,15 @@ def collect(kind):
     if kind in {'ai','games','all'} and config().get('x_enabled'):
         from leader_sources import collect as collect_x
         report['x']=collect_x(scope='games' if kind=='games' else 'ai' if kind=='ai' else None)
+    if kind in {'ai','all'} and config().get('rumors',{}).get('enabled'):
+        # Rumor accounts and model searches run after the official X pass, sharing its read-only adapter.
+        from rumor_sources import collect as collect_rumors
+        try:report['rumors']=collect_rumors()
+        except Exception as error:report['rumors']=dict(ok=False,error=type(error).__name__+': '+str(error)[:200])
+    if kind in {'ai','all'} and config().get('github_trending',{}).get('enabled'):
+        from github_trending import collect as collect_trending
+        try:report['github_trending']=collect_trending()
+        except Exception as error:report['github_trending']=dict(ok=False,error=type(error).__name__+': '+str(error)[:200])
     dump(directory/"report.json",report)
     print(json.dumps(report,ensure_ascii=False,indent=2))
     return report
@@ -392,6 +403,14 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
         item['selection_policy']=source.get('selection_policy','standard')
         # Media/aggregator feeds only point at news; the scene must cite the official original.
         if source.get('lead_only'):item['lead_only']=True
+        # 2026-11-09: rumors lead the AI edition, media reports follow, official news last.
+        if item['source_id'].startswith('rumor-x-'):
+            post=load(ROOT/'data/rumors'/(item['id']+'.json'))
+            item.update(rumor=True,source_type='rumor_x',rumor_tier=post.get('tier','C'),author=post.get('handle'),likes=post.get('likes'),
+                        segment='rumor',evidence_path='data/rumors/'+item['id']+'.json')
+        elif source.get('rumor'):item.update(rumor=True,source_type='rumor_'+source.get('rumor_platform','feed'),rumor_tier=source.get('tier','C'),segment='rumor')
+        elif source.get('tier')=='media':item.update(media=True,segment='media')
+        elif item['kind']=='ai':item['segment']='official'
         from editorial_policy import region_of
         item['region']=region_of(item,sources,config().get('editorial',{}))
         if source.get('published_precision')=='date' or source.get('id')=='kimi-blog':item['published_precision']='date'
@@ -427,7 +446,7 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
     rows=view(rows)
     if compact:
         selected=rows[cursor:cursor+limit]
-        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path','lead_only') if item.get(k) is not None} for item in selected]
+        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path','lead_only','segment','rumor_tier','likes') if item.get(k) is not None} for item in selected]
         print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
                               items=brief,excluded_used_count=len(excluded),full_file='data/candidates.json',
                               game_coverage=payload['game_coverage'],
@@ -533,6 +552,7 @@ def import_editorial(path):
     if leader_audit:episode['leader_audit']=leader_audit
     from freshness import audit_episode
     audit_episode(episode,ROOT,bind=True)
+    assign_segments(episode,source_catalog)
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)
     from layout_policy import prepare_overview
@@ -554,6 +574,25 @@ def import_editorial(path):
             if row["kind"]=="social":raise ValueError("Social stories removed from new editions")
             if row['source_id'] in lead_only:
                 raise ValueError('LEAD_ONLY_SOURCE: '+row['source_id']+' is a discovery lead; find the official original (company site/X), collect it and cite that item instead')
+            # 2026-11-09 segments: rumor -> media -> official -> GitHub (AI); official -> activities -> community (games).
+            segment=scene.get('segment')
+            if segment=='rumor':
+                from rumor_sources import validate_scene as validate_rumor
+                validate_rumor(scene,ROOT)
+            elif scene.get('scene_type')=='rumor':raise ValueError('RUMOR_SOURCE_REQUIRED: a rumor scene must cite a collected rumor post/feed item')
+            elif segment=='github':
+                from github_trending import validate_scene as validate_trending
+                validate_trending(scene,ROOT,episode_id=episode['id'])
+            elif segment=='community':
+                from community_sources import validate_scene as validate_community
+                validate_community(scene,episode,ROOT)
+            elif segment=='media':
+                from content_rules import sentences
+                name=source_catalog[row['source_id']]['publisher']
+                if not any('据' in s and name.casefold() in s.casefold() for s in sentences(scene.get('narration',''))[:2]):
+                    raise ValueError('MEDIA_ATTRIBUTION_REQUIRED: say 据'+name+'报道 in the first two sentences; a media report is not an official statement')
+            if scene.get('scene_type')=='activity_overview' and scene.get('freshness_basis')!='active_window':
+                raise ValueError('ACTIVITY_OVERVIEW_BASIS: an activity overview uses freshness_basis=active_window')
             if row["kind"]=="games":
                 record=load(ROOT/"data/game-items"/(row["id"]+".json"))
                 if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
@@ -581,6 +620,8 @@ def import_editorial(path):
             pages=[sc for sc in episode["scenes"] if sc.get("item_id")==repeated]
             if any(not sc.get("game") or not isinstance(sc.get("page_number"),int) for sc in pages) or len({sc.get("event_key") for sc in pages})!=1 or len({sc["page_number"] for sc in pages})!=len(pages):raise ValueError("Duplicate event selection")
     db.close()
+    from rumor_sources import check_ledger,record_ledger
+    rumor_changes=check_ledger(episode,ROOT)
     from used_news import recent_records,exclude_used
     edition_key=episode.get('edition_key',re.sub(r'-v\d+$','',episode['id']))
     _,already_used,_=exclude_used(selected_rows,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
@@ -613,11 +654,41 @@ def import_editorial(path):
     if tibo_audit:dump(directory/'tibo-audit.json',tibo_audit)
     if leader_audit:dump(directory/'leader-audit.json',leader_audit)
     dump(directory/"episode.json",episode)
+    record_ledger(rumor_changes,ROOT)
+    from github_trending import record_featured
+    record_featured(episode,ROOT)
     if media_audit:dump(directory/'scene-media.json',media_audit)
     (directory/"script.txt").write_text("\n".join(s["narration"] for s in episode["scenes"]),encoding="utf-8")
     report=selection_report(episode)
     dump(Path(path).parent/'selection-report.json',report);dump(directory/'selection-report.json',report)
     print(directory)
+
+def segment_for(row,scene,catalog):
+    """Which part of the video a story belongs to; derived from its collected source, never the editor's label."""
+    source=catalog.get(row['source_id'],{})
+    if str(row['source_id']).startswith('rumor-x-') or source.get('rumor'):return 'rumor'
+    if row['source_id']=='github-trending':return 'github'
+    if str(row['source_id']).startswith('community-'):return 'community'
+    if source.get('tier')=='media':return 'media'
+    if scene.get('freshness_basis')=='active_window':return 'activities'
+    return 'official'
+
+def assign_segments(episode,catalog):
+    """Bind each body scene to its segment before the story order is computed."""
+    from layout_policy import is_overview
+    db=database()
+    try:
+        for scene in episode['scenes']:
+            if is_overview(scene) or not scene.get('item_id'):continue
+            row=db.execute('SELECT * FROM items WHERE id=?',(scene['item_id'],)).fetchone()
+            if not row:raise ValueError('Editorial refers to unknown collected candidate')
+            scene['segment']=segment_for(dict(row),scene,catalog)
+            badge={'rumor':'传闻·未经官方证实','media':'媒体报道','github':'GitHub 今日热门','community':'玩家热议','activities':'进行中活动'}.get(scene['segment'])
+            if badge:scene['badge']=badge
+            if scene['segment']=='github':
+                from github_trending import bind_media
+                bind_media(scene,ROOT)
+    finally:db.close()
 
 def selection_report(episode):
     """Why an edition is short: every fresh candidate with selected/rejected reason, plus source health."""

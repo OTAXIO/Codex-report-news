@@ -103,6 +103,15 @@ def prepare(episode_id,slot=None,root=ROOT,create_upload_manifest=True):
     validate_release_mix(source,ep.get('background_music_requirement'),timing['duration'])
     tested=json.loads((source/'progress-validation.json').read_text(encoding='utf-8'))
     if len(tested)!=len(ep['scenes']):raise ValueError('Not all news navigation segments were verified')
+    if ep.get('edition_series'):
+        # 2026-11-09: series uploads never go out with an empty description; chapters,
+        # sources and disclaimers are generated when the producer wrote none.
+        from publication_policy import describe
+        pub_path=source/'publication.json';pub=json.loads(pub_path.read_text(encoding='utf-8'))
+        text=describe(ep,pub,timing)
+        if pub.get('description')!=text:
+            pub['description']=text;pub_path.write_text(json.dumps(pub,ensure_ascii=False,indent=2),encoding='utf-8')
+        (source/'description.txt').write_text(text,encoding='utf-8')
     old=json.loads((target/'release.json').read_text(encoding='utf-8')) if (target/'release.json').exists() else None
     if old and old.get('published'):raise ValueError('Published release is immutable; prepare a new revision directory explicitly')
     if old and ((target/'upload-attempt.json').exists() or old.get('state') in {'unknown','uploading','submitting','submitted','reviewing'}):

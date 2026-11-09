@@ -127,6 +127,16 @@
       "sha256": "5898890ef447e82f86eea9458b61e821b22fc68fd8907d3f5e11adfde27b34d5",
       "usage": "Game/company identity fallback; never presented as an event photograph",
       "retrieved_utc": "2026-10-29T11:24:30.217905+00:00"
+    },
+    {
+      "id": "github",
+      "path": "assets/logos/github.png",
+      "source": "https://avatars.githubusercontent.com/u/9919?s=512&v=4",
+      "organization": "https://github.com/github",
+      "width": 460,
+      "height": 460,
+      "sha256": "b567b770db5c818a4a958afbb51acd6c70d8b3651a7f74f67bdf2da7455d2e91",
+      "usage": "Platform identity for the GitHub trending page; no implied endorsement"
     }
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "policy": "Community material (video titles, comments, danmaku) and public narration are screened by category. A hit on a video title/description drops the whole video; a hit on a comment drops that comment. Lists are conservative and editable; the producer still reviews every quote.",
+  "categories": {
+    "vulgar": ["裤子爆炸", "涩涩", "色色", "瑟瑟", "冲了", "导管", "鹿管", "撸管", "开车了", "黄油", "本子", "福利姬", "擦边", "露点", "胖次", "内衣", "内裤", "丝袜", "足控", "黑丝", "白丝", "屁股", "胸部", "欧派", "奶子", "大雷", "做爱", "上床", "约炮", "出轨", "小三", "裸", "NSFW", "R18", "r18", "hentai"],
+    "gore_violence": ["血腥", "断头", "斩首", "分尸", "肢解", "砍死", "杀了你", "弄死", "自杀", "自残", "跳楼", "虐杀", "爆头", "开膛"],
+    "abuse": ["傻逼", "傻b", "sb", "SB", "脑残", "智障", "废物", "滚出", "去死", "nmsl", "NMSL", "你妈", "尼玛", "狗东西", "畜生", "孤儿", "low逼", "垃圾玩家"],
+    "group_attack": ["原批", "粥批", "舟批", "农批", "米哈游狗", "鹰角狗", "女拳", "男拳", "国男", "国女", "蝈蝻", "台巴子", "支那", "棒子", "小日本", "阿三"],
+    "flamewar": ["引战", "孝子", "急了", "破防了", "典中典", "退坑警告", "卸载了", "骗氪"],
+    "spoiler": ["剧透", "结局是", "最后死了"]
+  },
+  "spoiler_allowed_when_marked": true,
+  "public_banned": ["震惊", "炸裂", "惊呆", "速看", "必看", "绝了", "吊打", "跪了"]
+}

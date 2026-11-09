@@ -8,6 +8,8 @@ from audio_mix import ensure_soundtrack
 from renderer_backends import save,load
 
 EXTRA_FONTS={'persona':['impact.ttf']}
+# 2026-11-09 segment badges: rumors are visibly unconfirmed, player views visibly opinions.
+BADGE_COLORS={'rumor':'#F06A00','community':'#12925A','media':'#5B6470','github':'#24292F','activities':'#0A6FB5'}
 
 def text(value):return html.escape(str(value),quote=True)
 def phrase(value):
@@ -72,7 +74,9 @@ def build(root,episode,plan):
             body=identity+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
-        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span><i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
+        badge=s.get('badge')
+        badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{BADGE_COLORS.get(s.get("segment"),"#101218")}">{text(badge)}</b>' if badge else '')
+        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
         chapters.append(dict(id=s['id'],label=s.get('short_title',s['title']),start=start,end=end))
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]
     for c in captions:
