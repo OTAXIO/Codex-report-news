@@ -57,3 +57,27 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 - 素材充足时每期6—10条、约3—5分钟（AI 3—5，游戏3—6）；不足时如实变短。每条读完整官方原文，口播150—250字、facts 3—4条，补原文中的背景、时间、适用范围和影响对象，不加原文没有的评价。
 - 游戏按“国服方舟/国际服方舟/终末地”三块检查：新版本或SideStory、新干员与卡池、活动规则、维护闪断、联动、直播前瞻、制作组通讯、创作活动。同一事件跨来源合并（如X只有标题、森空岛有全文），取最全官方原文。
 - editorial可写`rejections:{item_id:原因}`；import自动生成`selection-report.json`（期次data目录与episode目录各一份），列出全部候选的入选/落选原因、来源条数和失败来源，unreviewed越少越好。
+
+## 2026-11-09内容改版（用户确认，当前有效）
+
+覆盖本页及旧文档中的“传闻不报”和“qbitai-leads为lead_only线索源”。各栏目都是有合格素材才做；补充栏目（传闻、GitHub、玩家热议）采集失败只跳过该栏目并记缺口，不中断collect或正片。编辑字段见workspace-context/DSH_PROMPT.md第3a节。
+
+### 来源
+
+- 媒体（`tier:"media"`，segment=media）：量子位qbitai-leads、TechCrunch AI、The Verge AI、IT之家（`include_pattern`只收AI相关标题）。媒体页口播前两句须有“据+媒体名”（MEDIA_ATTRIBUTION_REQUIRED），只转述报道，不当官方确认。
+- 传闻（`rumor_sources.json`，`rumor_sources.py`，config.rumors）：X账号btibor91、testingcatalog（A），legit_api、chetaslua、apples_jimmy（B），kimmonismus（C），2026-11-09经agent-reach profile核验存在；分级是编辑默认值，按日后准确率调整。另按12个模型家族轮换OR搜索（每轮≤8次、间隔10秒），搜索所得C级帖须≥20赞；Reddit r/singularity为C级。全部只读，48h窗口，过滤词见`content_filter.json`。RATE_LIMITED/PLATFORM_BLOCKED/NEED_LOGIN时整轮停止并冷却（`data/rumor-collection-state.json`），不换账号或后端。原帖与时间证据分别存`data/rumors/`与`data/time-evidence/`。
+- GitHub今日热门（`github_trending.py`，config.github_trending）：每次collect读github.com/trending，`judge`只留AI或开发者工具，跳过人肉/开盒/盗号/外挂/破解/deepfake/成人等用途（如sherlock类账号搜索），保留≤3个，记录仓库卡片到`assets/github/`（不入Git）。快照时间即发布时间。
+- 玩家热议（`community_sources.py`＋`community_reader.mjs`，config.community）：独立阅读profile `../../.community-reader-private/chrome-profile`，与上传profile分开（代码拒绝复用）。由用户本人`python -B community_sources.py login`用小号登录一次，程序不代登。只读渲染后的页面：近48h按播放最多5个＋最新3个视频（最新的需≥200播放、≥10评论），每视频读最热、最新评论及弹幕，页面间隔3–5秒；不导出Cookie、不直接调用评论/搜索API、不逆向WBI、不重放请求、不读用户名。快照存`data/community/`。
+
+### 门槛
+
+- 传闻：evidence_type三选一（tierA_source／two_independent／artifact），credibility（较可信/待观察/存疑；两条C级不能较可信），unknowns，official_status（未回应/已否认/已部分确认），rumor_safety_checked。口播首句点名来源＋转述词，末句官方状态，未部分确认时不得出现确认/证实/实锤/官宣等定论词（否定句如“尚未确认”允许）。标题带曝/传/疑似；传闻做头条时封面也要带。`data/rumor-ledger.jsonl`7天内同一传闻需新来源；官方证实或否认后用resolves_rumor回扣。
+- GitHub：scene_type=github_trending，repo与stars_today须与采集一致，口播90–280字含仓库短名和“GitHub”，7天内同仓库不重复（`data/github-trending/featured.jsonl`），固定在AI早报最后，不能当头条（LEAD_SEGMENT）。
+- 活动一览：scene_type=activity_overview，`freshness_basis:"active_window"`，1–3个官方活动；window_quote须含起止日期，公告≤30天，活动窗口与[本期, 本期+7天]重叠；按即将结束→进行中→即将开始排列。
+- 玩家热议：scene_type=community_pulse，每期≤3页。讨论对象须是`game_glossary.json`本游戏`reviewed:true`的词且类型一致（两游戏共用的词要求视频标题含本游戏名）；所引视频须在快照中且标题属于本游戏；去重后样本≥30、提及≥5；sample_count与口播数字一致；口播须标明“玩家…认为/觉得”等；引语≤3条、每条≤20字且原样出现在样本中；过滤粗口、血腥、辱骂、群体攻击、引战、剧透。未审核词用`glossary-candidates`列出交用户确认。
+
+### 排序、标题与简介
+
+- import在新鲜度审计后、排序前自动分栏（assign_segments）并加角标：传闻·未经官方证实、媒体报道、GitHub 今日热门、进行中活动、玩家热议。头条仍放最前，其余AI：传闻→媒体→官方→GitHub；游戏：官方→活动→热议。
+- 标题可加`title_hook`（≤16字）与`title_hook_evidence`（须同时出现在hook和所选正文）；标题封面禁用震惊/炸裂/惊呆/速看/必看/绝了/吊打/跪了。
+- publication.json未写description时，release自动生成章节时间点、来源链接和免责声明（传闻、玩家热议）；超过2000字或为空时报DESCRIPTION_REQUIRED。
