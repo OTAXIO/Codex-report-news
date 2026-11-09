@@ -8,3 +8,7 @@
 *.yml text eol=lf
 *.html text eol=lf
 .gitignore text eol=lf
+# The deployed uploader is pinned by its exact bytes (config.json publisher.implementation_sha256),
+# copied verbatim from codex-upload-video. Never convert its line endings, or every checkout
+# fails with SKILL_VERSION_MISMATCH. Must stay below the eol rules above.
+News_Video/skills/codex-upload/** -text

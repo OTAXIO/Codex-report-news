@@ -36,6 +36,8 @@ python -B sync_upload_skill.py --apply --installed
 python -B sync_upload_skill.py --check --installed
 ```
 
+2026-11-09 换行修正：指纹按文件原始字节计算，而仓库`.gitattributes`曾把`.py`/`.json`/`.mjs`统一成LF、源码仓库部署的却是CRLF，导致每次合并、切分支或新检出后报`SKILL_VERSION_MISMATCH`（提交前拦截，属安全失败）。现已对`News_Video/skills/codex-upload/**`设`-text`，仓库按部署原字节保存，检出后指纹与pin一致。以后部署后照常提交`skills/codex-upload`与`config.json`即可；若仍遇到该报错，先运行上面的`--apply`恢复，不要用git restore“还原”这些文件。
+
 缺记录、失败、跳过、测试证据损坏或源码变化时，部署在复制文件前拒绝。部署期间桥接器拒绝新开浏览器；复制后核对所有文件和完整运行模块指纹，异常回滚并保留备份；最后更新生产配置与验证证据。每期沿用`--check --installed`和既有doctor，无需每期重跑离线测试。
 
 恢复不设固定次数上限。每次仍需成功平台回查及submit_started=false证据；封面/定位错误会记录代码及公开上传输入签名。同样错误且输入、实现均未改变时，返回REPAIR_REQUIRED，阻止小时任务无效重复。修复、验证、部署后可继续恢复；不清零历史次数，不修改已发布稿。
