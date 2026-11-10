@@ -72,7 +72,7 @@
 ## 3a. 新栏目（2026-11-09）
 import 会按来源给每页自动分栏（`segment`）并加角标，再按栏目排序。头条（lead_event_id）仍按第 3 节影响力手选，放在最前；其余按下面顺序：
 - AI早报：传闻 → 媒体报道 → 官方动态 → GitHub 今日热门（固定最后，每期最多 1 条，不能当头条）。
-- 游戏情报：官方消息 → 活动一览 → 玩家热议。
+- 游戏情报：官方消息 → 活动（每页一个，见下）→ 玩家热议。
 栏目都是“有合格素材才做”，没有就不做，不凑数。
 
 **传闻**（`scene_type:"rumor"`，item_id 为某条传闻帖）：
@@ -87,7 +87,13 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 
 **GitHub 今日热门**（`scene_type:"github_trending"`）：填 `repo`（owner/name）、`stars_today`（与采集一致）；口播 90–280 字，含仓库短名和“GitHub”，讲清它是做什么的、谁做的、今天涨了多少星。配图自动用仓库卡片。同一仓库 7 天内不重复。
 
-**活动一览**（`scene_type:"activity_overview"`，`freshness_basis:"active_window"`）：一页列 1–3 个正在进行或 7 天内开始的官方活动，`activity_items` 每项填 `item_id、name、start_at、end_at（带时区）、window_quote（含起止日期的官方原句）、source_type`。公告发布超过 30 天的不用；顺序必须是即将结束 → 进行中 → 即将开始。
+**活动**（2026-11-10 起一页只讲一个活动；`scene_type:"activity"`，`freshness_basis:"active_window"`，旧的多活动 `activity_overview` 页导入会被 ACTIVITY_ONE_PER_PAGE 拒绝）：
+- 先看有哪些活动：`python -B activities.py list --series <arknights|endfield>` 列出以前核实过、现在还在进行的活动（来自 `data/activity-ledger.json`，带“还剩N天”）；`python -B activities.py scan --series <…>` 从近 30 天采集到的官方帖里找出写有起止日期的活动窗口（只是线索，时区、活动名仍须读原文确认）。还在进行的活动每期都可以再报，直到结束；活动页不参与已用新闻去重。
+- `activity_items` 只填 1 项：`item_id、name、start_at、end_at（带时区）、window_quote（含起止日期的官方原句）、source_type`，再加 `kind`（`online` 线上 / `offline` 线下 / `collab` 联动，默认 online）和 `scale`（`main` 主要活动 / `minor` 热度低的网页、社区小活动，如投稿征集、H5 网页活动、转发抽奖，默认 main）。线下活动必须填 `location`，联动必须填 `partner`，两者都要是官方原文里出现的写法。
+- 画面上的倒计时条（“距截止还有 N 天”“今天/明天 HH:MM 截止”、起止时间、地点/联动方）由程序按核实过的时间算出，不要自己写进 facts。`facts` 只写 1–2 条（怎么参加、能拿到什么），每条 detail ≤54 字。
+- 口播必须念出截止日期（未开始的念开启日期），如“活动到 11 月 20 日截止”，否则 ACTIVITY_DEADLINE_NOT_SPOKEN。
+- 顺序由导入自动排：主要活动在前、小活动在后；各自按 即将结束 → 进行中 → 即将开始。每期最多 6 页（超了先删小活动）；同一活动只占一页，也不能同时再做成一条普通新闻页。公告发布超过 30 天的不用。
+- 配图：每个活动用它自己公告里的图（主视觉/活动海报）。`python -B scene_media.py rank <item_id>` 会把该公告的图片按清晰度和信息量从好到差列出，优先选靠前且不是超长海报的那张。
 
 **玩家热议**（`scene_type:"community_pulse"`，每期最多 3 页）：
 - 填 `item_id`（快照ID）、`game`、`subject:{game, entity_type, entity_name}`（entity_type 取 glossary 的 character/event/mode/banner/item/place）、`videos:[bvid]`（来自快照且标题属于本游戏）、`sample_count`（所引视频去重后的评论＋弹幕总条数，须 ≥30 且其中提到该对象的 ≥5 条；填错时报错信息会给出正确数字，口播里用阿拉伯数字原样写出）、可选 `quotes`（≤3 条、每条 ≤20 字，从样本原样照抄）。

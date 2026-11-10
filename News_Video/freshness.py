@@ -190,10 +190,14 @@ def audit_episode(episode,root,reference=None,bind=False):
             ok=bool(entries) and all(c['ok'] for c in checks)
             result.update(ok=ok,reason='schedule_entries_within_window' if ok else 'schedule_entry_invalid',basis='schedule',schedule_checks=checks)
         if basis=='active_window':
-            # Activity overview page: 2-3 official activities running now or within 7 days,
-            # each with its quoted start and end, ordered ending -> ongoing -> upcoming.
+            # 2026-11-10: one activity per page (scene_type=activity), official window running now
+            # or opening within 7 days. The older multi-activity overview page stays readable
+            # for editions imported before the change.
             entries=scene.get('activity_items') or []
             window=policy.get('active_window',{})
+            single=scene.get('scene_type')=='activity'
+            if single and len(entries)!=1:raise ValueError('ACTIVITY_ONE_PER_PAGE: an activity page presents exactly one activity')
+            if not single and bind and window.get('one_per_page'):raise ValueError('ACTIVITY_ONE_PER_PAGE: use scene_type=activity with one activity_items entry per page; the multi-activity overview is retired')
             if not 1<=len(entries)<=window.get('max_items_per_page',3):raise ValueError('FRESHNESS: an activity overview page lists 1-3 activities')
             checks=[]
             for entry in entries:
@@ -207,6 +211,10 @@ def audit_episode(episode,root,reference=None,bind=False):
                 order=[ACTIVITY_STATE_ORDER[c['state']] for c in checks]
                 if order!=sorted(order):raise ValueError('FRESHNESS: list activities ending soon first, then ongoing, then upcoming')
             result.update(ok=ok,reason='activities_within_window' if ok else 'activity_entry_invalid',basis='active_window',activity_checks=checks)
+            if ok and single and bind:
+                # The on-screen countdown comes from the verified window, not from the writer.
+                from activities import describe
+                scene['activity']=describe(scene,entries[0],checks[0],reference,official_text(root,entries[0].get('item_id')))
         results.append(result)
         if not result['ok']:raise ValueError('FRESHNESS: '+str(scene.get('item_id'))+': '+result['reason'])
         if bind:

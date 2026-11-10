@@ -1,5 +1,11 @@
-"""Resolve one related, local image for every page; no network during rendering."""
-import hashlib,json,re
+"""Resolve one related, local image for every page; no network during rendering.
+
+2026-11-10 picture choice: with `presentation.image_quality` configured, a picture that is
+too small or nearly blank is not shown, and a game page may take a better picture from the
+same official article. `python -B scene_media.py rank <item_id>` lists an article's pictures
+best first so the writer can pick.
+"""
+import hashlib,json,math,re,sys
 from pathlib import Path
 
 def digest(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -13,6 +19,54 @@ def image_info(root,value):
         im.verify();size=im.size
     if min(size)<16:raise ValueError('PAGE_IMAGE: image too small')
     return path,size
+
+def quality(path,gate=None):
+    """Size and information content of a picture, measured on a 96x96 grey thumbnail."""
+    from PIL import Image
+    gate=gate or {}
+    with Image.open(path) as im:
+        w,h=im.size;rgba=im.convert('RGBA')
+        flatbed=Image.new('RGBA',rgba.size,'white');flatbed.alpha_composite(rgba)   # transparent logos sit on the white page
+        hist=flatbed.convert('L').resize((96,96)).histogram()
+    n=96*96
+    entropy=-sum(c/n*math.log2(c/n) for c in hist if c)
+    flat=max(sum(hist[i:i+8]) for i in range(0,256,8))/n   # share of the page in one tone
+    long_poster=h>w*2.2
+    reject=None
+    if min(w,h)<gate.get('min_short_side',0) or max(w,h)<gate.get('min_long_side',0):reject='too_small'
+    elif flat>=gate.get('max_flat',2) or entropy<gate.get('min_entropy',0):reject='low_information'
+    score=entropy*10+min(w,h,1080)/1080*20-30*max(0,flat-.5)-(30 if long_poster else 0)
+    return dict(width=w,height=h,entropy=round(entropy,2),flat=round(flat,3),long_poster=long_poster,score=round(score,1),reject=reject)
+
+def article_images(root,item_id):
+    path=Path(root)/'data/articles'/(str(item_id)+'.json')
+    if not item_id or not path.is_file():return []
+    return [x for x in json.loads(path.read_text(encoding='utf-8')).get('related_images',[]) if x.get('file') and x.get('source_url')]
+
+def rank(root,images,gate):
+    rows=[]
+    for x in images:
+        try:path,_=image_info(root,x['file']);rows.append(dict(file=x['file'],source_url=x.get('source_url'),**quality(path,gate)))
+        except (ValueError,OSError) as error:rows.append(dict(file=x['file'],source_url=x.get('source_url'),score=-1,reject='unreadable: '+str(error)))
+    return rows
+
+def select(scene,root,gate):
+    """Keep the writer's picture unless it fails the gate or is a very long poster that would be
+    cropped; then, or when the page has none, take the best picture of the same official article.
+    Alternatives come only from the page's own article (or `image_candidates`), so relevance holds."""
+    own=[dict(file=scene['image'],source_url=scene.get('image_source_url'))] if scene.get('image') else []
+    others=list(scene.get('image_candidates',[]))
+    if scene.get('game') and scene.get('segment')!='community':others+=article_images(root,scene.get('item_id'))
+    others=[x for i,x in enumerate(others) if x['file']!=scene.get('image') and x['file'] not in [y['file'] for y in others[:i]]]
+    rows=rank(root,own+others,gate)
+    chosen=rows[0] if own and not rows[0]['reject'] else None
+    pool=sorted((r for r in rows[len(own):] if not r['reject'] and r.get('source_url')),key=lambda r:-r['score'])
+    if pool and (chosen is None or chosen['long_poster'] and not pool[0]['long_poster']):chosen=pool[0]
+    report=dict(requested=scene.get('image'),chosen=chosen and chosen['file'],candidates=rows)
+    if chosen and chosen['file']!=scene.get('image'):scene['image'],scene['image_source_url']=chosen['file'],chosen['source_url']
+    elif not chosen and own:
+        report['rejected']=rows[0]['reject'];scene.pop('image');scene.pop('image_source_url',None)   # falls back to the subject's identity
+    return report
 
 def catalog(root):
     path=Path(root)/'assets/logos/sources.json'
@@ -58,7 +112,7 @@ def prepare(episode,root):
     root=Path(root);cfg=json.loads((root/'config.json').read_text(encoding='utf-8'))
     if not cfg.get('presentation',{}).get('require_image_every_page'):return None
     from layout_policy import is_overview
-    records=catalog(root);rows=[]
+    records=catalog(root);rows=[];gate=cfg['presentation'].get('image_quality')
     body=[s for s in episode['scenes'] if not is_overview(s)]
     if not episode['scenes']:return dict(ok=True,policy_version=1,pages=[])
     if not body:raise ValueError('PAGE_IMAGE: no news for overview attribution')
@@ -70,7 +124,10 @@ def prepare(episode,root):
             try:media=choose({k:v for k,v in lead.items() if k not in {'image','image_source_url'}},root,records)
             except ValueError:media=choose(lead,root,records)
             media=dict(media,overview_of=lead['id'])
-        else:media=choose(scene,root,records)
+        else:
+            picked=select(scene,root,gate) if gate else None
+            media=choose(scene,root,records)
+            if picked and (picked['candidates'] or picked['requested']):media['selection']=picked
         media['layout']='portrait' if media['field']=='image' and media['height']>media['width']*1.35 else 'landscape'
         scene['resolved_media']=media;rows.append(dict(scene_id=scene['id'],**media))
     episode['page_image_policy_version']=1
@@ -90,3 +147,11 @@ def validate(episode,root):
             raise ValueError('PAGE_IMAGE: identity does not match this page subject')
         rows.append(dict(scene_id=scene['id'],**media))
     return dict(ok=True,policy_version=1,pages=rows)
+
+if __name__=='__main__':
+    import argparse
+    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['rank']);parser.add_argument('item_id')
+    args=parser.parse_args();root=Path(__file__).resolve().parent
+    gate=json.loads((root/'config.json').read_text(encoding='utf-8'))['presentation'].get('image_quality')
+    rows=sorted(rank(root,article_images(root,args.item_id),gate),key=lambda r:(bool(r['reject']),-r['score']))
+    sys.stdout.buffer.write((json.dumps(rows,ensure_ascii=False,indent=1)+'\n').encode('utf-8'))

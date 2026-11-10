@@ -40,7 +40,22 @@ function render(t){
   chapterNodes.forEach((n,i)=>{n.className=i===current?'chapter active':'chapter';});
   moduleNodes.forEach((n,i)=>{const m=story.progress.modules[i];n.className=time>=m.start&&time<m.end?'module active':'module';});
 }
+// Fact type grows to use the page: the largest step that still clears the source line, then spare
+// height becomes breathing room. Measured once after fonts and images, in layout pixels.
+function fitFacts(){
+  document.querySelectorAll('.scene.fit').forEach(scene=>{
+    const facts=scene.querySelector('.facts'),source=scene.querySelector('.source');
+    if(!facts||!facts.children.length)return;
+    const limit=(source?source.offsetTop:story.progress.reading_area_bottom)-14;
+    const bottom=()=>facts.offsetTop+facts.offsetHeight;
+    const steps=[1.4,1.32,1.24,1.16,1.08,1,.93];
+    const step=steps.find(s=>{scene.style.setProperty('--fs',s);return bottom()<=limit;})||steps[steps.length-1];
+    scene.style.setProperty('--fs',step);
+    const n=facts.children.length;
+    scene.style.setProperty('--air',Math.max(0,Math.min(20,Math.floor((limit-bottom())/(3*n-1))))+'px');
+  });
+}
 Shot.define({duration:story.duration,fps:30,cuts:story.scenes.slice(1).map(s=>s.start),
   fonts:[['700 64px NewsSans','新闻导览国内国际'],['400 29px NewsSans','来源北京时间'],...(persona?[['400 168px PersonaDisplay','0123456789']]:[])],
-  setup:()=>Promise.all(Array.from(document.images,img=>img.decode())),
+  setup:()=>Promise.all(Array.from(document.images,img=>img.decode())).then(fitFacts),
   render,post:{motionBlur:1,grain:0},meta:{template:story.template,chapters:story.progress.chapters}});

@@ -119,3 +119,34 @@ h1{position:absolute;left:96px;top:180px;width:1560px;margin:0;font-size:64px;fo
 #stage.persona .overview .brand b,#stage.persona .has-diagram .brand b{display:none}
 #stage.persona .identity{width:auto;max-width:1600px}
 #stage.persona .portrait-media .identity{max-width:900px}
+
+/* 2026-11-10 larger pages. The picture frame hugs the image's own shape (size set per page by
+   the builder), the text column takes the remaining width, and news-shot.js picks the largest
+   fact type that still clears the source line (--fs) and spreads spare height (--air). */
+.scene.hug-media .photo{left:auto;right:100px;top:350px;width:var(--media-w);height:var(--media-h)}
+.scene.brief.hug-media .photo{right:164px}
+.scene.hug-media .photo img{object-fit:contain}
+.scene.hug-media .facts,.scene.hug-media .source,.scene.hug-media .countdown{width:var(--text-w)}
+.scene.hug-media .facts p{max-width:none}
+.scene.portrait-media.hug-media .photo{right:280px;top:112px}
+.scene.portrait-media.hug-media h1{width:calc(var(--text-w) + 40px)}
+#stage.persona .scene.hug-media .source{width:auto;max-width:var(--text-w)}
+.scene.fit .facts{gap:calc(18px + var(--air,0px))}
+.scene.fit .facts article{padding-top:calc(14px + var(--air,0px));padding-bottom:var(--air,0px)}
+.scene.fit .facts h2{font-size:calc(32px*var(--fs,1))}
+.scene.fit .facts p{font-size:calc(27px*var(--fs,1))}
+#stage.persona .scene.fit .facts{gap:calc(12px + var(--air,0px))}
+#stage.persona .scene.fit .facts article{padding-top:calc(10px + var(--air,0px));padding-bottom:calc(10px + var(--air,0px))}
+/* Activity page: one activity, its countdown first. */
+.countdown{position:absolute;left:96px;top:354px;width:760px;height:120px;display:flex;align-items:center;gap:26px;padding-right:34px;background:#101218;color:#fff;clip-path:polygon(0 0,100% 0,calc(100% - 22px) 100%,0 100%)}
+.portrait-media .countdown{width:900px}
+.count{flex:none;height:100%;display:grid;grid-template-columns:auto auto;align-content:center;align-items:baseline;column-gap:10px;padding:0 30px 0 24px;background:#01A1FE;clip-path:polygon(0 0,100% 0,calc(100% - 22px) 100%,0 100%)}
+.count small{grid-column:1/3;font-size:23px;font-weight:700;letter-spacing:2px;line-height:1.2}
+.count strong{font-family:PersonaDisplay,NewsSans,sans-serif;font-weight:400;font-size:84px;line-height:84px;letter-spacing:2px}
+.count b{font-size:32px}
+.countdown.urgent .count{background:#FF5A36}
+.countdown.upcoming .count{background:#fff;color:#023077}
+.when{min-width:0}.when h3{margin:0;font-size:34px;line-height:1.25;white-space:nowrap}
+.when p{margin:3px 0 0;font-size:23px;line-height:1.3;color:#9FD9FF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.when .place{color:#fff;font-weight:700}
+.scene.activity .facts{top:488px}

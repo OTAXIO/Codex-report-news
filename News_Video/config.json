@@ -274,7 +274,14 @@
     "reset_overview": false,
     "cover_subtitle_enabled": false,
     "cover_footer_no_date": true,
-    "require_image_every_page": true
+    "require_image_every_page": true,
+    "image_quality": {
+      "min_short_side": 240,
+      "min_long_side": 480,
+      "max_flat": 0.88,
+      "min_entropy": 3.0,
+      "note": "2026-11-10: a page picture that is too small or nearly blank is not shown; game pages may take a better picture from the same official article. Identity logos are not gated."
+    }
   },
   "model_alerts": {
     "enabled": true,
@@ -392,7 +399,10 @@
         "decided": "2026-11-09 用户确认：游戏视频加“进行中活动一览”，30天内官方公告、活动起止覆盖本期至7天后任一点，每页2-3个，不再限1页",
         "ahead_days": 7,
         "max_announcement_age_days": 30,
-        "max_items_per_page": 3
+        "max_items_per_page": 3,
+        "one_per_page": true,
+        "max_pages": 6,
+        "decided_20261110": "用户确认：一页只展示一个活动（scene_type=activity），屏幕显示截止倒计时；线上/线下/联动分类；主要活动在前，热度低的网页/社区小活动（scale=minor）排在后面；每期最多6页"
       }
     }
   },

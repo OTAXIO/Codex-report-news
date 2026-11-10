@@ -78,7 +78,7 @@ def record_export(directory,root=ROOT,now=None):
     news=[]
     try:
         for scene in episode['scenes']:
-            if not scene.get('item_id'):continue
+            if not scene.get('item_id') or scene.get('activity'):continue
             source=db.execute('SELECT title,kind FROM items WHERE id=?',(scene['item_id'],)).fetchone()
             if source is None:raise ValueError('Export refers to unknown collected news')
             news.append(dict(item_id=scene['item_id'],title=scene['title'],source_title=source['title'],

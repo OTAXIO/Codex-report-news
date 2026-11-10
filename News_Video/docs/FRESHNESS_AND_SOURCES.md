@@ -73,7 +73,7 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 
 - 传闻：evidence_type三选一（tierA_source／two_independent／artifact），credibility（较可信/待观察/存疑；两条C级不能较可信），unknowns，official_status（未回应/已否认/已部分确认），rumor_safety_checked。口播首句点名来源＋转述词，末句官方状态，未部分确认时不得出现确认/证实/实锤/官宣等定论词（否定句如“尚未确认”允许）。标题带曝/传/疑似；传闻做头条时封面也要带。`data/rumor-ledger.jsonl`7天内同一传闻需新来源；官方证实或否认后用resolves_rumor回扣。
 - GitHub：scene_type=github_trending，repo与stars_today须与采集一致，口播90–280字含仓库短名和“GitHub”，7天内同仓库不重复（`data/github-trending/featured.jsonl`），固定在AI早报最后，不能当头条（LEAD_SEGMENT）。
-- 活动一览：scene_type=activity_overview，`freshness_basis:"active_window"`，1–3个官方活动；window_quote须含起止日期，公告≤30天，活动窗口与[本期, 本期+7天]重叠；按即将结束→进行中→即将开始排列。
+- 活动（2026-11-10起一页一个）：scene_type=activity，`freshness_basis:"active_window"`，activity_items恰好1项（ACTIVITY_ONE_PER_PAGE；旧activity_overview仅供已导入期次复核，新导入拒绝）；window_quote须含起止日期，公告≤30天，活动窗口与[本期, 本期+7天]重叠。kind=online/offline/collab，offline须location、collab须partner且见于官方原文；scale=main/minor。facts 1–2条、detail≤54字（ACTIVITY_FACTS）；口播须念出截止（或开启）日期（ACTIVITY_DEADLINE_NOT_SPOKEN）。导入时`activities.arrange`自动排序：main在前、minor在后，各自按即将结束→进行中→即将开始；每期≤active_window.max_pages（6）页，同一活动不重复、不与新闻页重复。倒计时由freshness绑定时写入scene.activity（release/upload复核不重算）。活动页不进used-news去重与记录，改记`data/activity-ledger.json`，供`activities.py list`在后续期次继续报到结束。
 - 玩家热议：scene_type=community_pulse，每期≤3页。讨论对象须是`game_glossary.json`本游戏`reviewed:true`的词且类型一致（两游戏共用的词要求视频标题含本游戏名）；所引视频须在快照中且标题属于本游戏；去重后样本≥30、提及≥5；sample_count与口播数字一致；口播须标明“玩家…认为/觉得”等；引语≤3条、每条≤20字且原样出现在样本中；过滤粗口、血腥、辱骂、群体攻击、引战、剧透。未审核词用`glossary-candidates`列出交用户确认。
 
 ### 排序、标题与简介
@@ -81,3 +81,11 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 - import在新鲜度审计后、排序前自动分栏（assign_segments）并加角标：传闻·未经官方证实、媒体报道、GitHub 今日热门、进行中活动、玩家热议。头条仍放最前，其余AI：传闻→媒体→官方→GitHub；游戏：官方→活动→热议。
 - 标题可加`title_hook`（≤16字）与`title_hook_evidence`（须同时出现在hook和所选正文）；标题封面禁用震惊/炸裂/惊呆/速看/必看/绝了/吊打/跪了。
 - publication.json未写description时，release自动生成章节时间点、来源链接和免责声明（传闻、玩家热议）；超过2000字或为空时报DESCRIPTION_REQUIRED。
+
+## 2026-11-10 活动页与活动台账
+
+用户要求：说明最近有哪些活动在进行、每个多久截止，每个活动一页，含线上、线下和联动；热度低的网页小活动放后面。实现在`activities.py`：
+
+- `python -B activities.py list --series <game> [--at ISO]`：台账中仍在进行（或7天内开始）的活动。
+- `python -B activities.py scan --series <game>`：在`data/game-items`近30天官方条目的标题/摘要/正文里找“起–止”日期窗口，给出kind/scale猜测。仅为线索，不能代替读原文。
+- 来源缺口：目前没有专门的线下活动/联动来源（官方B站、微博、线下展会页未接入），线下和联动只能来自已接入的森空岛官方帖、官网公告和官方X；没采到就不报，不凑数。

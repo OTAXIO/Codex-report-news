@@ -555,8 +555,11 @@ def import_editorial(path):
     from freshness import audit_episode
     audit_episode(episode,ROOT,bind=True)
     assign_segments(episode,source_catalog)
+    import activities
+    activities.arrange(episode)
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)
+    activities.validate_pages(episode,cfg.get('freshness',{}).get('effective_window',{}).get('active_window',{}).get('max_pages',6))
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
     from community_sources import assign_image
@@ -597,8 +600,8 @@ def import_editorial(path):
                 name=source_catalog[row['source_id']]['publisher']
                 if not any('据' in s and name.casefold() in s.casefold() for s in sentences(scene.get('narration',''))[:2]):
                     raise ValueError('MEDIA_ATTRIBUTION_REQUIRED: say 据'+name+'报道 in the first two sentences; a media report is not an official statement')
-            if scene.get('scene_type')=='activity_overview' and scene.get('freshness_basis')!='active_window':
-                raise ValueError('ACTIVITY_OVERVIEW_BASIS: an activity overview uses freshness_basis=active_window')
+            if scene.get('scene_type') in {'activity','activity_overview'} and scene.get('freshness_basis')!='active_window':
+                raise ValueError('ACTIVITY_OVERVIEW_BASIS: an activity page uses freshness_basis=active_window')
             if row["kind"]=="games":
                 record=load(ROOT/"data/game-items"/(row["id"]+".json"))
                 if scene.get("game")!=record.get("game") or scene.get("game_region")!=record.get("game_region"):raise ValueError("Game identity/region differs from official source")
@@ -616,6 +619,8 @@ def import_editorial(path):
                 from leader_sources import validate_scene
                 validate_scene(scene,load(ROOT/'data/leader-posts'/(scene['item_id']+'.json')))
             if source_catalog.get(row['source_id'],{}).get('published_precision')=='date' or row['source_id']=='kimi-blog':scene['published_precision']='date'
+            # A running activity is reported every day until it ends; it is not "used news".
+            if scene.get('activity'):continue
             selected.append(scene["item_id"])
             if scene.get('editorial_role')=='recap':
                 from important_events import validate_recap
@@ -661,6 +666,7 @@ def import_editorial(path):
     if leader_audit:dump(directory/'leader-audit.json',leader_audit)
     dump(directory/"episode.json",episode)
     record_ledger(rumor_changes,ROOT)
+    activities.record(episode,ROOT)
     from github_trending import record_featured
     record_featured(episode,ROOT)
     if media_audit:dump(directory/'scene-media.json',media_audit)
@@ -690,6 +696,7 @@ def assign_segments(episode,catalog):
             if not row:raise ValueError('Editorial refers to unknown collected candidate')
             scene['segment']=segment_for(dict(row),scene,catalog)
             badge={'rumor':'传闻·未经官方证实','media':'媒体报道','github':'GitHub 今日热门','community':'玩家热议','activities':'进行中活动'}.get(scene['segment'])
+            if scene.get('activity'):badge=scene['activity']['kind_label']
             if badge:scene['badge']=badge
             if scene['segment']=='github':
                 from github_trending import bind_media

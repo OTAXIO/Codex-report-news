@@ -10,6 +10,26 @@ from renderer_backends import save,load
 EXTRA_FONTS={'persona':['impact.ttf']}
 # 2026-11-09 segment badges: rumors are visibly unconfirmed, player views visibly opinions.
 BADGE_COLORS={'rumor':'#F06A00','community':'#12925A','media':'#5B6470','github':'#24292F','activities':'#0A6FB5'}
+ACTIVITY_COLORS={'online':'#0A6FB5','offline':'#0A8F6A','collab':'#B8327C'}
+FIT_MODES={'game','product','social','brief'}
+
+def photo_frame(media,mode,extra):
+    """The frame takes the picture's own shape inside the page's picture box, so no
+    letterbox bars or cropped posters; the text column gets whatever width is left."""
+    w,h=media['width'],media['height'];pad=20
+    if media.get('layout')=='portrait':
+        if h>w*2.2:return ' crop-media',''   # very long poster: keep the existing top crop
+        bw,bh,edge,gap=560,700+extra,1640,84
+    else:bw,bh,edge,gap=(880 if mode=='game' else 740),460+extra,(1756 if mode=='brief' else 1820),54   # a brief may open the film: its 64px entry slide must stay inside the reading area
+    scale=min((bw-pad)/w,(bh-pad)/h,1.6)
+    fw,fh=round(w*scale)+pad,round(h*scale)+pad
+    return ' hug-media',f'--media-w:{fw}px;--media-h:{fh}px;--text-w:{edge-fw-96-gap}px'
+
+def countdown(activity):
+    c=activity['countdown'];upcoming=activity['phase']=='upcoming'
+    place=' · '.join(x for x in [activity.get('location') and '地点 '+activity['location'],activity.get('partner') and '联动 '+activity['partner']] if x)
+    return (f'<div class="countdown{" urgent" if activity["urgent"] else ""}{" upcoming" if upcoming else ""}"><div class="count"><small>{text(c["lead"])}</small><strong>{text(c["big"])}</strong><b>{text(c["tail"])}</b></div>'
+            f'<div class="when"><h3>{text(activity["start_label"] if upcoming else activity["end_label"])}</h3><p>{text(activity["window_label"])}</p>'+(f'<p class="place">{text(place)}</p>' if place else '')+'</div></div>')
 
 def text(value):return html.escape(str(value),quote=True)
 def phrase(value):
@@ -33,6 +53,7 @@ def build(root,episode,plan):
     soundtrack=ensure_soundtrack(root,episode,timing['duration'])
     # Audio is attached by the renderer CLI, never advanced by browser playback.
     offsets=[];scenes=[];cards=[];chapters=[];folios=folio_numbers(ep['scenes'])
+    extra=navigation_layout('multiplane')['content_extra_y']
     for index,s in enumerate(ep['scenes']):
         parts=[p for p in timing['sentences'] if p['scene_id']==s['id']]
         if not parts:raise ValueError('No timing for scene '+s['id'])
@@ -71,12 +92,17 @@ def build(root,episode,plan):
                 f'<article><div class="category">{text(f.get("category","重点新闻"))}</div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for f in facts)+'</div>'+logo+picture
         else:
             identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
-            body=identity+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
+            body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
+        frame=''
+        if picture and not diagram and mode in FIT_MODES and s.get('resolved_media'):
+            hug,frame=photo_frame(s['resolved_media'],mode,extra);classes+=hug
+        if mode in FIT_MODES:classes+=' fit'
+        if s.get('activity'):classes+=' activity'
         badge=s.get('badge')
-        badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{BADGE_COLORS.get(s.get("segment"),"#101218")}">{text(badge)}</b>' if badge else '')
-        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
+        badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{ACTIVITY_COLORS[s["activity"]["kind"]] if s.get("activity") else BADGE_COLORS.get(s.get("segment"),"#101218")}">{text(badge)}</b>' if badge else '')
+        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"'+(f' style="{frame}"' if frame else '')+f'><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
         chapters.append(dict(id=s['id'],label=s.get('short_title',s['title']),start=start,end=end))
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]
     for c in captions:

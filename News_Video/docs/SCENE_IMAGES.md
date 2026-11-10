@@ -41,3 +41,12 @@ presentation.require_image_every_page=true。scene_media.prepare在导入并生�
 所有坐标由navigation_layout输出caption、content_extra_y和reading_area_bottom；模板用同一元数据生成样式，DOM验收检查字幕位置、与导航间隔及图文安全区，禁止只移动字而留下旧检查范围。进度细条仍贴底，已发布视频不更改。当前完整诊断期次page-image-preview-20261029-v4，203项测试与64处DOM检查通过。
 
 字幕下移v4最终成片161.2秒、1920×1080/30fps，7段进度/高亮及全片解码通过；实际MP4已提取1.63/15.97/63/146.13秒检查。旧HyperFrames同素材check通过。此轮未改音轨或字幕时间轴，未投稿。
+
+## 2026-11-10 配图质量筛选与自动择优
+
+`presentation.image_quality`（min_short_side 240、min_long_side 480、max_flat 0.88、min_entropy 3.0）启用后，`scene_media.prepare`在选图前先量每张候选图（96×96灰度缩略图的信息熵、单一色调占比和原图尺寸）：
+
+- 过小（too_small）或近乎空白（low_information）的新闻图不上画面，退回该页主体的官方标识，原因写入scene-media.json的selection.rejected。标识本身不受此门槛限制。
+- 游戏页可换用**同一篇官方公告**里的其他图：编辑指定的图不合格，或是高宽比>2.2会被裁切的超长海报而公告里有正常比例的图时，自动换成得分最高的一张；没指定图的游戏页自动取公告里最好的一张。候选只来自该页自己的公告（或编辑给的`image_candidates:[{file,source_url}]`），所以不会配到无关图片；换图后image/image_source_url同步更新，仍满足“游戏图须来自所读公告”的检查。
+- `python -B scene_media.py rank <item_id>`列出某公告图片的尺寸、熵、得分和淘汰原因，供写稿时挑图。
+- 得分=熵×10＋短边/1080×20−单色占比超50%部分×30−超长海报30；只用于同一公告内排序，不是审美判断，最终仍由制作者看图确认与本页内容相符。
