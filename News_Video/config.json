@@ -101,6 +101,11 @@
     ]
   },
   "editorial": {
+    "review_coverage": {
+      "enabled": true,
+      "top_n": 40,
+      "decided": "2026-11-11 用户要求“全部修复”：候选按观众相关度排序、同一事件合并；导入时前40组每组都要有选用或不选理由（一条理由覆盖整组），防止重要消息停留在 unreviewed。"
+    },
     "company_names": "Foreign names keep official English; domestic brands use established Chinese names, Qwen -> 千问; DeepSeek remains English",
     "include_episode_notes_chapter": false,
     "preferred_vendors": [
@@ -210,7 +215,15 @@
     "trigger": "hourly",
     "executable": "agent-reach",
     "limit_per_account": 10,
-    "timeout_seconds": 40,
+    "timeout_seconds": 60,
+    "warmup_timeout_seconds": 150,
+    "retries": 1,
+    "retry_backoff_seconds": 15,
+    "max_consecutive_failures": 3,
+    "transient_cooldown_seconds": 120,
+    "catch_up_pass": true,
+    "max_pause_seconds": 180,
+    "robustness_note": "2026-11-11 user: strengthen X. The 06:00 runs hit a cold reader browser and one 55 s timeout stopped every account; now the first read gets 150 s, a timeout skips only that account (one retry, then a catch-up pass at the end), three in a row mean X is unreachable (120 s pause). NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED still stop at once and are never retried. See x_reach.py.",
     "hourly_polling": true,
     "paid_x_api": false,
     "leader_post_without_official_news_allowed": true,

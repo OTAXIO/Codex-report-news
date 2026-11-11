@@ -94,6 +94,7 @@ def build(root,episode,plan):
             identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
             body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
+        if s.get('brief_publishers'):source=f'<div class="source"><b>快讯来源</b>　{text(" · ".join(s["brief_publishers"]))}<span>每条出处见括号，原文链接见简介</span></div>'
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
         frame=''
         if picture and not diagram and mode in FIT_MODES and s.get('resolved_media'):

@@ -88,11 +88,11 @@ class RumorTests(unittest.TestCase):
                 calls.append(args)
                 if args[1]=='tweets':return dict(ok=True,items=[post(args[2],'GPT-6.2 Sol model picker string spotted in the app')])
                 return dict(ok=False,error=dict(code='RATE_LIMITED',retry_after_seconds=600))
-            report=r.collect(runner=runner,sleep=lambda s:None,root=root)
+            report=r.collect(runner=runner,sleep=lambda s:None,root=root,now=NOW)
             self.assertTrue(report['stopped']);self.assertEqual(report['reason'],'RATE_LIMITED')
             self.assertEqual(sum(1 for a in calls if a[1]=='search'),1,'stop the channel on the first block')
             self.assertEqual(report['accepted'],len(r.accounts(root)))
-            again=r.collect(runner=runner,sleep=lambda s:None,root=root)
+            again=r.collect(runner=runner,sleep=lambda s:None,root=root,now=NOW)
             self.assertEqual(again['reason'],'COOLDOWN')
 
     def test_ledger_blocks_repeats_without_new_evidence(self):

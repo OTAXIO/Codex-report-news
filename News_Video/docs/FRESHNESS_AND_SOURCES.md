@@ -89,3 +89,13 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 - `python -B activities.py list --series <game> [--at ISO]`：台账中仍在进行（或7天内开始）的活动。
 - `python -B activities.py scan --series <game>`：在`data/game-items`近30天官方条目的标题/摘要/正文里找“起–止”日期窗口，给出kind/scale猜测。仅为线索，不能代替读原文。
 - 来源缺口：目前没有专门的线下活动/联动来源（官方B站、微博、线下展会页未接入），线下和联动只能来自已接入的森空岛官方帖、官网公告和官方X；没采到就不报，不凑数。
+
+## 2026-11-11 资讯量、候选排序与X连接（用户要求“全部修复”，当前有效）
+
+起因：2026-11-11 AI早报候选 339 条只审了 17 条、成片 7 条；同期同行 8.5 分钟讲 18 条，并以 Claude 额度重置开场（该消息在我们的候选里未被看到）。06:00 的 X 采集连续多日因专用浏览器冷启动超时而整轮放弃。
+
+- **X 连接**（`x_reach.py`，`leader_sources.py`、`rumor_sources.py` 共用）：参数在 `config.json` 的 `x_collection`。首次读取 150 秒，其后 60 秒；临时错误（TIMEOUT/UPSTREAM_BROKEN/BUSY）按阅读器给出的 `retry_after_seconds` 暂停（上限 180 秒）后重试 1 次，仍失败则跳过并在本轮末尾补读一次；连续 3 个账号失败判 X_UNREACHABLE 并冷却 2 分钟。NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED/NEED_SETUP 立即停止，不重试、不换账号或后端。“Could not resolve @x” 记为 NOT_FOUND（账号改名或不存在），不再触发全局暂停。被杀进程留下的锁（PID 已不存在）自动清除。每轮结果追加到 `data/x-health.jsonl`；`x_reach.py probe` 预热并实测，`x_reach.py doctor` 汇总各账号近期结果；`leader_sources.py --retry-failed` 只补读上一轮 `pending_handles`。传闻搜索失败只跳过该搜索。
+- **候选排序与审阅覆盖**（`candidate_rank.py`）：AI 候选按信号加分——额度重置/限额 30、封号/政策 30、新发布 25、价格/免费 22、大厂模型 15、预览/泄露 12、公司大事 10，周边/招聘/教程 −25，来源层级与 12/24 小时内新鲜度另加分。标题里的模型版本（如“Claude Fable 5.2”与“Fable 5.2”视为同一）和专有名词相同、或标题词重合度 ≥0.5 的归为同一事件；平台名与人名（Claude Code、ChatGPT、Sam Altman 等）不作为归组依据。组得分 = 组内最高分 + 每多一个来源 8 分（上限 32）。`editorial.review_coverage.top_n`（40）组在导入时每组须有选用或落选理由，否则 REVIEW_COVERAGE；selection-report 中同组其余候选记为 `same_event_as:<id>`。分数只决定审阅顺序，不替代 48h 门禁和来源规则。
+- **快讯页**（`briefs.py`，`scene_type:"briefs"`）：一页 2–3 条，每条须为已采集、48h 内、未播过的候选，source_url 与采集记录一致；传闻、lead_only、GitHub、玩家热议、需上下文的 X 帖不能进入。标题 ≤22 字、说明 ≤40 字，`spoken_key` 须在标题中并按画面顺序在口播中念到；媒体条目口播须“据+媒体名”，负责人 X 须点名本人。facts 由各条自动生成并附出处，底部出处条列出全部来源；每条均记入已用新闻。栏目顺序：传闻 → 媒体 → 官方 → 快讯 → GitHub；快讯不能当头条，也不能进 title_groups（TITLE_BRIEFS_PAGE）。自动简介的时间轴列出快讯各条标题，来源链接列出每条（总长保持在 2000 字内）。
+- **新增来源**：媒体 404 Media（只收 AI 相关）、Ars Technica AI；官方 ElevenLabs 博客 RSS；X 账号 ElevenLabs（官方）、OfficialLoganK（谷歌）、elonmusk（xAI，只采信他本人关于 xAI/Grok 的第一手说法）。身份均于 2026-11-11 实测核对；@xai（2026 年新建、0 关注者）疑似仿冒未收录，@elevenlabsio 不存在。
+- **停用**：MiniMax 官网与 Kimi 论坛在本机 TLS 握手失败（直连与代理均为 UNEXPECTED_EOF），已 `enabled:false` 并写明原因；由 X @MiniMax_AI、@Kimi_Moonshot、IT之家与 kimi-blog 覆盖。

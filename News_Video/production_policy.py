@@ -8,11 +8,11 @@ ORDER_VERSION=4
 EDITION_ORDER={'morning':['ai','games'],'night':['games','ai']}
 MAJOR_CATEGORIES={'model_release','product_launch','quota_reset','game_update'}
 # Segment rank inside a single-audience series (2026-11-09 user decision).
-SEGMENT_ORDER={'ai':{'rumor':0,'media':1,'official':2,'github':3},
+SEGMENT_ORDER={'ai':{'rumor':0,'media':1,'official':2,'briefs':3,'github':4},
                'games':{'official':0,'activities':1,'community':2}}
-SEGMENT_GROUP={'rumor':{'ai':'rumor'},'media':{'ai':'media'},'official':{'ai':'ai','games':'games'},'github':{'ai':'github'},
+SEGMENT_GROUP={'rumor':{'ai':'rumor'},'media':{'ai':'media'},'official':{'ai':'ai','games':'games'},'github':{'ai':'github'},'briefs':{'ai':'briefs'},
                'activities':{'games':'activities'},'community':{'games':'community'}}
-GROUP_LABELS={'headline':'头条','games':'游戏资讯','ai':'AI 动态','rumor':'传闻','media':'媒体报道','github':'GitHub热门','activities':'活动一览','community':'玩家热议'}
+GROUP_LABELS={'headline':'头条','games':'游戏资讯','ai':'AI 动态','rumor':'传闻','media':'媒体报道','github':'GitHub热门','activities':'活动一览','community':'玩家热议','briefs':'快讯'}
 
 def edition_order(episode,root=None):
     # Persisted plans stay stable when a default changes during recovery.
@@ -97,6 +97,7 @@ def apply_story_order(episode,root=None):
         ranks=SEGMENT_ORDER[default_order[0]]
         segment=lambda key:groups[key][0].get('segment') or 'official'
         if segment(lead)=='github' and len(groups)>1:raise ValueError('LEAD_SEGMENT: the GitHub trending page closes the video; pick a news story as lead')
+        if segment(lead)=='briefs' and len(groups)>1:raise ValueError('LEAD_SEGMENT: a 快讯 page collects secondary stories; pick a full story as lead')
         if requested is None and segment(lead)!=min((segment(k) for k in groups),key=lambda s:ranks.get(s,9)) and not major:
             lead=min(groups,key=lambda k:(ranks.get(segment(k),9),list(groups).index(k)))
         rest=[k for k in order if k!=lead]
@@ -195,7 +196,7 @@ def validate_content(episode):
 
 def modules(episode,offsets,duration):
     if episode.get('edition_slot')=='temporary':return [('temporary','临时新闻',0,duration)]
-    if any(is_game(s) or s.get('navigation_group') in {'rumor','media','github'} for s in episode['scenes']):
+    if any(is_game(s) or s.get('navigation_group') in {'rumor','media','github','briefs'} for s in episode['scenes']):
         from layout_policy import is_overview
         labels=GROUP_LABELS;runs=[]
         for i,s in enumerate(episode['scenes']):

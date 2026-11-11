@@ -22,12 +22,20 @@ def describe(episode, publication, timings=None):
         for scene in episode['scenes']:
             if is_overview(scene):continue
             stamp=starts.get(scene['id'])
-            label=(f'{int(stamp)//60:02}:{int(stamp)%60:02} ' if stamp is not None else '')+scene['title']
-            if lines and lines[-1].endswith(scene['title']):continue
+            # A 快讯 page lists its entries, so every story the video covers is findable in the chapters.
+            title='快讯：'+' / '.join(e['title'] for e in scene['brief_items']) if scene.get('brief_items') else scene['title']
+            label=(f'{int(stamp)//60:02}:{int(stamp)%60:02} ' if stamp is not None else '')+title
+            if lines and lines[-1].endswith(title):continue
             lines.append(label)
-        sources=list(dict.fromkeys(s.get('source_url') for s in episode['scenes'] if s.get('source_url') and not is_overview(s)))
+        sources=list(dict.fromkeys(url for s in episode['scenes'] if not is_overview(s)
+                                   for url in ([e.get('source_url') for e in s['brief_items']] if s.get('brief_items') else [s.get('source_url')]) if url))
         text='\n'.join(lines)
-        if sources:text+='\n\n来源：\n'+'\n'.join(sources[:12])
+        if sources:
+            # Story order; stop short of the 2000-character upload limit so the disclaimers below still fit.
+            text+='\n\n来源：'
+            for url in sources:
+                if len(text)+len(url)+1>1880:break
+                text+='\n'+url
         if any(s.get('scene_type')=='rumor' for s in episode['scenes']):text+='\n\n传闻内容未经官方证实，请以官方公告为准。'
         if any(s.get('scene_type')=='community_pulse' for s in episode['scenes']):text+='\n玩家热议为B站公开评论的归纳，代表玩家个人看法。'
     if not text.strip() or len(text)>2000:raise ValueError('DESCRIPTION_REQUIRED: description must be 1-2000 characters')
@@ -57,6 +65,7 @@ def title_for(episode, publication):
             scene=stories[key]
             if ('games' if is_game(scene) else 'ai')!=kind:raise ValueError('TITLE_CATEGORY_MIXED: '+key)
             if key in seen:raise ValueError('TITLE_EVENT_DUPLICATED: '+key)
+            if scene.get('brief_items'):raise ValueError('TITLE_BRIEFS_PAGE: a 快讯 page is not a title story; name a full story')
             seen.add(key);title=scene['title'].strip()
             if not title or re.search(r'[|｜\n\r]',title):raise ValueError('TITLE_STORY_SEPARATOR_INVALID')
             titles.append(title)

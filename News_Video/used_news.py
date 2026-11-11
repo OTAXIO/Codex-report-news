@@ -79,6 +79,15 @@ def record_export(directory,root=ROOT,now=None):
     try:
         for scene in episode['scenes']:
             if not scene.get('item_id') or scene.get('activity'):continue
+            if scene.get('brief_items'):
+                # A 快讯 page uses every one of its entries.
+                for entry in scene['brief_items']:
+                    source=db.execute('SELECT title,kind,publisher,published FROM items WHERE id=?',(entry['item_id'],)).fetchone()
+                    if source is None:raise ValueError('Export refers to unknown collected news')
+                    news.append(dict(item_id=entry['item_id'],title=entry['title'],source_title=source['title'],
+                        url=canonical_url(entry['source_url']),event_key=canonical_url(entry['source_url']),
+                        kind=source['kind'],publisher=source['publisher'],published=source['published']))
+                continue
             source=db.execute('SELECT title,kind FROM items WHERE id=?',(scene['item_id'],)).fetchone()
             if source is None:raise ValueError('Export refers to unknown collected news')
             news.append(dict(item_id=scene['item_id'],title=scene['title'],source_title=source['title'],

@@ -41,18 +41,8 @@ def queries(root=None,offset=0):
     return (out[start:]+out[:start])[:limit]
 
 def run_reach(args,timeout=60):
-    executable=shutil.which(n.config().get('x_collection',{}).get('executable','agent-reach'))
-    if not executable:return dict(ok=False,error=dict(code='NEED_SETUP'))
-    env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
-    from quiet_background import hidden_kwargs,quiet_reach
-    try:
-        with quiet_reach():
-            process=subprocess.run([executable,*args,'--timeout',str(timeout)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout+20,env=env,**hidden_kwargs())
-        result=json.loads(process.stdout.lstrip('﻿'))
-        return result if isinstance(result,dict) and isinstance(result.get('ok'),bool) else dict(ok=False,error=dict(code='UPSTREAM_BROKEN'))
-    except subprocess.TimeoutExpired:return dict(ok=False,error=dict(code='TIMEOUT'))
-    except (json.JSONDecodeError,ValueError):return dict(ok=False,error=dict(code='UPSTREAM_BROKEN'))
-    except OSError:return dict(ok=False,error=dict(code='NEED_SETUP'))
+    import x_reach
+    return x_reach.call(x_reach.executable(n.config()),list(args),timeout)
 
 def normalize(item,now,hours=48,root=None,source_id=SEARCH_ID,query=None):
     """A dated, authored post with a body; search URLs (x.com/i/status) get the author's path."""
@@ -90,9 +80,12 @@ def store(db,post,root=None):
     db.execute('INSERT OR REPLACE INTO observations VALUES(?,?,?)',(post['id'],post['source_id'],now))
     return not existed
 
-def collect(hours=48,runner=run_reach,sleep=time.sleep,root=None):
-    """Watch accounts, then rotating model-family searches; stop a channel on the first block."""
-    root=Path(root or n.ROOT);reg=registry(root);now=dt.datetime.now(n.UTC)
+def collect(hours=48,runner=run_reach,sleep=time.sleep,root=None,now=None):
+    """Watch accounts, then rotating model-family searches. A hard platform signal stops the channel at
+    once; a timeout skips only that account or query (see x_reach), and skipped accounts are retried last."""
+    import inspect,x_reach
+    root=Path(root or n.ROOT);reg=registry(root);now=now or dt.datetime.now(n.UTC)
+    takes_timeout=len(inspect.signature(runner).parameters)>1
     state_path=root/'data/rumor-collection-state.json'
     state=n.load(state_path) if state_path.is_file() else {}
     report=dict(kind='rumors',started=now.isoformat(),model_calls=0,sources=[],accepted=0,new_items=0,stopped=False)
@@ -105,15 +98,24 @@ def collect(hours=48,runner=run_reach,sleep=time.sleep,root=None):
     jobs+=[(SEARCH_ID,['twitter','search',q['query'],'--limit',str(reg['search']['limit_per_query'])],q['query'],None) for q in queries(root,state.get('query_offset',0))]
     db=n.database()
     try:
-        for index,(source_id,args,query,handle) in enumerate(jobs):
-            if index:sleep(spacing)
-            result=runner(args)
-            status=dict(source_id=source_id,query=query,handle=handle,ok=result['ok'],accepted=0,rejected=0)
+        link=x_reach.Link(x_reach.policy(n.load(root/'config.json') if (root/'config.json').is_file() else {}),sleep=sleep)
+        queue=[(job,False) for job in jobs];first=True;skipped=[]
+        while queue:
+            (source_id,args,query,handle),catch_up=queue.pop(0)
+            if not first:sleep(spacing)
+            first=False
+            result=link.fetch(lambda timeout:runner(args,timeout) if takes_timeout else runner(args))
+            status=dict(source_id=source_id,query=query,handle=handle,ok=result['ok'],accepted=0,rejected=0,attempts=result.get('_attempts',1),seconds=result.get('_seconds'))
+            if catch_up:status['caught_up']=True
             if not result['ok']:
                 code=result.get('error',{}).get('code','UPSTREAM_BROKEN');status['error_code']=code;report['sources'].append(status)
                 if code=='NOT_FOUND':continue
-                delay=result.get('error',{}).get('retry_after_seconds',300)
-                report.update(stopped=True,reason=code,retry_after_utc=(now+dt.timedelta(seconds=max(int(delay or 300),300))).isoformat());break
+                if code in x_reach.HARD or link.unreachable:
+                    report.update(stopped=True,reason=code if code in x_reach.HARD else 'X_UNREACHABLE',retry_after_utc=link.cooldown(result,now));break
+                # Accounts get one more try at the end; a failed rotating search simply waits for the next run.
+                if handle and not catch_up:queue.append(((source_id,args,query,handle),True))
+                else:skipped.append(handle or query)
+                continue
             for item in result.get('items',[]):
                 try:post=normalize(item,now,hours,root,source_id,query)
                 except (ValueError,TypeError,AttributeError):status['rejected']+=1;continue
@@ -123,9 +125,11 @@ def collect(hours=48,runner=run_reach,sleep=time.sleep,root=None):
                 if screen(post['summary'],root,allow=('flamewar','spoiler')):status['rejected']+=1;continue
                 report['new_items']+=int(store(db,post,root));status['accepted']+=1;report['accepted']+=1
             report['sources'].append(status)
+        report['skipped']=skipped
         db.commit()
     finally:db.close()
     report['finished']=dt.datetime.now(n.UTC).isoformat()
+    x_reach.log_health(root,'rumors',report)
     n.dump(state_path,dict(report,query_offset=state.get('query_offset',0)+reg['search']['max_queries_per_run']))
     return report
 

@@ -364,7 +364,7 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
         rows=view(payload['items']);selected=rows[cursor:cursor+limit]
         if compact:
             print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
-                                  items=[{k:v for k,v in item.items() if k not in {'summary','content_hash'}} for item in selected],
+                                  items=[{k:v for k,v in item.items() if k not in {'summary','content_hash','rank_reasons','cluster_score'}} for item in selected],
                                   reference_time=payload['generated_at'],game_coverage=payload['game_coverage'],full_file='data/candidates.json'),ensure_ascii=False));return
         for item in selected:print(json.dumps(item,ensure_ascii=False))
         return
@@ -432,6 +432,11 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
     db.close()
     from used_news import recent_records,exclude_used
     rows,excluded,used_context=exclude_used(rows,recent_records(ROOT,days=max(2,(hours+23)//24+1)))
+    # 2026-11-11: AI candidates are listed by audience relevance with same-event reports grouped,
+    # and the top groups must each get a decision at import (candidate_rank.check_coverage).
+    from candidate_rank import rank,ordered,must_review
+    rows=ordered(rank(rows,reference))
+    top_n=config().get('editorial',{}).get('review_coverage',{}).get('top_n',40)
     payload=dict(producer="RSS + Agent Reach collector; no model calls",cutoff_utc=cutoff,generated_at=reference.isoformat(),hours=hours,excluded_stale=rejected,items=rows,
         excluded_used_news=excluded,previously_used_news=used_context,
         dedup_policy='Exclude completed exports by item ID, canonical URL, event key or normalized source title; compare previously_used_news before selecting rewritten reports of the same event.')
@@ -444,15 +449,20 @@ def candidates(hours=48,compact=False,limit=12,cursor=0,series=None):
     payload['tibo_review_candidates']=review_candidates(rows,ROOT)
     from leader_editorial import review_leader_candidates
     payload['leader_review_candidates']=review_leader_candidates(rows,ROOT)
+    titles={r['id']:r for r in rows}
+    payload['must_review']=[dict(id=c,title=(titles[c].get('title') or '')[:120],cluster_size=titles[c].get('cluster_size'),
+                                 score=titles[c].get('cluster_score'),reasons=titles[c].get('rank_reasons'))
+                            for c in must_review(rows,top_n)]
     dump(ROOT/"data/candidates.json",payload)
     rows=view(rows)
     if compact:
         selected=rows[cursor:cursor+limit]
-        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path','lead_only','segment','rumor_tier','likes') if item.get(k) is not None} for item in selected]
+        brief=[{k:item.get(k) for k in ('id','kind','publisher','published','title','url','source_type','priority_tier','game','game_region','game_topic','evidence_path','lead_only','segment','rumor_tier','likes','rank_score','cluster','cluster_size') if item.get(k) is not None} for item in selected]
         print(json.dumps(dict(total=len(rows),cursor=cursor,next_cursor=cursor+len(selected) if cursor+len(selected)<len(rows) else None,
                               items=brief,excluded_used_count=len(excluded),full_file='data/candidates.json',
                               game_coverage=payload['game_coverage'],
-                              note='Open full local evidence before final factual claims; compact list omits summaries.'),ensure_ascii=False))
+                              must_review_count=len(payload['must_review']),
+                              note='AI items are ordered by audience relevance; items sharing a cluster id report the same event. Every group in must_review (data/candidates.json) needs a selection or a rejection reason. Open full local evidence before final factual claims; compact list omits summaries.'),ensure_ascii=False))
     else:
         for item in rows: print(json.dumps({k:item[k] for k in ["id","kind","publisher","published","title","url","summary"]},ensure_ascii=False))
 
@@ -583,6 +593,13 @@ def import_editorial(path):
             if row["kind"]=="social":raise ValueError("Social stories removed from new editions")
             if row['source_id'] in lead_only:
                 raise ValueError('LEAD_ONLY_SOURCE: '+row['source_id']+' is a discovery lead; find the official original (company site/X), collect it and cite that item instead')
+            if scene.get('scene_type')=='briefs':
+                # 2026-11-11 快讯: 2-3 verified short items on one page; each entry is checked and recorded as used.
+                if not scene.get('evidence') or not scene.get('selection_reason'):raise ValueError("Missing evidence/ranking reason")
+                from briefs import validate as validate_briefs
+                for brief_id,brief_row in validate_briefs(scene,db,source_catalog,ROOT):
+                    selected.append(brief_id);selected_rows.append(brief_row)
+                continue
             # 2026-11-09 segments: rumor -> media -> official -> GitHub (AI); official -> activities -> community (games).
             segment=scene.get('segment')
             if segment=='rumor':
@@ -650,6 +667,12 @@ def import_editorial(path):
         pool,_,_=exclude_used(pool,[r for r in recent_records(ROOT) if r['edition_key']!=edition_key])
         selection_audit=audit_selection(episode,selected_rows,pool,sources,cfg.get('editorial',{}))
         if selection_audit:episode['ai_coverage_audit']=selection_audit
+    coverage_rule=cfg.get('editorial',{}).get('review_coverage',{})
+    if coverage_rule.get('enabled') and episode.get('edition_slot') in {'morning','night'} and (ROOT/'data/candidates.json').is_file():
+        from candidate_rank import check_coverage
+        from edition_series import accepts_candidate,series_of
+        snapshot_rows=[r for r in load(ROOT/'data/candidates.json').get('items',[]) if accepts_candidate(series_of(episode),r)]
+        episode['review_coverage']=check_coverage(episode,snapshot_rows,coverage_rule.get('top_n',40))
     validate_content(episode)
     episode["publication_preset"]=cfg["publication_preset"]
     episode['upload_enabled']=bool(cfg.get('upload_enabled'));episode['auto_publish']=bool(cfg.get('auto_publish'))
@@ -683,6 +706,7 @@ def segment_for(row,scene,catalog):
     if str(row['source_id']).startswith('community-'):return 'community'
     if source.get('tier')=='media':return 'media'
     if scene.get('freshness_basis')=='active_window':return 'activities'
+    if scene.get('scene_type')=='briefs':return 'briefs'
     return 'official'
 
 def assign_segments(episode,catalog):
@@ -695,7 +719,7 @@ def assign_segments(episode,catalog):
             row=db.execute('SELECT * FROM items WHERE id=?',(scene['item_id'],)).fetchone()
             if not row:raise ValueError('Editorial refers to unknown collected candidate')
             scene['segment']=segment_for(dict(row),scene,catalog)
-            badge={'rumor':'传闻·未经官方证实','media':'媒体报道','github':'GitHub 今日热门','community':'玩家热议','activities':'进行中活动'}.get(scene['segment'])
+            badge={'rumor':'传闻·未经官方证实','media':'媒体报道','github':'GitHub 今日热门','community':'玩家热议','activities':'进行中活动','briefs':'快讯'}.get(scene['segment'])
             if scene.get('activity'):badge=scene['activity']['kind_label']
             if badge:scene['badge']=badge
             if scene['segment']=='github':
@@ -707,14 +731,22 @@ def selection_report(episode):
     """Why an edition is short: every fresh candidate with selected/rejected reason, plus source health."""
     snapshot=load(ROOT/'data/candidates.json') if (ROOT/'data/candidates.json').is_file() else {}
     chosen={s.get('item_id') for s in episode['scenes'] if s.get('item_id')}
-    chosen|={e.get('item_id') for s in episode['scenes'] for e in s.get('schedule_items',[])}
+    chosen|={e.get('item_id') for s in episode['scenes'] for e in s.get('schedule_items',[])+s.get('brief_items',[])}
     reasons=episode.get('rejections',{})
     from edition_series import accepts_candidate,series_of
     series=series_of(episode)
     rows=[r for r in snapshot.get('items',[]) if accepts_candidate(series,r)]
     def brief(r):return dict(id=r['id'],kind=r.get('kind'),source_id=r.get('source_id'),published=r.get('published'),title=(r.get('title') or '')[:90])
     selected=[brief(r) for r in rows if r['id'] in chosen]
-    rejected=[dict(brief(r),reason=reasons.get(r['id'],'unreviewed')) for r in rows if r['id'] not in chosen]
+    # One decision covers a whole same-event group (candidate_rank.cluster).
+    decided={}
+    for r in rows:
+        if r.get('cluster') and (r['id'] in reasons or r['id'] in chosen):decided.setdefault(r['cluster'],r['id'])
+    def reason_of(r):
+        if r['id'] in reasons:return reasons[r['id']]
+        if r.get('cluster') in decided:return 'same_event_as:'+decided[r['cluster']]
+        return 'unreviewed'
+    rejected=[dict(brief(r),reason=reason_of(r)) for r in rows if r['id'] not in chosen]
     db=database()
     try:
         runs={}

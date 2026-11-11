@@ -1,8 +1,9 @@
 """Bounded, read-only Agent Reach ingestion; no X API keys or browser access."""
 from __future__ import annotations
-import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess
+import argparse, datetime as dt, hashlib, json, os, re, shutil, subprocess, time
 from pathlib import Path
 import news_video as n
+import x_reach
 from quiet_background import hidden_kwargs,quiet_reach
 
 STOP_CODES={'NEED_SETUP','NEED_LOGIN','UPSTREAM_BROKEN','TIMEOUT','RATE_LIMITED','PLATFORM_BLOCKED','BUSY','LOCAL_PERMISSION_DENIED'}
@@ -51,32 +52,13 @@ def validate_scene(scene, evidence):
     aliases=[evidence['author'],evidence['handle']]+scene.get('author_spoken_aliases',[])
     if not any(a and a.casefold() in public for a in aliases):raise ValueError('Attribute the speaker in narration')
 
-def local_failure(process):
-    # Classify locally; never persist raw stderr or session data.
-    diagnostic=(process.stderr or '')+'\n'+(process.stdout or '')
-    if re.search(r'PermissionError|\[Errno 13\]|Access is denied|EACCES',diagnostic,re.I):
-        return dict(ok=False,error=dict(code='LOCAL_PERMISSION_DENIED',stage='local_runtime',
-            message='Local runtime permission denied before a usable platform response.',
-            hint='Run the same approved collector with access to the existing runtime and browser locks; do not change account or backend.'))
-    return dict(ok=False,error=dict(code='UPSTREAM_BROKEN',stage='cli_response',
-        message='Reader returned no valid structured response; inspect local runtime diagnostics.'))
-
+local_failure=x_reach.local_failure
 
 def run_reach(executable, source, limit, timeout):
-    env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
-    try:
-        with quiet_reach():
-            process=subprocess.run([executable,'twitter','tweets',source['handle'],'--limit',str(limit),'--timeout',str(timeout)],
-                                   capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=timeout+15,env=env,**hidden_kwargs())
-        try:result=json.loads(process.stdout.lstrip('\ufeff'))
-        except (json.JSONDecodeError,ValueError):return local_failure(process)
-        if not isinstance(result,dict) or not isinstance(result.get('ok'),bool):return local_failure(process)
-        return result
-    except subprocess.TimeoutExpired:return dict(ok=False,error=dict(code='TIMEOUT'))
-    except PermissionError:return dict(ok=False,error=dict(code='LOCAL_PERMISSION_DENIED',stage='process_start'))
-    except OSError:return dict(ok=False,error=dict(code='NEED_SETUP'))
+    return x_reach.call(executable,['twitter','tweets',source['handle'],'--limit',str(limit)],timeout,
+                        run=lambda *a,**k:subprocess.run(*a,**k),hidden=lambda:hidden_kwargs(),quiet=lambda:quiet_reach())
 
-def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope=None):
+def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope=None, sleep=time.sleep, retry_failed=False):
     cfg=n.config();policy=cfg.get('x_collection',{})
     if not cfg.get('x_enabled'):raise ValueError('X sources disabled')
     if not 1<=hours<=72:raise ValueError('Freshness window must be 1-72 hours')
@@ -87,6 +69,8 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
     if only:
         accounts=[s for s in accounts if s['handle'].lower()==only.lower().lstrip('@')]
         if not accounts:raise ValueError('Handle is not in the verified allowlist')
+    # Most important accounts first, so a later outage costs the least.
+    accounts.sort(key=lambda s:(s.get('priority_tier',2),-s.get('source_priority',0)))
     executable=shutil.which(policy.get('executable','agent-reach'))
     now=dt.datetime.now(n.UTC);run_id=now.strftime('%Y%m%dT%H%M%S%f')+'_leaders'
     report=dict(id=run_id,kind='leaders',started=now.isoformat(),model_calls=0,paid_api_calls=0,
@@ -94,6 +78,10 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
     directory=n.ROOT/'data/collections'/run_id;directory.mkdir(parents=True,exist_ok=True)
     state_path=n.ROOT/'data/leader-collection-state.json'
     previous=n.load(state_path) if state_path.exists() else {}
+    if retry_failed:
+        # Catch-up after an outage: only the accounts the previous run could not read.
+        pending={h.lower() for h in previous.get('pending_handles',[])}
+        accounts=[s for s in accounts if s['handle'].lower() in pending]
     auth_pending=previous.get('reason') in {'NEED_LOGIN','PLATFORM_BLOCKED'}
     if auth_pending and not resume_after_fix:
         report.update(stopped=True,reason=previous['reason'],requires_user_resolution=True)
@@ -102,28 +90,41 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
         report.update(stopped=True,reason='COOLDOWN',retry_after_utc=previous['retry_after_utc'])
         n.dump(directory/'report.json',report);return report
     lock=n.ROOT/'data/leader-collection.lock'
+    if lock.exists() and x_reach.stale_lock(lock):lock.unlink(missing_ok=True)
     try:handle=lock.open('x',encoding='utf-8')
     except FileExistsError:
         report.update(stopped=True,reason='BUSY');n.dump(directory/'report.json',report);return report
     with handle:handle.write(str(os.getpid()))
     db=n.database()
     try:
-        for source in accounts:
-            result=runner(executable,source,min(20,max(1,source.get('limit',policy.get('limit_per_account',5)))),policy.get('timeout_seconds',40)) if executable else dict(ok=False,error=dict(code='NEED_SETUP'))
-            status=dict(source_id=source['id'],handle=source['handle'],ok=result['ok'],accepted=0,rejected=0)
+        settings=x_reach.policy(cfg);link=x_reach.Link(settings,sleep=sleep);pending=[]
+        limit_of=lambda s:min(20,max(1,s.get('limit',policy.get('limit_per_account',5))))
+        def read(source):
+            if not executable:return dict(ok=False,error=dict(code='NEED_SETUP'))
+            return link.fetch(lambda timeout:runner(executable,source,limit_of(source),timeout))
+        queue=[(s,False) for s in accounts]
+        while queue:
+            source,catch_up=queue.pop(0)
+            result=read(source)
+            status=dict(source_id=source['id'],handle=source['handle'],ok=result['ok'],accepted=0,rejected=0,
+                        attempts=result.get('_attempts',1),seconds=result.get('_seconds'))
+            if catch_up:status['caught_up']=True
             # Only content fields are retained. Never persist raw backend/session dumps.
             if result.get('meta',{}).get('update'):report['update_available']=result['meta']['update'].get('latest')
             if not result['ok']:
                 code=result.get('error',{}).get('code','UPSTREAM_BROKEN');status['error_code']=code
-                if result.get('error',{}).get('stage') in {'local_runtime','process_start','cli_response'}:
+                if result.get('error',{}).get('stage') in {'local_runtime','process_start','cli_response','process_timeout'}:
                     status['error_stage']=result['error']['stage']
                 report['sources'].append(status)
-                if code!='NOT_FOUND':
-                    report.update(stopped=True,reason=code)
-                    try:delay=int(result.get('error',{}).get('retry_after_seconds',300))
-                    except (TypeError,ValueError):delay=300
-                    report['retry_after_utc']=(now+dt.timedelta(seconds=max(delay,300))).isoformat()
+                if code=='NOT_FOUND':continue
+                if code in x_reach.HARD or link.unreachable:
+                    report.update(stopped=True,reason=code if code in x_reach.HARD else 'X_UNREACHABLE',retry_after_utc=link.cooldown(result,now))
+                    pending+=[source['handle']]+[s['handle'] for s,_ in queue]
+                    pending=list(dict.fromkeys(pending))
                     break
+                # A transient failure skips only this account; it gets one more try once the reader is warm.
+                if not catch_up and settings['catch_up_pass']:queue.append((source,True))
+                else:pending.append(source['handle'])
                 continue
             for item in result.get('items',[]):
                 try:post=normalize_post(item,source,now,hours)
@@ -144,9 +145,12 @@ def collect(hours=48, only=None, runner=run_reach, resume_after_fix=False, scope
                     from game_sources import archive,topic
                     post['game_topic']=topic(post['summary']);archive(n.ROOT,post['id'],post,source)
             report['sources'].append(status)
+        report['pending_handles']=pending
+        report['read_ok']=sum(1 for s in report['sources'] if s['ok'])
         report['finished']=dt.datetime.now(n.UTC).isoformat()
         db.execute('INSERT INTO runs VALUES(?,?,?,?,?)',(run_id,'leaders',report['started'],report['finished'],json.dumps(report,ensure_ascii=False)))
         db.commit();n.dump(directory/'report.json',report);n.dump(state_path,report)
+        x_reach.log_health(n.ROOT,'leaders',report)
     finally:db.close();lock.unlink(missing_ok=True)
     return report
 
@@ -155,11 +159,8 @@ def thread(item_id, executable=None, timeout=60):
     path=n.ROOT/'data/leader-posts'/(item_id+'.json')
     post=n.load(path)
     executable=executable or shutil.which(n.config().get('x_collection',{}).get('executable','agent-reach'))
-    env=os.environ.copy();env.update(PYTHONUTF8='1',PYTHONIOENCODING='utf-8')
-    with quiet_reach():
-        process=subprocess.run([executable,'twitter','thread',post['url'],'--timeout',str(timeout)],capture_output=True,text=True,
-                               encoding='utf-8',errors='replace',timeout=timeout+15,env=env,**hidden_kwargs())
-    result=json.loads(process.stdout.lstrip('﻿'))
+    link=x_reach.Link(dict(x_reach.policy(n.config()),timeout_seconds=timeout))
+    result=link.fetch(lambda t:x_reach.call(executable,['twitter','thread',post['url']],t))
     if not result.get('ok'):raise ValueError('Thread read failed: '+str(result.get('error',{}).get('code')))
     own=[dict(url=i['url'],published_at=n.parse_date(i.get('published_at')),text=i.get('text',''))
          for i in result.get('items',[]) if (i.get('author') or '').lower()==post['handle'].lower() and i.get('url','').rstrip('/').split('/')[-1]!=post['url'].split('/')[-1]]
@@ -175,4 +176,5 @@ if __name__=='__main__':
         print(json.dumps(thread(sys.argv[2]),ensure_ascii=False));raise SystemExit
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--hours',type=int,default=48);p.add_argument('--handle')
     p.add_argument('--resume-after-fix',action='store_true',help='Only after the user resolved login/verification; never bypasses rate-limit cooldown')
-    a=p.parse_args();print(json.dumps(collect(a.hours,a.handle,resume_after_fix=a.resume_after_fix),ensure_ascii=False,indent=2))
+    p.add_argument('--retry-failed',action='store_true',help='Read again only the accounts the previous run could not reach')
+    a=p.parse_args();print(json.dumps(collect(a.hours,a.handle,resume_after_fix=a.resume_after_fix,retry_failed=a.retry_failed),ensure_ascii=False,indent=2))

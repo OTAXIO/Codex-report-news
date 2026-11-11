@@ -1,4 +1,6 @@
-# DeepSeek Harness 接手指令（2026-11-10 版，替代 2026-11-09 版）
+# DeepSeek Harness 接手指令（2026-11-11 版，替代 2026-11-10 版）
+
+> **2026-11-11 资讯量与 X 连接（用户要求“全部修复”，当前有效）**：同行一期能讲 18 条，我们只讲 7 条，原因是 06:00 X 采集冷启动超时整轮放弃、候选 339 条只看了 17 条、每条新闻都占一整页。现在：(1) 采集前先运行 `python -B x_reach.py probe` 预热 X 阅读器，单个账号超时不再中断整轮，报告里 `pending_handles` 非空时补跑 `python -B leader_sources.py --retry-failed`；(2) AI 候选按观众关心程度排序并把同一事件的多条报道归成一组，导入时前 40 组每组都要有选用或落选理由（REVIEW_COVERAGE）；(3) 新增“快讯”页，一页讲 2–3 条次要消息；(4) 新增来源 404 Media、Ars Technica、ElevenLabs 博客及 X 账号 ElevenLabs、OfficialLoganK、elonmusk。细节见第 2 节“X 连接”、第 3 节“候选排序”、第 3a 节“快讯”。
 
 > **2026-11-10 活动与版式（用户确认，当前有效）**：游戏情报里的活动改为**一页只讲一个活动**（`scene_type:"activity"`），画面自动显示截止倒计时；分线上、线下、联动，主要活动在前、热度低的网页小活动在后。**覆盖下一条里“活动一览”的旧做法**（一页 1–3 个活动的 `activity_overview` 现在导入会被拒绝）。写法、命令和示例见第 3a 节“活动”。
 
@@ -52,6 +54,14 @@
   - 用独立的阅读 profile（`../../.community-reader-private/chrome-profile`，与上传器 profile 分开）只读 B站页面：近 48h 播放最多的 5 个视频＋最新的 3 个（有播放/评论下限），每个读最热和最新评论，另读弹幕。不导出 Cookie、不直接调评论或搜索 API、不逆向 WBI、不重放请求，不读用户名。
   - 首次使用或报 COMMUNITY_LOGIN_REQUIRED：停下这一栏目，请用户本人运行 `python -B community_sources.py login` 用小号登录一次（程序不代登），本期照常出片、不做玩家热议。报 PLATFORM_BLOCKED 同样跳过并汇报，不重试。
   - 采集后运行 `python -B community_sources.py topics <快照ID>` 看各讨论对象的提及数；对象必须是 `game_glossary.json` 里本游戏 `reviewed:true` 的词。`python -B community_sources.py glossary-candidates` 列出常被提到但没收录的词，只汇报给用户，不要自己把 reviewed 改成 true。
+- **X 连接（2026-11-11）**：X 帖只能通过本机专用浏览器读取，浏览器闲置 10 分钟会自动关闭，06:00 第一次读取要冷启动。
+  - `collect` 之前先运行 `python -B x_reach.py probe`（读一个官方账号，返回 ok 和耗时）把浏览器热起来；probe 报 NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED 时本期 X 记缺口、照常用官网与 RSS，不要换账号或后端。
+  - 采集对 X 的处理：第一次读取给 150 秒；单个账号超时或上游出错会等阅读器给的暂停时间（最多 180 秒）后重试 1 次，仍失败就跳过、最后再补读一轮；连续 3 个账号都失败才判定 X_UNREACHABLE 并停止本轮（冷却 2 分钟）。遇到 NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED 立即停止、不重试。
+  - 看 `data/collections/` 里本次报告的 `read_ok`、`pending_handles`：有未读到的账号时，冷却过后运行一次 `python -B leader_sources.py --retry-failed`，只补读这些账号；仍失败就写进 source_gaps。
+  - 账号改名或不存在会记为 NOT_FOUND（不会再拖垮整轮），把账号名写进汇报，由用户确认新账号，不要自己猜。
+  - `python -B x_reach.py doctor` 汇总最近 3 天（`--days N` 可改）每次采集各账号的结果（`data/x-health.jsonl`），`weak_accounts` 是经常读不到的账号，汇报里提一句。
+  - 网络不通的来源：MiniMax 官网与 Kimi 论坛在本机 TLS 握手失败，已停用，由 X 官方号 @MiniMax_AI、@Kimi_Moonshot、IT之家和 kimi.com/blog 覆盖，不再报缺口。
+- 2026-11-11 新增来源：媒体 404 Media（只收 AI 相关）、Ars Technica AI；官方 ElevenLabs 博客；X 账号 ElevenLabs（官方）、OfficialLoganK（谷歌 AI Studio/Gemini API 负责人）、elonmusk（只采信他本人关于 xAI/Grok 的第一手说法，政治、商业八卦一律不选）。
 - 然后按系列列候选：`python -B news_video.py candidates --hours 48 --compact --limit 12 --cursor 0 --series <ai|arknights|endfield>`，按 next_cursor 翻完所有页。逐条用 `python -B news_video.py article <ID> --compact` 读原文，truncated=true 时读完整归档。
 - X 帖：原文和真实链接在 `data/leader-posts/<ID>.json`，source_url 必须与采集记录完全一致，不要自己拼。summary 里已附引用帖正文（[引用 @…]）。是线程或明显有后续时运行 `python -B leader_sources.py thread <ID>`。帖子只有标题加链接时读链接里的官方原文；openai.com 对脚本返回 403 时，用浏览器读原文并把原句写进 evidence。
 - 运行 `python -B news_video.py game-schedule --days 14`，找当天生效的旧公告（见第 3 节生效时间规则）。
@@ -68,6 +78,9 @@
 - 不凑数。不用预告、营销、转帖截断、只有标题链接或缺上下文的内容；负责人只有一两个词的短句记为 defer。与已播事件去重，包括引用同一公告的负责人帖。
 - **终末地森空岛帖**：末尾固定的“————————▼ 当前版本已开启…”是宣传语，不是该帖新闻。skland_capture.js 已裁掉这段，仍要只按帖子自身正文和配图判断；正文只剩标题的不报。
 - 选配图前看一眼图片内容，确认和该页事件一致（曾出现过把下一期预告图当本期配图）。每页至少一张相关图，新闻原图优先，`image`/`image_source_url` 取自该文章的 related_images；缺图才用官方游戏/公司标识。
+- **候选排序与审阅覆盖（2026-11-11，AI早报）**：AI 候选已按观众关心程度排好（额度重置/限额、封号与政策、价格与免费、新模型发布、预览与泄露、大厂模型、公司大事加分；周边、招聘、教程减分；越新越靠前），`rank_score` 是分数；报道同一事件的多条候选有相同的 `cluster`，`cluster_size` 是报道条数。`data/candidates.json` 的 `must_review` 列出前 40 组。
+  - 导入时这 40 组每组都要有决定：选用其中一条，或在 `rejections` 里给其中任意一条写落选理由（一条理由覆盖整组），否则 REVIEW_COVERAGE 报错并列出缺的组。不要用“不相关”之类的空话批量打发，理由写具体（如“只是转发”“缺原文”“已在 11.10 播过”）。
+  - 分数只决定看的顺序，不决定选不选；48h 门禁、来源规则照旧。同组的多条报道选最权威的一条（官方原文 > 负责人 X > 媒体），其他报道可作为补充证据。
 - **篇幅**：AI早报素材充足时 6–12 条、3–5 分钟；游戏情报 3–8 条，宁缺毋滥；不足就如实变短（成片仍须 >30 秒）。在 editorial 写 `rejections:{item_id:落选原因}`，覆盖本系列所有看过但没选的候选。import 会生成本系列的 selection-report.json，unreviewed 应接近 0。
 - **头条**：按影响力选正文01——新模型/大版本/新玩法 > 价格、额度、可用性变化 > 卡池与新干员 > 福利活动 > 其他；同分时国内厂商、国服优先。正文01 = 封面头条 = lead_event_id。当天已公开的 temporary 临时新闻由导入自动作为回顾插入（仅 AI早报）。
 
@@ -86,6 +99,23 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 - 去重：`data/rumor-ledger.jsonl` 记录已播传闻（`python -B rumor_sources.py ledger` 查看未结案的）。7 天内同一传闻没有新来源会被 RUMOR_REPEATED 拒绝。后来官方证实或否认时，在官方/媒体那页加 `resolves_rumor:{key, status:"confirmed"|"denied"}`，口播要回扣（如“此前传闻的……今天官宣了”）。
 
 **媒体报道**（媒体源条目）：口播前两句里必须有“据＋媒体名”（如“据 TechCrunch 报道”），只转述报道内容，不当作官方确认。
+
+**快讯**（2026-11-11，仅 AI早报；`scene_type:"briefs"`，每页 2–3 条，放在官方动态之后、GitHub 之前，不能当头条，也不能放进标题）：
+- 用途：值得一提但不够单独一页的次要消息（小版本、功能上线、合作、地区开放等），让一期能多讲几条。重大消息仍然单独成页。
+- 每条都必须是本期采集到、48h 内、未播过的候选；传闻、GitHub、玩家热议、需要回复/引用上下文的 X 帖不能进快讯。
+- 写法：页面的 `item_id`/`source_url` 填第一条的；`brief_items` 每项填 `item_id`、`source_url`（与采集记录完全一致）、`title`（≤22 字）、`detail`（≤40 字，只写原文事实）、`spoken_key`（标题里出现的名字，口播必须按画面顺序念到）。`facts` 不用写，导入时由各条生成，并在每条后面自动加出处。
+- 口播每条一两句；媒体来源要说“据＋媒体名”，负责人 X 要点名本人。还要照常写 `evidence` 和 `selection_reason`。
+- 每条都会记入已用新闻，之后不能再单独成页重复报。画面底部出处条列出各条来源，简介的时间轴列出各条标题和每条原文链接。
+
+```json
+{"id":"briefs-1","scene_type":"briefs","item_id":"<第一条item_id>","source_url":"<第一条url>",
+ "title":"今日快讯","short_title":"快讯","company":"<第一条的公司>",
+ "narration":"谷歌推出医疗版Gemini，先在美国开放。据TechCrunch报道，ElevenLabs发布Scribe v3，实时版同步上线。",
+ "brief_items":[{"item_id":"<id1>","source_url":"<url1>","title":"谷歌推出医疗版Gemini","detail":"面向医院和研究机构，先在美国开放","spoken_key":"医疗版Gemini"},
+                {"item_id":"<id2>","source_url":"<url2>","title":"ElevenLabs发布Scribe v3","detail":"语音识别准确率创新高，实时版同步上线","spoken_key":"Scribe v3"}],
+ "evidence":["…"],"selection_reason":"…"}
+```
+（示例数值只是格式示意，必须换成采集到的真实内容。）
 
 **GitHub 今日热门**（`scene_type:"github_trending"`）：填 `repo`（owner/name）、`stars_today`（与采集一致）；口播 90–280 字，含仓库短名和“GitHub”，讲清它是做什么的、谁做的、今天涨了多少星。配图自动用仓库卡片。同一仓库 7 天内不重复。
 
@@ -126,6 +156,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 - 在期次目录写两个文件：
   - publication.json：title_groups 只能有一组，kind 为本系列的类别（ai 填 `ai`，两款游戏填 `games`），event_ids 放 1–2 条（第一条是头条），lead_event_id 一致，auto_publish 为 true。生成的标题形如“头条事件标题、次要事件标题｜明日方舟情报 11.7”（直接取正文页 title），不带“AI：/游戏：”前缀，超过 60 字会报 TITLE_TOO_LONG，请把正文标题写短。tags 只填本期事实相关的词，系列固定标签由代码自动放在最前面。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
     - 2026-11-09：可加 `title_hook`（≤16 字，放在标题最前）和 `title_hook_evidence:[短语]`。每个短语必须同时出现在 hook 和所选正文里，否则报 TITLE_HOOK_UNSUPPORTED。标题和封面不得使用“震惊、炸裂、惊呆、速看、必看、绝了、吊打、跪了”（PUBLIC_WORD_BANNED）。
+    - 2026-11-11 标题热词：标题是观众点进来的主要原因。AI早报在不超过 60 字的前提下，title_groups 里放 2–3 条最热的事件（优先 must_review 靠前、观众能直接行动的：额度重置、封号/政策、降价免费、新模型上线），事件标题写短、把模型名或产品名放前面。快讯页不能放进标题（TITLE_BRIEFS_PAGE）。
     - 简介：publication.json 写了 `description` 就用它；没写时 release 会自动生成（章节时间点、来源链接，有传闻或玩家热议时附免责声明）。
   - cover.json：headline_top、headline_main、highlight 必须是头条标题、口播或 facts 里原样出现的文字，并且要短。
 - 再运行 `python -B publication_policy.py title episodes/<ID> --write`。所有 JSON 用无 BOM 的 UTF-8。

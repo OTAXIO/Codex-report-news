@@ -64,7 +64,9 @@
     "selection_policy": "product_and_model_updates_first",
     "region": "domestic",
     "published_precision": "date",
-    "timezone": "Asia/Shanghai"
+    "timezone": "Asia/Shanghai",
+    "enabled": false,
+    "disabled_reason": "2026-11-11: www.minimax.io 在本机经代理和直连都 TLS 握手失败（SSL UNEXPECTED_EOF），国内站 minimaxi.com 新闻列表由浏览器端渲染、无可解析条目；MiniMax 新闻改由官方 X @MiniMax_AI 与 IT之家覆盖。网络恢复后把 enabled 改回 true。"
   },
   {
     "id": "deepmind",
@@ -203,7 +205,9 @@
     "type": "rss",
     "group": "ai",
     "priority_tier": 1,
-    "selection_policy": "official_announcements_only"
+    "selection_policy": "official_announcements_only",
+    "enabled": false,
+    "disabled_reason": "2026-11-11: forum.moonshot.ai 在本机经代理和直连都 TLS 握手失败；Kimi 官方消息由 kimi-blog（www.kimi.com/blog）与官方 X @Kimi_Moonshot 覆盖。"
   },
   {
     "id": "kimi-blog",
@@ -500,6 +504,50 @@
     "include_pattern": "AI|人工智能|大模型|模型|智能体|Agent|GPT|Claude|Gemini|DeepSeek|千问|Qwen|Kimi|豆包|混元|文心|智谱|GLM|MiniMax|OpenAI|Anthropic|英伟达|NVIDIA|算力",
     "selection_policy": "media: only AI/model/company items (include_pattern); cite as 据IT之家报道",
     "checked_on": "2026-11-09"
+  },
+  {
+    "id": "404media",
+    "name": "404 Media",
+    "group": "ai",
+    "publisher": "404 Media",
+    "vendor": "404 Media",
+    "url": "https://www.404media.co/rss/",
+    "type": "rss",
+    "region": "international",
+    "priority_tier": 3,
+    "tier": "media",
+    "include_pattern": "\bAI\b|artificial intelligence|OpenAI|Anthropic|Claude|ChatGPT|Codex|Gemini|Google DeepMind|Grok|xAI|Meta AI|LLM|chatbot|model|agent|deepfake|Nvidia",
+    "selection_policy": "media: AI platform policy, enforcement, security and investigations; cite as 据404 Media报道",
+    "checked_on": "2026-11-11"
+  },
+  {
+    "id": "arstechnica-ai",
+    "name": "Ars Technica",
+    "group": "ai",
+    "publisher": "Ars Technica",
+    "vendor": "Ars Technica",
+    "url": "https://feeds.arstechnica.com/arstechnica/technology-lab",
+    "type": "rss",
+    "region": "international",
+    "priority_tier": 3,
+    "tier": "media",
+    "include_pattern": "\bAI\b|OpenAI|Anthropic|Claude|ChatGPT|Codex|Gemini|DeepMind|Grok|xAI|LLM|chatbot|model|agent|Nvidia",
+    "selection_policy": "media: AI product, security and industry reporting; cite as 据Ars Technica报道",
+    "checked_on": "2026-11-11"
+  },
+  {
+    "id": "elevenlabs-blog",
+    "name": "ElevenLabs Blog",
+    "publisher": "ElevenLabs",
+    "vendor": "ElevenLabs",
+    "region": "international",
+    "url": "https://elevenlabs.io/blog/rss.xml",
+    "type": "rss",
+    "group": "ai",
+    "priority_tier": 2,
+    "include_pattern": "Introduc|Launch|Announc|Eleven ?v\\d|Scribe|Flash|Turbo|Agents|Music|model|API|Studio|Reader|v\\d",
+    "selection_policy": "official: model and product launches only; skip SEO how-to articles",
+    "checked_on": "2026-11-11"
   },
   {
     "id": "reddit-singularity",
