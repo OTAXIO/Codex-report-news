@@ -1,5 +1,7 @@
 # DeepSeek Harness 接手指令（2026-11-11 版，替代 2026-11-10 版）
 
+> **2026-11-12 AI 活动（用户确认，当前有效）**：AI 早报和 AI 临时稿改挂「AI IN ALL！」（topic_id 1255303），上传器自动选择，无需手动操作；游戏情报仍是方舟 8314、终末地 1325166，游戏临时稿挂其游戏的活动。覆盖下文及旧版本中 AI 活动“most_popular_free”或“1325166”的写法。
+
 > **2026-11-11 资讯量与 X 连接（用户要求“全部修复”，当前有效）**：同行一期能讲 18 条，我们只讲 7 条，原因是 06:00 X 采集冷启动超时整轮放弃、候选 339 条只看了 17 条、每条新闻都占一整页。现在：(1) 采集前先运行 `python -B x_reach.py probe` 预热 X 阅读器，单个账号超时不再中断整轮，报告里 `pending_handles` 非空时补跑 `python -B leader_sources.py --retry-failed`；(2) AI 候选按观众关心程度排序并把同一事件的多条报道归成一组，导入时前 40 组每组都要有选用或落选理由（REVIEW_COVERAGE）；(3) 新增“快讯”页，一页讲 2–3 条次要消息；(4) 新增来源 404 Media、Ars Technica、ElevenLabs 博客及 X 账号 ElevenLabs、OfficialLoganK、elonmusk。细节见第 2 节“X 连接”、第 3 节“候选排序”、第 3a 节“快讯”。
 
 > **2026-11-10 活动与版式（用户确认，当前有效）**：游戏情报里的活动改为**一页只讲一个活动**（`scene_type:"activity"`），画面自动显示截止倒计时；分线上、线下、联动，主要活动在前、热度低的网页小活动在后。**覆盖下一条里“活动一览”的旧做法**（一页 1–3 个活动的 `activity_overview` 现在导入会被拒绝）。写法、命令和示例见第 3a 节“活动”。
@@ -12,7 +14,7 @@
 
 | 系列 `edition_series` | 时段 | 期次 ID | 编辑目录 | release 目录 | 内容 | 投稿分区 | 活动 | 固定标签 |
 |---|---|---|---|---|---|---|---|---|
-| `ai`「AI早报」 | morning 06:00 | `daily-YYYYMMDD-morning` | `data/morning-YYYYMMDD/` | `release/YYYY_MM_DD_morning` | 只做 AI（含 tibo/负责人、临时新闻回顾） | 科技数码 | 可参加的免费活动里热度最高的（`most_popular_free`，不限题材，没有就不挂） | AI |
+| `ai`「AI早报」 | morning 06:00 | `daily-YYYYMMDD-morning` | `data/morning-YYYYMMDD/` | `release/YYYY_MM_DD_morning` | 只做 AI（含 tibo/负责人、临时新闻回顾） | 科技数码 | 1255303「AI IN ALL！」（精确，2026-11-12 起） | AI |
 | `arknights`「明日方舟情报」 | night 18:00 | `daily-YYYYMMDD-night-arknights` | `data/night-arknights-YYYYMMDD/` | `release/YYYY_MM_DD_night_arknights` | 只做明日方舟（国服＋英文国际服） | 游戏 | 8314 明日方舟创作者应援计划（精确） | 明日方舟 |
 | `endfield`「终末地情报」 | night 18:00 | `daily-YYYYMMDD-night-endfield` | `data/night-endfield-YYYYMMDD/` | `release/YYYY_MM_DD_night_endfield` | 只做明日方舟：终末地 | 游戏 | 1325166 明日方舟终末地创作者应援计划（精确） | 明日方舟终末地、终末地 |
 
@@ -189,7 +191,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 ## 7. 投稿
 - 运行 `python -B render_sample.py <ID> --resume-export`。它会准备 release、写已用新闻记录，并按已授权的默认设置自动投稿：
   - 合集按题材自动选择：AI早报进 AI-News，两条游戏情报进 Game-News；原创/禁止转载＋AI 生成声明。找不到合集时上传器会停下，不要自己新建合集；
-  - 分区与活动按系列自动选择（见文首表格）：ai 投科技数码、挂当时热度最高的可参加活动；arknights 投游戏、精确挂 8314；endfield 投游戏、精确挂 1325166。游戏两条找不到指定活动就停止，不换别的活动。
+  - 分区与活动按系列自动选择（见文首表格）：ai 投科技数码、精确挂 1255303「AI IN ALL！」；arknights 投游戏、精确挂 8314；endfield 投游戏、精确挂 1325166。临时稿按话题挂：AI 临时稿 1255303，游戏临时稿挂其游戏的活动。找不到指定活动就停止（ACTIVITY_NOT_AVAILABLE，保留 release 并汇报），不换别的活动。
 - 读 release 目录的 release.json、upload-attempt.json 和 upload.receipt.json，核对回执中的 bvid、标题、分区、合集、声明和活动标签读回。
 - 然后运行一次 `python -B upload_bridge.py recover <release目录>`。审核中就如实记为已提交、未公开，不要重投。
 
