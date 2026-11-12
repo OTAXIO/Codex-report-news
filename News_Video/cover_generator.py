@@ -67,28 +67,33 @@ def make_hyperframes(episode_id):
 NAVY='#023077';LINE=(1,147,238)  # LINE = 12% navy speed line over the blue field
 def display(size):return ImageFont.truetype('C:/Windows/Fonts/impact.ttf',size)
 
-def sheared(layer,angle=12):
-    # Same lean as the video's skewX(-12deg): the top shifts right, the baseline stays put.
-    k=math.tan(math.radians(angle));pad=math.ceil(k*layer.height)
-    return layer.transform((layer.width+pad,layer.height),Image.Transform.AFFINE,(1,k,-pad,0,1,0),Image.Resampling.BICUBIC)
+SLANT=math.tan(math.radians(12))  # same lean as the video's skewX(-12deg)
+# 2026-11-12 user minimums: line 1 never below the "更新第二阶段" sample (138px), line 3 never
+# below the "两千八百亿" sample (166px). The picture shrinks (to ART_MIN) before text does.
+TOP_MIN,HI_MIN,MAIN_MIN,ART_MIN=138,166,52,360
 
 def tag(text,f,fg,bg,shadow=None,offset=0,padx=0,pady=0,outline=None):
-    """A slanted label; bg None draws bare text, outline gives it a hard ink shadow."""
+    """Upright text (2026-11-12: no slanted lettering); only a background plate keeps the
+    parallelogram lean. bg None draws bare text, outline gives it a hard ink shadow."""
     box=ImageDraw.Draw(Image.new('L',(1,1))).textbbox((0,0),text,font=f)
     w,h=box[2]-box[0]+2*padx,box[3]-box[1]+2*pady
-    layer=Image.new('RGBA',(w+offset,h+offset),(0,0,0,0));d=ImageDraw.Draw(layer)
+    lean=math.ceil(SLANT*h) if bg else 0
+    layer=Image.new('RGBA',(w+lean+offset,h+offset),(0,0,0,0));d=ImageDraw.Draw(layer)
     if bg:
-        if shadow:d.rectangle((offset,offset,w+offset-1,h+offset-1),fill=shadow)
-        d.rectangle((0,0,w-1,h-1),fill=bg)
-    elif outline:d.text((padx-box[0]+offset,pady-box[1]+offset),text,font=f,fill=outline)
-    d.text((padx-box[0],pady-box[1]),text,font=f,fill=fg)
-    return sheared(layer)
+        plate=lambda dx,dy:[(lean+dx,dy),(w+lean-1+dx,dy),(w-1+dx,h-1+dy),(dx,h-1+dy)]
+        if shadow:d.polygon(plate(offset,offset),fill=shadow)
+        d.polygon(plate(0,0),fill=bg)
+    x,y=padx+lean//2-box[0],pady-box[1]
+    if outline:d.text((x+offset,y+offset),text,font=f,fill=outline)
+    d.text((x,y),text,font=f,fill=fg)
+    return layer
 
-def fitted_tag(text,initial,width,**style):
-    for size in range(initial,max(18,initial//2)-1,-4):
+def fitted_tag(text,initial,width,minimum=None,**style):
+    minimum=minimum or max(18,initial//2)
+    for size in range(initial,minimum-1,-4):
         layer=tag(text,font(size),**style)
         if layer.width<=width:return layer
-    raise ValueError('Cover text is too long; shorten the factual headline')
+    raise ValueError(f'Cover text "{text}" does not fit at {minimum}px; shorten it in cover.json')
 
 def art_panel(brief,max_w,max_h,border=10):
     """News pictures fill a frame of their own aspect (clamped to 3:4..2:1, centre-cropped beyond);
@@ -111,41 +116,54 @@ def art_panel(brief,max_w,max_h,border=10):
 
 def persona_canvas(ep,brief,height):
     """Video-matching P3 blue/white cover; 4:3 is laid out natively, not letterboxed."""
-    W,H=1920,height;dy=(H-1080)//2
+    # 2026-11-12 layout (user-approved samples): white band lower, picture top-right beside
+    # lines 1-2, line 3 full width under it; sizes medium / small / large; date bottom-right.
+    W,H=1920,height;tall=H>1080
     image=Image.new('RGB',(W,H),BLUE);d=ImageDraw.Draw(image)
     run=math.tan(math.radians(25))*H
     for x in range(-int(run),W+60,44):d.polygon([(x+run,0),(x+run+3,0),(x+3,H),(x,H)],fill=LINE)
     edge=lambda x,base:base-80*x/W  # bottom band rises toward the right, like the video header edge
-    band=H-215
+    band=H-(160 if tall else 130)
     d.polygon([(0,edge(0,band)-30),(W,edge(W,band)-30),(W,edge(W,band)-20),(0,edge(0,band)-20)],fill=NAVY)
     d.polygon([(0,edge(0,band)-12),(W,edge(W,band)-12),(W,edge(W,band)),(0,edge(0,band))],fill=BLACK)
     d.polygon([(0,edge(0,band)),(W,edge(W,band)),(W,H),(0,H)],fill='white')
-    # Verified art in a tilted frame with an ink outline and hard shadow. The frame takes the
-    # picture's own shape and fills the right column (2026-11-09: a fixed square left wide
-    # news pictures as a thin strip in white space).
-    framed=art_panel(brief,820,620 if H==1080 else 860)
-    cx,cy=1460,(445 if H==1080 else 600);image.paste(framed,(cx-framed.width//2,cy-framed.height//2),framed)
+    slot=tag(slot_label(ep),font(54),BLUE,'white',shadow=BLACK,offset=8,padx=26,pady=10)
+    top_y=110 if tall else 70
+    image.paste(slot,(104,top_y),slot)
+    hi=None
+    if brief.get('highlight'):
+        hi=fitted_tag(brief['highlight'],300 if tall else 230,W-220,HI_MIN,fg=BLUE,bg='white',shadow=BLACK,offset=16,padx=34,pady=14)
+        hi_y=int(edge(100+hi.width,band))-60-hi.height
+    else:hi_y=int(edge(0,band))-40
+    zone_bottom=hi_y-(60 if tall else 36)
+    top_style=dict(fg='white',bg=None,outline=BLACK,offset=9)
+    main_style=dict(fg='white',bg=BLACK,shadow='white',offset=10,padx=26,pady=14)
+    # The picture gives up width when line 1/2 need it at their minimum size; 80 covers the
+    # frame border, shadow and tilt. A frame takes the picture's own shape (2026-11-09).
+    need=max(tag(brief['headline_top'],font(TOP_MIN),**top_style).width if brief.get('headline_top') else 0,
+             tag(brief['headline_main'],font(MAIN_MIN),**main_style).width)
+    right=W-70;art_w=max(ART_MIN,min(760,right-104-40-need-80))
+    framed=art_panel(brief,art_w,zone_bottom-top_y-20)
+    ax=right-framed.width;ay=top_y+(zone_bottom-top_y-framed.height)//2
+    image.paste(framed,(ax,ay),framed)
     if brief.get('image_label'):
         label=tag(brief['image_label'],font(40),'white',BLACK,shadow=BLUE,offset=6,padx=22,pady=8)
-        image.paste(label,(cx+framed.width//2-label.width-30,cy+framed.height//2-40),label)
-    # Headline stack: slot tag, subject, black title bar, oversized highlight.
-    slot=tag(slot_label(ep),font(54),BLUE,'white',shadow=BLACK,offset=8,padx=26,pady=10)
-    image.paste(slot,(104,70+dy//2),slot)
-    y=200+dy
-    if brief.get('headline_top'):
-        top=fitted_tag(brief['headline_top'],150,900,fg='white',bg=None,outline=BLACK,offset=10)
-        image.paste(top,(104,y),top);y+=top.height+24
-    main=fitted_tag(brief['headline_main'],110,900,fg='white',bg=BLACK,shadow='white',offset=12,padx=28,pady=14)
-    image.paste(main,(96,y),main);y+=main.height+34
-    if brief.get('highlight'):
-        hi=fitted_tag(brief['highlight'],170,900,fg=BLUE,bg='white',shadow=BLACK,offset=14,padx=30,pady=6)
-        image.paste(hi,(110,min(y,band-hi.height-70)),hi)
-    # The edition date appears exactly once, on the white band.
+        image.paste(label,(ax+framed.width-label.width-30,ay+framed.height-40),label)
+    col=ax-104-40;rows=[]
+    if brief.get('headline_top'):rows.append((fitted_tag(brief['headline_top'],190 if tall else 170,col,TOP_MIN,**top_style),104))
+    rows.append((fitted_tag(brief['headline_main'],88 if tall else 76,col,MAIN_MIN,**main_style),96))
+    gap=40 if tall else 26;start=top_y+slot.height+(60 if tall else 30)
+    y=start+max(0,(zone_bottom-start-sum(r.height for r,_ in rows)-gap*(len(rows)-1))//2)
+    for layer,x in rows:image.paste(layer,(x,y),layer);y+=layer.height+gap
+    if hi:image.paste(hi,(100,hi_y),hi)
+    # The edition date appears exactly once, bottom-right on the white band.
     date=ep['edition_date'][5:].replace('-','.')
-    stamp=tag(date,display(140),BLACK,None);image.paste(stamp,(110,H-188),stamp)
+    df=display(140 if tall else 120);db=d.textbbox((0,0),date,font=df)
+    d.text((W-110-db[2],H-db[3]-(34 if tall else 26)),date,font=df,fill=BLACK)
     footer=cover_footer(brief)
     if footer!=slot_label(ep):
-        note=tag(footer,fitted(d,footer,44,760,False),BLACK,None);image.paste(note,(110+stamp.width+40,H-112),note)
+        ff=fitted(d,footer,44,760,False);fb=d.textbbox((0,0),footer,font=ff)
+        d.text((110,H-fb[3]-(50 if tall else 40)),footer,font=ff,fill=BLACK)
     return image
 
 def make_persona(episode_id):
