@@ -764,7 +764,8 @@ def selection_report(episode):
     finally:db.close()
     # Skland captures are imported after collect, so re-read their status now instead of the collect-time snapshot.
     from skland_sources import capture_status
-    catalog={s['id']:s for s in load(ROOT/'sources.json')}
+    # Same guard as the rest of import: a workspace without the source registry still gets its report.
+    catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').is_file() else {}
     now=dt.datetime.now(UTC)
     current=[capture_status(ROOT,catalog[s['source_id']],now) if s.get('source_type')=='skland_capture' and s.get('source_id') in catalog else s
              for kind in ('all','leaders') for s in runs.get(kind,{}).get('sources',[])]

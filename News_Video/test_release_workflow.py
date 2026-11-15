@@ -4,7 +4,9 @@ from unittest.mock import patch
 from release_manager import naming,prepare,digest
 
 class ReleaseWorkflowChecks(unittest.TestCase):
-    def test_named_video_in_release_before_publication_and_repeat_safe(self):
+    # Copy/naming mechanics only; the sealed-content gate (cover.json + publication review) is covered by test_publication_policy.
+    @patch('publication_policy.validate')
+    def test_named_video_in_release_before_publication_and_repeat_safe(self,_sealed):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as folder:
             root=Path(folder)/'News_Video';source=root/'episodes'/'edition';source.mkdir(parents=True)
             ep={'id':'edition','edition_date':'2026-10-26','edition_slot':'night','scenes':[{'id':'intro'}]}

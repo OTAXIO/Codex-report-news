@@ -10,7 +10,9 @@ import upload_bridge
 
 
 class ProjectLayoutChecks(unittest.TestCase):
-    def test_nested_checkout_uses_external_release_for_prepare_plan_and_archive(self):
+    # Path layout only; the sealed-content gate (cover.json + publication review) is covered by test_publication_policy.
+    @patch('publication_policy.validate')
+    def test_nested_checkout_uses_external_release_for_prepare_plan_and_archive(self,_sealed):
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as folder:
             work=Path(folder);root=work/'Codex-report-news/News_Video'
             source=root/'episodes/fixture';source.mkdir(parents=True)

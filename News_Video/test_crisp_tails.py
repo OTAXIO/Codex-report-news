@@ -1,10 +1,14 @@
-import json, os, tempfile, unittest
+import importlib.util, json, os, tempfile, unittest
 from unittest.mock import patch
 from pathlib import Path
 os.environ['NUMBA_CACHE_DIR']=str(Path(__file__).parent/'.cache/numba')
 import numpy as np
 from crisp_tails import crisp_release,process,write_wav,read_wav
 
+# crisp_tails.py runs inside the GPT-SoVITS runtime (news_video.py starts it with <engine>/runtime/python.exe),
+# which ships librosa; the plain project Python does not. Run these there:
+#   <engine>/runtime/python.exe -B -c "import sys;sys.path.insert(0,'.');import unittest;unittest.main(module='test_crisp_tails',argv=['x'])"
+@unittest.skipUnless(importlib.util.find_spec('librosa'),'librosa lives in the GPT-SoVITS runtime; run this file with that interpreter')
 class CrispReleaseChecks(unittest.TestCase):
     def test_release_shorter_but_pitch_and_prefix_preserved(self):
         sr=32000;t=np.arange(sr*2)/sr

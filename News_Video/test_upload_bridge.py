@@ -14,7 +14,9 @@ class UploadBridgeChecks(unittest.TestCase):
         b.save(self.release/'upload.codex.json',dict(schema_version=1))
         b.save(self.release/'used-news-record.json',dict(episode_id='edition'))
     def tearDown(self):self.tmp.cleanup()
-    def test_submitted_is_not_published_and_does_not_submit_twice(self):
+    # Submission state only; the sealed-content gate (cover.json + publication review) is covered by test_publication_policy.
+    @patch('publication_policy.validate')
+    def test_submitted_is_not_published_and_does_not_submit_twice(self,_sealed):
         with patch.object(b,'call',return_value=dict(ok=True,state='submitted',key='a'*64,receipt=dict(aid=123,bvid='BV1aaaaaaaaa'))) as call:
             result=b.publish_ready(self.release,self.root);self.assertEqual(result['state'],'submitted')
             receipt=b.load(self.release/'release.json');self.assertTrue(receipt['submitted']);self.assertFalse(receipt['published'])
