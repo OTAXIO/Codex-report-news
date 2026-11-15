@@ -55,7 +55,7 @@
   - **传闻**：X 爆料账号 btibor91、testingcatalog（A 级），legit_api、chetaslua、apples_jimmy（B 级），kimmonismus（C 级），以及按 12 个模型家族轮换的关键词搜索（每次最多 8 次搜索、间隔 10 秒；搜索来的 C 级帖要 ≥20 赞）；Reddit r/singularity（C 级）。原帖存 `data/rumors/<ID>.json`，候选里带 `rumor:true, rumor_tier, likes`。遇到 RATE_LIMITED/PLATFORM_BLOCKED/NEED_LOGIN 会自动停掉本轮并冷却，不要换账号或后端重试。
   - **GitHub 今日热门**：读 github.com/trending，自动跳过与 AI/开发工具无关或用途有害（人肉、开盒、盗号、外挂、破解、deepfake 等）的仓库，保留至多 3 个候选，item 存 `data/github-trending/items/<ID>.json`。
 - **玩家热议（仅两条游戏情报，各自采集）**：`python -B community_sources.py collect --series <arknights|endfield>`。
-  - 用独立的阅读 profile（`../../.community-reader-private/chrome-profile`，与上传器 profile 分开）只读 B站页面：近 48h 播放最多的 5 个视频＋最新的 3 个（有播放/评论下限），每个读最热和最新评论，另读弹幕。不导出 Cookie、不直接调评论或搜索 API、不逆向 WBI、不重放请求，不读用户名。
+  - 用独立的阅读 profile（`../../.community-reader-private/chrome-profile`，与上传器 profile 分开）只读 B站页面：近 48h 播放最多的 12 个视频＋最新的 3 个（有播放/评论下限，2026-11-11 用户要求每个系列读到 15 条），每个读最热和最新评论，另读弹幕。不导出 Cookie、不直接调评论或搜索 API、不逆向 WBI、不重放请求，不读用户名。
   - 首次使用或报 COMMUNITY_LOGIN_REQUIRED：停下这一栏目，请用户本人运行 `python -B community_sources.py login` 用小号登录一次（程序不代登），本期照常出片、不做玩家热议。报 PLATFORM_BLOCKED 同样跳过并汇报，不重试。
   - 采集后运行 `python -B community_sources.py topics <快照ID>` 看各讨论对象的提及数；对象必须是 `game_glossary.json` 里本游戏 `reviewed:true` 的词。`python -B community_sources.py glossary-candidates` 列出常被提到但没收录的词，只汇报给用户，不要自己把 reviewed 改成 true。
 - **X 连接（2026-11-11）**：X 帖只能通过本机专用浏览器读取，浏览器闲置 10 分钟会自动关闭，06:00 第一次读取要冷启动。

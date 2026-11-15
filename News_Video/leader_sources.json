@@ -249,6 +249,29 @@
       "model_release_alerts": true
     },
     {
+      "id": "x-official-claudedevs",
+      "handle": "ClaudeDevs",
+      "name": "Claude Developers",
+      "vendor": "Anthropic",
+      "region": "international",
+      "product_scope": [
+        "Claude API",
+        "Claude Code",
+        "Claude apps"
+      ],
+      "entity_kind": "product_and_agent",
+      "type": "official_x",
+      "group": "ai",
+      "enabled": true,
+      "identity_checked": true,
+      "identity_evidence": "Anthropic developer account; posts sit in the same thread as @claudeai (e.g. 2120275296637321476 replies to claudeai's MCP Apps rollout) and are linked from Claude developer communications; live read 2026-11-11",
+      "priority_tier": 1,
+      "source_priority": 80,
+      "selection_policy": "verified_meaningful_model_product_agent_updates; no filler",
+      "collection_trigger": "hourly_and_before_episode",
+      "model_release_alerts": true
+    },
+    {
       "id": "x-official-tencenthunyuan",
       "handle": "TencentHunyuan",
       "name": "腾讯混元",

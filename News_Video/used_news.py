@@ -25,7 +25,9 @@ def keys(item):
     if item.get('event_key'):result.add('event:'+item['event_key'])
     title=item.get('source_title',item.get('title',''))
     title=re.sub(r'[^\w\u4e00-\u9fff]','',title.lower())
-    if title:result.add('title:'+title)
+    # Community snapshots all carry the same generic title ("… B站玩家热议素材"),
+    # so the snapshot ID and the reviewed event key identify them, not the title.
+    if title and not str(item.get('source_id','')).startswith('community-'):result.add('title:'+title)
     return result
 
 def normalize_record(record):

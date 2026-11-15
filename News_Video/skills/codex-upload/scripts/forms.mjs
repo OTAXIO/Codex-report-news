@@ -81,19 +81,34 @@ export async function readForm(page){
       visibility:document.querySelector('.check-radio-v2-box-checked + .check-radio-v2-name')?.textContent.trim()??null};
   },S);
 }
+async function clickSettled(page,find,label){
+  // The statement list re-renders while it opens, so a handle resolved a
+  // moment earlier can already be detached when Puppeteer asks for its box.
+  for(let attempt=0;attempt<4;attempt++){
+    const element=await find();
+    if(element){
+      try{await element.click();return;}
+      catch(error){
+        const box=await element.boundingBox().catch(()=>null);
+        if(box?.width&&box?.height){await page.mouse.click(box.x+box.width/2,box.y+box.height/2);return;}
+      }
+    }
+    await pause(250);
+  }
+  fault('STATEMENT_OPTION_UNCLICKABLE','Declaration control stayed unclickable after re-query',{control:label});
+}
 async function declarations(page,wanted){
   let actual=await readForm(page);
   if(Object.keys(wanted).every(k=>actual.declarations[k]===wanted[k]))return;
   const disabled=await page.$eval(S.statement,e=>!!e.querySelector('.bcc-select.disabled'));
   if(disabled)fault('DECLARATION_IMMUTABLE','Platform does not allow changing this submitted declaration');
-  await (await visible(page,S.statementTrigger)).click();
+  await (await visible(page,S.statementTrigger)).click();await pause(200);
   const primary=wanted.ai_generated?'含AI生成内容':wanted.original?'内容无需标注':'内容为转载';
-  const option=await exactText(page,primary,'.creation-statement-container');await option.click();await pause(350);
+  await clickSettled(page,()=>exactText(page,primary,'.creation-statement-container',false),primary);await pause(350);
   actual=await readForm(page);
   if(actual.declarations.no_reprint!==wanted.no_reprint){
     if(!await visible(page,'.creation-statement-container .auth-content',false))await (await visible(page,S.statementTrigger)).click();
-    await page.waitForSelector('.creation-statement-container .auth-content',{visible:true,timeout:5000});
-    await (await visible(page,'.creation-statement-container .auth-content')).click();await pause(250);
+    await clickSettled(page,()=>visible(page,'.creation-statement-container .auth-content',false),'内容为自制');await pause(250);
   }
   const list=await visible(page,'.creation-statement-container .bcc-select-list-wrap',false);
   if(list)await (await visible(page,S.statementTrigger)).click();

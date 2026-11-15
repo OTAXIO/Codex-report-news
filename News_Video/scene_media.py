@@ -75,12 +75,17 @@ def catalog(root):
 
 def identity_key(scene):
     if scene.get('game') in {'arknights','endfield'}:return scene['game']
-    aliases=[('openai',r'Open\s*AI|ChatGPT|Codex|thsottiaux|\btibo\b'),('anthropic',r'Anthropic|Claude'),('deepseek',r'DeepSeek'),
+    aliases=[('openai',r'Open\s*AI|ChatGPT|Codex|thsottiaux|\btibo\b'),('claude',r'\bClaude\b'),('anthropic',r'Anthropic'),('deepseek',r'DeepSeek'),
              ('qwen',r'Qwen|千问|通义'),('google',r'Google|Gemini|DeepMind'),('minimax',r'MiniMax'),
              ('kimi',r'Kimi|Moonshot|月之暗面'),('glm',r'GLM|智谱|ZCode|Z\.ai'),('tencent',r'Tencent|腾讯|WorkBuddy|混元|Hunyuan'),('ai2',r'\bai2\b|AllenAI'),('github',r'^GitHub$')]
-    if scene.get('company'):
-        return next((key for key,pattern in aliases if re.search(pattern,str(scene['company']),re.I)),None)
-    for field in ['publisher','product','speaker_name','author_handle','title']:
+    fields=['product','publisher','speaker_name','author_handle','title']
+    company=str(scene.get('company') or '')
+    # Claude 是产品名（2026-11-11）：Anthropic 的或未写公司的新闻，产品/标题/发布者提到 Claude 就用 Claude 橙色图标。
+    # 写了别的公司时仍以公司为准：别家新闻标题里顺带提到 Claude/OpenAI 不能换成它们的图标。
+    if (not company or re.search(r'Anthropic|Claude',company,re.I)) and any(re.search(r'\bClaude\b',str(scene.get(f,'')),re.I) for f in fields):return 'claude'
+    if company:
+        return next((key for key,pattern in aliases if re.search(pattern,company,re.I)),None)
+    for field in fields:
         found=next((key for key,pattern in aliases if re.search(pattern,str(scene.get(field,'')),re.I)),None)
         if found:return found
     return None

@@ -98,9 +98,9 @@ def choose_videos(series,searches,now,root=None):
             report.append(dict(bvid=card['bvid'],label=search['label'],rank=rank,reason=reason or 'selected_candidate'))
             if reason or card['bvid'] in rows:continue
             rows[card['bvid']]=dict(bvid=card['bvid'],title=card['title'],plays=plays,danmaku_count=danmaku,published=published.isoformat(),picked_by=search['label'],search_rank=rank)
-    hot=sorted([r for r in rows.values() if r['picked_by']=='hot'],key=lambda r:-(r['plays'] or 0))[:5]
+    hot=sorted([r for r in rows.values() if r['picked_by']=='hot'],key=lambda r:-(r['plays'] or 0))[:pol.get('hot_videos',12)]
     newest=[r for r in rows.values() if r['picked_by']=='newest' and r not in hot][:3]
-    return (hot+newest)[:pol.get('max_videos_per_game',8)],report
+    return (hot+newest)[:pol.get('max_videos_per_game',15)],report
 
 def search_jobs(series,now,root=None):
     """B站 ignores pubtime_* when order=click (verified 2026-11-09: all-time PVs come back),

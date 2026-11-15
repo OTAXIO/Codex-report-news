@@ -27,6 +27,12 @@ class PageImageChecks(unittest.TestCase):
             (self.root/'assets/broken.png').write_text('not a PNG')
             ep=dict(scenes=[dict(id='news',game='endfield',image=value)])
             m.prepare(ep,self.root);self.assertEqual(ep['scenes'][0]['resolved_media']['subject'],'endfield')
+    def test_claude_product_icon_only_for_anthropic_or_unattributed_stories(self):
+        self.assertEqual(m.identity_key(dict(company='Anthropic',product='Claude Code')),'claude')
+        self.assertEqual(m.identity_key(dict(title='Claude 额度重置')),'claude')
+        self.assertEqual(m.identity_key(dict(company='Anthropic',title='Anthropic 融资')),'anthropic')
+        self.assertIsNone(m.identity_key(dict(company='Unknown Company',title='Comparison with Claude')))
+        self.assertEqual(m.identity_key(dict(company='OpenAI',title='GPT vs Claude')),'openai')
     def test_no_unrelated_company_fallback_or_generic_placeholder(self):
         ep=dict(scenes=[dict(id='new',company='Unknown Company',title='Comparison with OpenAI')])
         with self.assertRaisesRegex(ValueError,'no verified related'):m.prepare(ep,self.root)

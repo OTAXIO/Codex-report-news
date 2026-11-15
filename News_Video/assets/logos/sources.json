@@ -22,6 +22,18 @@
       "usage": "Organization identity in a locally reviewed news sample; no implied endorsement"
     },
     {
+      "id": "claude",
+      "path": "assets/logos/claude.png",
+      "source": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f8/a0/eb/f8a0eba3-be3c-7cbb-214b-f138d28f45d5/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg",
+      "final_url": "https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/f8/a0/eb/f8a0eba3-be3c-7cbb-214b-f138d28f45d5/AppIcon-0-0-1x_U007epad-0-1-85-220.png/512x512bb.jpg",
+      "organization": "https://claude.ai/",
+      "width": 512,
+      "height": 512,
+      "sha256": "7002ff7a6bd4dc5c0f57ab9acf29a39b8b0fc27ad66a54ff11fa5ed23f02274d",
+      "usage": "Claude product icon (official App Store artwork) for Claude-related stories; Anthropic company logo is not used",
+      "retrieved_utc": "2026-11-11T06:12:00+00:00"
+    },
+    {
       "id": "ai2",
       "path": "assets/logos/ai2.png",
       "source": "https://avatars.githubusercontent.com/u/5667695?s=512&v=4",

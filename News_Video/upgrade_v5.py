@@ -18,7 +18,7 @@ details={
 }
 for s in ep['scenes']:
     short,facts=details[s['id']];s['short_title']=short;s['facts']=[dict(title=a,detail=b) for a,b in facts]
-    if s['id']=='claude':s.update(company='Anthropic',logo='assets/logos/anthropic.png')
+    if s['id']=='claude':s.update(company='Anthropic',product='Claude',logo='assets/logos/claude.png')
     elif s['id'].startswith('openai'):s.update(company='OpenAI',logo='assets/logos/openai.png')
     elif s['id']=='litpivot':s.update(company='Ai2',logo='assets/logos/ai2.png')
     if s.get('item_id'):s['evidence'].append('V5 explanatory facts checked against saved article/RSS evidence; distinctions of metric and publication stage are editorial qualifications.')
