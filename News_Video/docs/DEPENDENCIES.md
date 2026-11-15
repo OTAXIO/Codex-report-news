@@ -5,7 +5,7 @@
 | 能力 | 本机入口 | 迁移说明 |
 |---|---|---|
 | 普通 Python | D:/Basement/Miniconda3/python.exe | Python 3.10+；numpy、Pillow、requests，requirements.txt 有最低依赖 |
-| 本地语音 | D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/python.exe | 该运行时含 torch/librosa/jieba 等；不要把 site-packages 混入普通 Python |
+| ASR/对齐运行时 | D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/python.exe | 不再用于配音（2026-11-15 删除 GPT-SoVITS 配音后端）；仍运行 verify_speech_content.py 与 align_captions.py，提供 ASR 模型与 jieba 词典；不要把 site-packages 混入普通 Python |
 | 语音 worker | D:/Basement/Codex_Video/Voice_Generate/tools/generate_job.py | 使用现有模型，交接包附工具源码副本；同机优先用原项目 |
 | 语音 profile | D:/Basement/Codex_Video/admin_retrain/recommended_profile.json | 本地读取权重路径，不打印凭据；权重不入包、不重训 |
 | Node.js | C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe | 同机 DSH 可复用；换机重新定位 Node，不依赖 Codex 专属 API |
@@ -50,7 +50,7 @@
 
 ## 2026-10-27 Qwen3-TTS 与后台窗口更新
 
-用户已选择 Qwen3-TTS。新闻默认后端现为 config.voice.backend=qwen3，0.6B Base + 现有“帝江号，我已就位，该出发了”参考音频；GPT-SoVITS 原权重、profile 和运行时保留，改 backend=gpt-sovits 可回退。Qwen 接口通过独立 Python 环境和 tools/qwen_generate_job.py，使用逐句映射以保留字幕/导览停顿；Qwen 的 cleanup 强制 off，不做尾字压缩/淡出或机械拉伸语速。旧 GPT-SoVITS speed/cleanup 等参数不是 Qwen 的已实现控制参数，不能混淆。
+用户已选择 Qwen3-TTS。新闻默认后端现为 config.voice.backend=qwen3，0.6B Base + 现有“帝江号，我已就位，该出发了”参考音频；（2026-11-15 用户决定：GPT-SoVITS 配音后端代码已删除，不能再切回；backend 只接受 qwen3。GPT-SoVITS 安装目录 config.voice.engine 仍提供 ASR 听写核验模型、字幕分词词典 jieba、对齐用 Python 与 ffmpeg/ffprobe，不能删。）Qwen 接口通过独立 Python 环境和 tools/qwen_generate_job.py，使用逐句映射以保留字幕/导览停顿；Qwen 的 cleanup 强制 off，不做尾字压缩/淡出或机械拉伸语速。旧 GPT-SoVITS speed/cleanup 等参数不是 Qwen 的已实现控制参数，不能混淆。
 
 官方约 2.5GB 权重已下载并逐文件校验 SHA-256；本地克隆样音成功（8.4 秒），新闻入口真实隔离烟测通过逐句输出、2 秒导览停顿和时间映射，无视频生成/上传。安装版本冲突已解决，pip check 通过。自然度与音色仍待用户试听，不能宣称优于旧模型或已完成 Qwen 微调。新方法和训练路线见 VOICE_UPGRADE.md。28 条训练＋4 条验证已导出，尚未训练。
 

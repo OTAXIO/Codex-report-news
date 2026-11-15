@@ -31,15 +31,10 @@
   "voice": {
     "repository": "D:/Basement/Codex_Video/Voice_Generate",
     "engine": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604",
-    "profile": "D:/Basement/Codex_Video/admin_retrain/recommended_profile.json",
-    "cleanup": "strong",
-    "speed": 1.0,
+    "engine_note_20261115": "GPT-SoVITS已不作配音后端（只用qwen3）；此目录仍提供ASR听写核验模型、字幕分词词典(jieba)、对齐用Python与ffmpeg，勿删",
     "pause": 0.4,
-    "language": "zh",
     "reference_audio": "D:/Basement/Codex_Video/media-library/voice/dijiang-ready.wav",
     "reference_text": "帝江号，我已就位，该出发了。",
-    "soft_release": false,
-    "tail_style": "natural",
     "pronunciations": {
       "OpenAI": "Open AI",
       "tibo": "梯啵",

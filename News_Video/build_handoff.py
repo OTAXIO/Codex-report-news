@@ -39,7 +39,7 @@ def build(date='2026-10-26'):
         if p.is_file() and '.hyperframes' not in p.parts and 'fonts' not in p.parts and p.suffix in {'.html','.json','.js'}:add(p)
     for p in (ROOT/'episodes').rglob('*'):
         if p.is_file() and p.suffix in {'.json','.txt'}:add(p)
-    for name in ['generate_job.py','audio_cleanup.py','common.py','prosody.py','qwen_generate_job.py','prepare_qwen_dataset.py','download_qwen3.py','download_qwen3_modelscope.py','qwen_generate_context.py','context_alignment.py','download_alignment_model.py','speech_text.py']:add(WORK/'Voice_Generate/tools'/name)
+    for name in ['audio_cleanup.py','prosody.py','qwen_generate_job.py','prepare_qwen_dataset.py','download_qwen3.py','download_qwen3_modelscope.py','qwen_generate_context.py','context_alignment.py','download_alignment_model.py','speech_text.py']:add(WORK/'Voice_Generate/tools'/name)
     add(WORK/'Voice_Generate/requirements-qwen3.txt')
     add(WORK/'Voice_Generate/requirements-qwen3-training.txt')
     add(WORK/'Voice_Generate/README.md')

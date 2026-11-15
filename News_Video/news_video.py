@@ -787,25 +787,23 @@ def voice(episode_id):
     display_script=(directory/'script.txt').read_text(encoding='utf-8')
     spoken_path=directory/'spoken_script.txt'
     spoken_path.write_text(spoken_text(display_script,v.get('pronunciations',{})),encoding='utf-8')
-    backend=v.get('backend','gpt-sovits')
+    # Qwen3-TTS is the only voice backend; the GPT-SoVITS TTS backend was removed on 2026-11-15.
+    # voice.engine (the GPT-SoVITS install) still supplies the ASR model, the jieba dictionary,
+    # the alignment Python and ffmpeg used below and by verify_speech_content/caption_layout.
+    if v.get('backend','qwen3')!='qwen3':raise ValueError('VOICE_BACKEND: only qwen3 is supported')
     job=dict(text_file=str(spoken_path),output_file=str(directory/'narration.wav'),pause=v['pause'],seed=42)
-    if backend=='qwen3':
-        qwen=v['qwen3'];executable=Path(qwen['python']);context=qwen.get('contextual_generation',False)
-        worker=Path(v['repository'])/'tools'/('qwen_generate_context.py' if context else 'qwen_generate_job.py')
-        job.update(model_path=qwen['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],qwen_language='Chinese',synthesis_unit='sentence',max_new_tokens=1024,cleanup='off')
-        job.update(qwen.get('sampling',{}));job['consistent_unit_seed']=qwen.get('consistent_unit_seed',False)
-        job['speech_rate']=qwen.get('speech_rate',1);job['ffmpeg_executable']=qwen.get('ffmpeg_executable')
-        job['compound_pause_max_seconds']=qwen.get('compound_pause_max_seconds',.12)
-        job['context_max_new_tokens']=int(episode.get('voice_context_max_new_tokens',1024))
-        if context:
-            from scene_pauses import sentence_scene_ids
-            ids=sentence_scene_ids(episode)
-            job.update(context_group_sentence_counts=episode.get('voice_context_group_sentence_counts') or [ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
-        worker_cwd=v['repository']
-    elif backend=='gpt-sovits':
-        profile=load(v['profile']);executable=Path(v['engine'])/'runtime/python.exe';worker=Path(v['repository'])/'tools/generate_job.py';worker_cwd=v['engine']
-        job.update(project=v['engine'],gpt=profile['model']['t2s_weights_path'],sovits=profile['model']['vits_weights_path'],reference=v.get('reference_audio',profile['request']['ref_audio_path']),reference_text=v.get('reference_text',profile['request']['prompt_text']),reference_language='all_zh',language=v['language'],speed=v['speed'],cleanup=v['cleanup'],temperature=.75)
-    else:raise ValueError('Unknown local voice backend')
+    qwen=v['qwen3'];executable=Path(qwen['python']);context=qwen.get('contextual_generation',False)
+    worker=Path(v['repository'])/'tools'/('qwen_generate_context.py' if context else 'qwen_generate_job.py')
+    job.update(model_path=qwen['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],qwen_language='Chinese',synthesis_unit='sentence',max_new_tokens=1024,cleanup='off')
+    job.update(qwen.get('sampling',{}));job['consistent_unit_seed']=qwen.get('consistent_unit_seed',False)
+    job['speech_rate']=qwen.get('speech_rate',1);job['ffmpeg_executable']=qwen.get('ffmpeg_executable')
+    job['compound_pause_max_seconds']=qwen.get('compound_pause_max_seconds',.12)
+    job['context_max_new_tokens']=int(episode.get('voice_context_max_new_tokens',1024))
+    if context:
+        from scene_pauses import sentence_scene_ids
+        ids=sentence_scene_ids(episode)
+        job.update(context_group_sentence_counts=episode.get('voice_context_group_sentence_counts') or [ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
+    worker_cwd=v['repository']
     dump(directory/'voice_job.json',job)
     env=os.environ.copy();env.update(PYTHONIOENCODING="utf-8",PYTHONUTF8="1",PYTHONDONTWRITEBYTECODE="1")
     # Workspace-owned lock; never terminate another voice/desktop process.
@@ -814,7 +812,7 @@ def voice(episode_id):
     try:
         with (directory/"voice.log").open("w",encoding="utf-8") as log:
             flags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0
-            if backend=='qwen3' and context and v['qwen3'].get('unit_cache',True):
+            if context and qwen.get('unit_cache',True):
                 # Only changed paragraph units are synthesized; unchanged ones come from the cache (see voice_units.py).
                 from voice_units import generate as generate_units
                 try:report=generate_units(job,directory/'voice_job.json',executable,v['repository'],env,log,ROOT/'.cache/voice-units',flags)
@@ -824,13 +822,6 @@ def voice(episode_id):
                 result=subprocess.run([str(executable),"-u","-B",str(worker),"--job",str(directory/"voice_job.json")],cwd=worker_cwd,env=env,stdout=log,stderr=subprocess.STDOUT,creationflags=flags)
                 if result.returncode: raise RuntimeError("Voice failed; inspect "+str(directory/"voice.log"))
     finally: lock.unlink(missing_ok=True)
-    if backend=='gpt-sovits' and v.get("tail_style")=="crisp":
-        with (directory/"crisp.log").open("w",encoding="utf-8") as log:
-            processed=subprocess.run([str(executable),str(ROOT/"crisp_tails.py"),episode_id,episode_id],env=env,cwd=ROOT,stdout=log,stderr=subprocess.STDOUT)
-        if processed.returncode:raise RuntimeError("Crisp release processing failed; inspect "+str(directory/"crisp.log"))
-    elif backend=='gpt-sovits' and v.get("soft_release"):
-        from voice_tuning import soften_file
-        soften_file(directory/"narration.wav",directory/"narration.json")
     from scene_pauses import apply_scene_holds
     meta=load(directory/'narration.json')
     display_sentences=[part.strip() for part in re.split(r'(?<=[。！？!?])\s*|(?<=\.)\s+|\n+',display_script) if part.strip()]
@@ -850,22 +841,23 @@ def voice(episode_id):
     if len(expected)!=len(sentences): raise RuntimeError("Voice sentence/scene mapping mismatch")
     for sentence,scene_id in zip(sentences,expected): sentence["scene_id"]=scene_id
     dump(directory/"timings.json",dict(sample_rate=rate,duration=meta["seconds"],sentences=sentences))
-    if backend=='qwen3':
-        episode['audio_content_review_required']=True
-        dump(directory/'episode.json',episode)
-        local_python=v['qwen3']['alignment_python']
-        quality_env=env.copy();quality_env['NUMBA_CACHE_DIR']=str(ROOT/'.cache/numba-asr')
-        for check_worker in ['verify_speech_content.py','align_captions.py']:
-            subprocess.run([local_python,'-u','-B',str(ROOT/check_worker),episode_id],env=quality_env,cwd=ROOT,check=True,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
+    episode['audio_content_review_required']=True
+    dump(directory/'episode.json',episode)
+    local_python=qwen['alignment_python']
+    quality_env=env.copy();quality_env['NUMBA_CACHE_DIR']=str(ROOT/'.cache/numba-asr')
+    for check_worker in ['verify_speech_content.py','align_captions.py']:
+        subprocess.run([local_python,'-u','-B',str(ROOT/check_worker),episode_id],env=quality_env,cwd=ROOT,check=True,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
     print(json.dumps(dict(duration=meta["seconds"],sentences=len(sentences),cleanup=job["cleanup"]),ensure_ascii=False))
 
 def doctor():
     cfg=config();v=cfg["voice"]
-    qwen=v.get('backend')=='qwen3';context=qwen and v['qwen3'].get('contextual_generation',False)
-    worker='qwen_generate_context.py' if context else 'qwen_generate_job.py' if qwen else 'generate_job.py'
-    python=Path(v['qwen3']['python']) if qwen else Path(v['engine'])/'runtime/python.exe'
-    checks={"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":python.is_file(),"upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
-    if not qwen:checks['voice_profile']=Path(v['profile']).is_file()
+    context=v['qwen3'].get('contextual_generation',False)
+    worker='qwen_generate_context.py' if context else 'qwen_generate_job.py'
+    checks={"voice_backend_qwen3":v.get('backend','qwen3')=='qwen3',"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":Path(v['qwen3']['python']).is_file(),
+            # The GPT-SoVITS install is no longer a voice backend but still holds the ASR model and caption dictionary.
+            "asr_model":(Path(v['engine'])/'tools/asr/models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/model.pt').is_file(),
+            "caption_dictionary":(Path(v['engine'])/'runtime/Lib/site-packages/jieba/dict.txt').is_file(),
+            "upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
     if context:checks.update(alignment_python=Path(v['qwen3']['alignment_python']).is_file(),alignment_weights=(Path(v['qwen3']['alignment_model'])/'model.pt').is_file())
     if cfg.get('background_music',{}).get('enabled'):
         from audio_mix import digest
@@ -875,11 +867,10 @@ def doctor():
     if cfg.get('publisher',{}).get('enabled'):
         from upload_bridge import paths
         cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())
-    if v.get('backend')=='qwen3':
-        q=v['qwen3'];checks.update(qwen_python=Path(q['python']).is_file(),qwen_worker=(Path(v['repository'])/'tools/qwen_generate_job.py').is_file(),qwen_weights=(Path(q['model_path'])/'model.safetensors').is_file(),qwen_tokenizer=(Path(q['model_path'])/'speech_tokenizer/model.safetensors').is_file())
-        reference=Path(v.get('reference_audio',''))
-        checks.update(qwen_reference_audio=reference.is_file(),qwen_reference_text=bool(v.get('reference_text','').strip()))
-        if v.get('reference_sha256'):checks['qwen_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
+    q=v['qwen3'];checks.update(qwen_worker=(Path(v['repository'])/'tools/qwen_generate_job.py').is_file(),qwen_weights=(Path(q['model_path'])/'model.safetensors').is_file(),qwen_tokenizer=(Path(q['model_path'])/'speech_tokenizer/model.safetensors').is_file())
+    reference=Path(v.get('reference_audio',''))
+    checks.update(qwen_reference_audio=reference.is_file(),qwen_reference_text=bool(v.get('reference_text','').strip()))
+    if v.get('reference_sha256'):checks['qwen_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
 def game_schedule(days=14):

@@ -41,7 +41,7 @@ GitHub main 已推送并远端核验：7e5aac5f296c3e811352652127e596739eb78f10�
 
 ## 2026-10-27 Qwen3-TTS 与后台窗口更新
 
-用户已选择 Qwen3-TTS。新闻默认后端现为 config.voice.backend=qwen3，0.6B Base + 现有“帝江号，我已就位，该出发了”参考音频；GPT-SoVITS 原权重、profile 和运行时保留，改 backend=gpt-sovits 可回退。Qwen 接口通过独立 Python 环境和 tools/qwen_generate_job.py，使用逐句映射以保留字幕/导览停顿；Qwen 的 cleanup 强制 off，不做尾字压缩/淡出或机械拉伸语速。旧 GPT-SoVITS speed/cleanup 等参数不是 Qwen 的已实现控制参数，不能混淆。
+用户已选择 Qwen3-TTS。新闻默认后端现为 config.voice.backend=qwen3，0.6B Base + 现有“帝江号，我已就位，该出发了”参考音频；（2026-11-15 用户决定：GPT-SoVITS 配音后端代码已删除，不能再切回；backend 只接受 qwen3。GPT-SoVITS 安装目录 config.voice.engine 仍提供 ASR 听写核验模型、字幕分词词典 jieba、对齐用 Python 与 ffmpeg/ffprobe，不能删。）Qwen 接口通过独立 Python 环境和 tools/qwen_generate_job.py，使用逐句映射以保留字幕/导览停顿；Qwen 的 cleanup 强制 off，不做尾字压缩/淡出或机械拉伸语速。旧 GPT-SoVITS speed/cleanup 等参数不是 Qwen 的已实现控制参数，不能混淆。
 
 官方约 2.5GB 权重已下载并逐文件校验 SHA-256；本地克隆样音成功（8.4 秒），新闻入口真实隔离烟测通过逐句输出、2 秒导览停顿和时间映射，无视频生成/上传。安装版本冲突已解决，pip check 通过。自然度与音色仍待用户试听，不能宣称优于旧模型或已完成 Qwen 微调。新方法和训练路线见 VOICE_UPGRADE.md。28 条训练＋4 条验证已导出，尚未训练。
 

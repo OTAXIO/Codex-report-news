@@ -1,5 +1,7 @@
 # 2026-10-27 语音后端调研与接入
 
+> 2026-11-15：用户确认不再用 GPT-SoVITS 配音，GPT-SoVITS 后端、crisp_tails/analyze_tails/voice_tuning 已删除；下文“保留回退”为历史记录。安装目录仍供 ASR/分词/对齐/ffmpeg 使用。
+
 ## GitHub 官方源码核查
 
 星标为本次查询时快照，不代表自然度排名。

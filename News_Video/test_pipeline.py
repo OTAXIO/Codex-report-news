@@ -1,8 +1,6 @@
 import json, unittest
 from pathlib import Path
 import news_video as n
-import numpy as np
-from voice_tuning import soften_release
 
 class PipelineChecks(unittest.TestCase):
     def test_rss_tracking_links_deduplicate(self):
@@ -40,18 +38,4 @@ class PipelineChecks(unittest.TestCase):
             self.assertEqual(scene['source_url'],row['url'])
             self.assertTrue(scene['evidence'])
         db.close()
-    def test_quiet_release_softened_without_shortening(self):
-        sr=32000;t=np.arange(sr)/sr
-        audio=(.4*np.sin(2*np.pi*180*t)).astype(np.float32)
-        audio[-int(.14*sr):]*=.12
-        processed,report=soften_release(audio,sr)
-        self.assertTrue(report['applied'])
-        self.assertEqual(len(processed),len(audio))
-        np.testing.assert_array_equal(processed[:int(.8*sr)],audio[:int(.8*sr)])
-        self.assertLess(float(np.sum(processed[-3200:]**2)),float(np.sum(audio[-3200:]**2)))
-    def test_loud_final_sound_protected(self):
-        sr=32000;audio=(.4*np.sin(2*np.pi*180*np.arange(sr)/sr)).astype(np.float32)
-        processed,report=soften_release(audio,sr)
-        self.assertFalse(report['applied'])
-        np.testing.assert_array_equal(processed,audio)
 if __name__=='__main__':unittest.main()

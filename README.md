@@ -51,7 +51,7 @@ python -B -m unittest discover -p 'test_*.py' -v
 
 config.json 的 workspace_directory 相对于 News_Video；release.directory 可为绝对路径或相对于 News_Video 的路径。voice 中的工具、引擎、模型 profile 和参考音频路径需按本机设置。publisher.private_home 相对于 News_Video，认证始终留在仓库外。独立投稿 CLI 必须另行安装并配置，缺少时 doctor 会报告，不应默认自动投稿可用。
 
-语音默认调用相邻 Voice_Generate 仓库的 Qwen3-TTS 0.6B 上下文生成入口，参考音频克隆而非已完成微调；模型、参考音频和运行环境需另行准备。既有 GPT-SoVITS 后端保留回退。本仓库不复制 Voice_Generate 源码，模型与音频权利按原授权。
+语音默认调用相邻 Voice_Generate 仓库的 Qwen3-TTS 0.6B 上下文生成入口，参考音频克隆而非已完成微调；模型、参考音频和运行环境需另行准备。GPT-SoVITS 配音后端已于 2026-11-15 删除；其安装目录仍提供 ASR 听写核验、字幕分词与 ffmpeg。本仓库不复制 Voice_Generate 源码，模型与音频权利按原授权。
 
 仅克隆 Git 不能获得本机运行环境。数据库、去重日志和 reset 基线需另行安全迁移；缺少生产数据库时对应的来源映射测试跳过。历史固定日期脚本不作为实时选题入口，历史稿件不可重新投稿。
 
