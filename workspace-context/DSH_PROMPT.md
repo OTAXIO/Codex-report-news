@@ -1,5 +1,7 @@
 # DeepSeek Harness 接手指令（2026-11-11 版，替代 2026-11-10 版）
 
+> **2026-11-15 活动日历（用户要求，当前有效）**：以前游戏情报只报单独做成页的活动，版本日历里的阶段开启（如方舟 SS 第三段、终末地内容更新）和几天后结束的活动都漏了。现在两条游戏情报**每期必须有一页「活动日历」**（`scene_type:"activity_calendar"`），列出本系列所有还在进行的官方活动和剩余天数；3 天内结束/开启、今天或明天开下一阶段的，口播必须点名并说出时间。写稿前先跑 `python -B activities.py sync --series <arknights|endfield>`（读官方公告全文，结果在 `data/activity-calendar.json`），超过 12 小时没同步或缺这一页，导入会拒绝。写法见第 3a 节“活动日历”。
+
 > **2026-11-12 AI 活动（用户确认，当前有效）**：AI 早报和 AI 临时稿改挂「AI IN ALL！」（topic_id 1255303），上传器自动选择，无需手动操作；游戏情报仍是方舟 8314、终末地 1325166，游戏临时稿挂其游戏的活动。覆盖下文及旧版本中 AI 活动“most_popular_free”或“1325166”的写法。
 
 > **2026-11-11 资讯量与 X 连接（用户要求“全部修复”，当前有效）**：同行一期能讲 18 条，我们只讲 7 条，原因是 06:00 X 采集冷启动超时整轮放弃、候选 339 条只看了 17 条、每条新闻都占一整页。现在：(1) 采集前先运行 `python -B x_reach.py probe` 预热 X 阅读器，单个账号超时不再中断整轮，报告里 `pending_handles` 非空时补跑 `python -B leader_sources.py --retry-failed`；(2) AI 候选按观众关心程度排序并把同一事件的多条报道归成一组，导入时前 40 组每组都要有选用或落选理由（REVIEW_COVERAGE）；(3) 新增“快讯”页，一页讲 2–3 条次要消息；(4) 新增来源 404 Media、Ars Technica、ElevenLabs 博客及 X 账号 ElevenLabs、OfficialLoganK、elonmusk。细节见第 2 节“X 连接”、第 3 节“候选排序”、第 3a 节“快讯”。
@@ -122,7 +124,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 **GitHub 今日热门**（`scene_type:"github_trending"`）：填 `repo`（owner/name）、`stars_today`（与采集一致）；口播 90–280 字，含仓库短名和“GitHub”，讲清它是做什么的、谁做的、今天涨了多少星。配图自动用仓库卡片。同一仓库 7 天内不重复。
 
 **活动**（2026-11-10 起一页只讲一个活动；`scene_type:"activity"`，`freshness_basis:"active_window"`，旧的多活动 `activity_overview` 页导入会被 ACTIVITY_ONE_PER_PAGE 拒绝）：
-- 先看有哪些活动：`python -B activities.py list --series <arknights|endfield>` 列出以前核实过、现在还在进行的活动（来自 `data/activity-ledger.json`，带“还剩N天”）；`python -B activities.py scan --series <…>` 从近 30 天采集到的官方帖里找出写有起止日期的活动窗口（只是线索，时区、活动名仍须读原文确认）。还在进行的活动每期都可以再报，直到结束；活动页不参与已用新闻去重。
+- 先看有哪些活动：`python -B activities.py sync --series <arknights|endfield>` 后 `python -B activities.py list --series <…>`，列出所有还在进行（或 3 天内开始）的活动、还剩几天和近期阶段（来自 `data/activity-calendar.json`，2026-11-15 起替代旧的 activity-ledger）。单独做活动页时，起止时间仍须读该公告原文核对。还在进行的活动每期都可以再报，直到结束；活动页不参与已用新闻去重。
 - `activity_items` 只填 1 项：`item_id、name、start_at、end_at（带时区）、window_quote（含起止日期的官方原句）、source_type`，再加 `kind`（`online` 线上 / `offline` 线下 / `collab` 联动，默认 online）和 `scale`（`main` 主要活动 / `minor` 热度低的网页、社区小活动，如投稿征集、H5 网页活动、转发抽奖，默认 main）。线下活动必须填 `location`，联动必须填 `partner`，两者都要是官方原文里出现的写法。
 - 画面上的倒计时条（“距截止还有 N 天”“今天/明天 HH:MM 截止”、起止时间、地点/联动方）由程序按核实过的时间算出，不要自己写进 facts。`facts` 只写 1–2 条（怎么参加、能拿到什么），每条 detail ≤54 字。
 - 口播必须念出截止日期（未开始的念开启日期），如“活动到 11 月 20 日截止”，否则 ACTIVITY_DEADLINE_NOT_SPOKEN。
@@ -142,6 +144,20 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
    "window_quote":"2026/10/31 12:00 - 2026/11/14 04:00","source_type":"skland_capture"}]}
 ```
 - 配图：每个活动用它自己公告里的图（主视觉/活动海报）。`python -B scene_media.py rank <item_id>` 会把该公告的图片按清晰度和信息量从好到差列出，优先选靠前且不是超长海报的那张。
+
+**活动日历**（2026-11-15 起两条游戏情报每期必有 1 页；`scene_type:"activity_calendar"`）：
+- 写稿前：`python -B activities.py sync --series <game>`。它读近 60 天该游戏所有官方公告的**全文**（版本更新说明、活动公告、森空岛官方帖、官方 X），把每个活动的起止时间、阶段（第二段/第三段、Phase 2、内容更新、后续开放）连同官方原句存进 `data/activity-calendar.json`；同名活动以官网公告为准，森空岛只补阶段。然后 `python -B activities.py list --series <game>` 看本期要提醒的内容。
+- sync 是自动解析，可能有误：名字乱了、把礼包/说明句当成活动、同一活动拆成两条时，用 `python -B activities.py fix --series <game> --key "<key>" --json '{"name":"…","quote":"<支持更正的官方原句>"}'` 改，用 `hide --key … --reason …` 隐藏；改动在之后的 sync 里保留。版本结束时间官方公布后用 `python -B activities.py version --series <game> --region cn --name <版本名> --end-at <带时区时间> --quote "<官方原句>" --item <item_id>` 写入，之前统一显示“版本更新前结束”，不要自己猜日期。
+- 页面写法：不填 `item_id`、不填 `facts`（行由程序从日历生成，最多 12 行，其余写进简介）。必须填 `game`、`title`、`narration` 和 `spoken`：`spoken` 是 `{日历key: 口播里称呼它的词}`，`list` 里每个“3 天内结束/3 天内开启/今天或明天开下一阶段”的活动都要有一项，这个词必须原样出现在口播里，而且同一句话里要说出时间（今天/明天/N天/具体日期，“两天”可以），否则 ACTIVITY_CALENDAR_SPOKEN / ACTIVITY_CALENDAR_DAY。同一个词可对应多个 key（如“怪物猎人联动”覆盖联动的 5 项）。
+- 这一页排在活动段最前（导入自动排），不能当头条，不进标题；没有进行中的活动时不做（导入会提示 ACTIVITY_CALENDAR_EMPTY）。
+- 示例（key 和数值只是示意，用 `list` 输出里的真实 key）：
+
+```json
+{"id":"calendar","scene_type":"activity_calendar","game":"endfield",
+ "title":"活动日历：百趣演武还剩3天","short_title":"活动日历",
+ "narration":"来看终末地的活动日历。百趣演武挑战活动还剩三天，十一月十九日凌晨四点结束；理智补给两天后开启。其余活动都持续到版本更新前，完整列表在简介里。",
+ "spoken":{"endfield|cn|百趣演武":"百趣演武","endfield|cn|理智补给":"理智补给"}}
+```
 
 **玩家热议**（`scene_type:"community_pulse"`，每期最多 3 页）：
 - 填 `item_id`（快照ID）、`game`、`subject:{game, entity_type, entity_name}`（entity_type 取 glossary 的 character/event/mode/banner/item/place）、`videos:[bvid]`（来自快照且标题属于本游戏）、`sample_count`（所引视频去重后的评论＋弹幕总条数，须 ≥30 且其中提到该对象的 ≥5 条；填错时报错信息会给出正确数字，口播里用阿拉伯数字原样写出）、可选 `quotes`（≤3 条、每条 ≤20 字，从样本原样照抄）。

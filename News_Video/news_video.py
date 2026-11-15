@@ -479,6 +479,19 @@ def candidate_order(item):
             item.get('source_priority',100) if ai else 0,
             -dt.datetime.fromisoformat(item['published']).timestamp())
 
+def read_web_article(item_id,row):
+    """Fetch an official web page once and archive its full text (data/articles/<id>.json)."""
+    body,final,encoding=fetch(row["url"])
+    page=PageText(); page.feed(body.decode(encoding,errors="replace"))
+    content=re.sub(r"[ \t]+"," "," ".join(page.parts))
+    data=dict(item_id=item_id,title=row["title"],url=final,metadata=page.metadata,text=content[:60000],fetched_at=dt.datetime.now(UTC).isoformat())
+    game_path=ROOT/"data/game-items"/(item_id+".json")
+    if game_path.exists():
+        from game_sources import article as game_article
+        data=game_article(ROOT,item_id,dict(load(game_path),**data),body.decode(encoding,errors="replace"))
+    dump(ROOT/"data/articles"/(item_id+".json"),data)
+    return data
+
 def article(item_id,compact=False,max_chars=8000):
     if max_chars<500 or max_chars>60000:raise ValueError('Use max_chars 500-60000')
     db=database(); row=db.execute("SELECT * FROM items WHERE id=?",(item_id,)).fetchone();db.close()
@@ -518,15 +531,7 @@ def article(item_id,compact=False,max_chars=8000):
                  related_images=data['related_images'],full_file='data/articles/'+item_id+'.json'),ensure_ascii=False))
         else:print(json.dumps(data,ensure_ascii=False,indent=2))
         return
-    body,final,encoding=fetch(row["url"])
-    page=PageText(); page.feed(body.decode(encoding,errors="replace"))
-    content=re.sub(r"[ \t]+"," "," ".join(page.parts))
-    data=dict(item_id=item_id,title=row["title"],url=final,metadata=page.metadata,text=content[:60000],fetched_at=dt.datetime.now(UTC).isoformat())
-    game_path=ROOT/"data/game-items"/(item_id+".json")
-    if game_path.exists():
-        from game_sources import article as game_article
-        data=game_article(ROOT,item_id,dict(load(game_path),**data),body.decode(encoding,errors="replace"))
-    dump(ROOT/"data/articles"/(item_id+".json"),data)
+    data=read_web_article(item_id,row)
     if compact:
         brief={k:data.get(k) for k in ('item_id','title','url','metadata','fetched_at','images') if k in data}
         brief.update(text=data['text'][:max_chars],text_chars=len(data['text']),truncated=len(data['text'])>max_chars,
@@ -570,6 +575,7 @@ def import_editorial(path):
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)
     activities.validate_pages(episode,cfg.get('freshness',{}).get('effective_window',{}).get('active_window',{}).get('max_pages',6))
+    activities.require_calendar(episode,ROOT)
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
     from community_sources import assign_image

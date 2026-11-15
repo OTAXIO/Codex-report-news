@@ -1,4 +1,5 @@
-"""2026-11-10: one activity per page with a countdown, minor activities last, picture choice."""
+"""2026-11-10: one activity per page with a countdown, minor activities last, picture choice.
+2026-11-15: the activity calendar (official windows, phases, days left) behind the 活动日历 page."""
 import datetime as dt,json,tempfile,unittest
 from pathlib import Path
 from PIL import Image
@@ -69,23 +70,108 @@ class OrderTests(unittest.TestCase):
         late=bound('大型活动',25);late['event_key']='lead'
         a.validate_pages(dict(lead_event_id='lead',scenes=[late,bound('即将结束',12)]),6)
 
-class LedgerAndScanTests(unittest.TestCase):
-    def test_running_activities_are_reported_until_they_end(self):
+# Excerpts in the shape of the official notices (终末地 6094 版本说明, 方舟 0787 感谢庆典公告).
+EF_TEXT="""「丹青渡」版本更新说明
+■ 「丹青渡」版本更新维护时间
+2026/10/15 06:00 - 2026/10/15 12:00（UTC+8）
+1.「百趣演武」挑战活动
+· 活动时间：2026/10/29 12:00 - 2026/11/19 04:00（服务器时间）
+· 活动内容更新时间：2026/11/11 04:00（服务器时间）
+2.「烟火生缘」趣味活动
+· 活动时间：「丹青渡」版本更新后 - 版本更新维护前
+3.「密境行者」空间组更新
+· 更新时间：2026/11/12 12:00（服务器时间）
+· 更新说明：「密境行者」解谜活动将更新新空间组「画外遗光」，率先开放3个协议空间，并在2026/11/19 04:00（服务器时间）开放后续3个协议空间。
+4.【特惠武库配额包】限时礼包
+· 售卖时间：2026/10/29 12:00 - 2026/11/19 04:00（服务器时间）"""
+AK_TEXT="""SideStory「时间啊，向前！」活动
+<第一段>
+开放时间：11月01日 12:00 - 11月22日 03:59
+<第二段>
+开放时间：11月08日 16:00 - 11月22日 03:59
+<第三段>
+开放时间：11月15日 16:00 - 11月22日 03:59
+◆ 维护补偿发放时间：11月01日 12:00 - 11月08日 03:59
+【活动时间】
+11月01日 12:00 - 11月29日 03:59"""
+
+def calendar_root(tmp,items):
+    root=Path(tmp);(root/'data/game-items').mkdir(parents=True);(root/'data/articles').mkdir(parents=True)
+    (root/'config.json').write_text(json.dumps(dict(activity_calendar=dict(regions=dict(endfield=['cn'],arknights=['cn']),max_sync_age_hours=12,rows_per_page=12,upcoming_days=3))),encoding='utf-8')
+    for key,game,title,text in items:
+        (root/'data/game-items'/(key+'.json')).write_text(json.dumps(dict(game=game,game_region='cn',title=title,summary=text[:80],url='https://example.test/'+key,published=at(1).isoformat() if game=='endfield' else '2026-10-24T20:30:00+08:00',source_type='official_game_page')),encoding='utf-8')
+        (root/'data/articles'/(key+'.json')).write_text(json.dumps(dict(item_id=key,text=text)),encoding='utf-8')
+    return root
+
+class CalendarTests(unittest.TestCase):
+    def test_version_note_gives_windows_phases_and_open_drops(self):
+        found,starts=a.extract(EF_TEXT,'endfield','cn',at(1),'v1')
+        by={a.key_name(e['name']):e for e in found}
+        self.assertEqual(starts['丹青渡']['start_at'],'2026-10-15T12:00:00+08:00')
+        self.assertEqual(set(by),{'百趣演武','烟火生缘','密境行者','特惠武库配额包'})
+        self.assertEqual((by['百趣演武']['end_at'],[(p['label'],p['start_at']) for p in by['百趣演武']['phases']]),
+                         ('2026-11-19T04:00:00+08:00',[('内容更新','2026-11-11T04:00:00+08:00')]))
+        self.assertEqual((by['烟火生缘']['start_at'],by['烟火生缘']['end_at'],by['烟火生缘']['end_rule']),('2026-10-15T12:00:00+08:00',None,'version_end'))
+        self.assertEqual((by['密境行者']['end_rule'],[p['start_at'] for p in by['密境行者']['phases']]),('open',['2026-11-19T04:00:00+08:00']))
+        self.assertEqual(by['特惠武库配额包']['category'],'pack')
+    def test_stage_labels_become_phases_of_one_activity(self):
+        found,_=a.extract(AK_TEXT,'arknights','cn',at(1),'ak')
+        self.assertEqual([e['name'] for e in found],['SideStory「时间啊，向前！」活动'])
+        self.assertEqual([(p['label'],p['start_at']) for p in found[0]['phases']],
+                         [('第一段','2026-11-01T12:00:00+08:00'),('第二段','2026-11-08T16:00:00+08:00'),('第三段','2026-11-15T16:00:00+08:00')])
+        self.assertEqual(found[0]['end_at'],'2026-11-22T03:59:00+08:00')
+    def test_reminders_say_days_left_and_phases_due(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT),('ak','arknights','「感谢庆典」活动公告',AK_TEXT)])
+            a.sync(root,'endfield',at(16,10),fetch=False);a.sync(root,'arknights',at(16,10),fetch=False)
+            rows={r['name']:r for r in a.reminders(root,'endfield',at(17,10))}
+            self.assertNotIn('【特惠武库配额包】限时礼包',rows)   # purchases are not activities
+            self.assertEqual((rows['「百趣演武」挑战活动']['state'],rows['「百趣演武」挑战活动']['label']),('ending','还剩2天'))
+            self.assertEqual(rows['「烟火生缘」趣味活动']['label'],'版本更新前结束')
+            self.assertEqual([p['when'] for p in rows['「密境行者」空间组更新']['phases_due']],['11月19日04:00'])
+            self.assertFalse(a.must_mention(rows['「密境行者」空间组更新']))
+            tomorrow={r['name']:r for r in a.reminders(root,'endfield',at(18,10))}
+            self.assertEqual(tomorrow['「密境行者」空间组更新']['phases_due'][0]['when'],'明天04:00')
+            self.assertTrue(a.must_mention(tomorrow['「密境行者」空间组更新']))
+            self.assertNotIn('「密境行者」空间组更新',{r['name'] for r in a.reminders(root,'endfield',at(21,10))})   # dropped after its last part opened
+            ss=a.reminders(root,'arknights',at(15,10))[0]
+            self.assertEqual((ss['name'],[p['when']+' '+p['label'] for p in ss['phases_due']]),('SideStory「时间啊，向前！」活动',['今天16:00 第三段']))
+    def test_calendar_page_must_name_due_items_with_their_day(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])
+            a.sync(root,'endfield',at(18,9),fetch=False)
+            ep=dict(id='e',edition_series='endfield',edition_slot='night',scenes=[])
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_CALENDAR_REQUIRED'):a.require_calendar(ep,root,at(18,10))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_CALENDAR_STALE'):a.require_calendar(ep,root,at(19,10))
+            keys={r['name']:r['key'] for r in a.reminders(root,'endfield',at(18,10))}
+            scene=dict(id='cal',scene_type='activity_calendar',game='endfield',narration='终末地活动日历。百趣演武明天四点结束。')
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_CALENDAR_SPOKEN'):a.bind_calendar(dict(scene),ep,root,at(18,10))
+            spoken={keys['「百趣演武」挑战活动']:'百趣演武',keys['「密境行者」空间组更新']:'密境行者'}
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_CALENDAR_SPOKEN'):
+                a.bind_calendar(dict(scene,spoken=spoken),ep,root,at(18,10))   # 密境行者 is mapped but never said
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_CALENDAR_DAY'):
+                a.bind_calendar(dict(scene,spoken=spoken,narration=scene['narration']+'密境行者还会开放新空间。'),ep,root,at(18,10))
+            ok=dict(scene,spoken=spoken,narration=scene['narration']+'密境行者明天再开三个空间。')
+            result=a.bind_calendar(ok,ep,root,at(18,10))
+            self.assertEqual((result['basis'],ok['badge'],ok['event_key'],ok['source_url']),('activity_calendar','活动日历','endfield-activity-calendar','https://example.test/v1'))
+            self.assertEqual(sorted(r['big'] for r in ok['calendar_rows'] if r['urgent']),['!','明天'])
+            a.require_calendar(dict(ep,scenes=[ok]),root,at(18,10))
+    def test_editor_corrections_survive_a_resync(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])
+            a.sync(root,'endfield',at(16,10),fetch=False)
+            a.hide(root,'endfield|cn|烟火生缘','测试')
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_FIX_QUOTE'):a.fix(root,'endfield|cn|密境行者',dict(name='x'))
+            a.fix(root,'endfield|cn|密境行者',dict(name='「密境行者」画外遗光',quote='· 更新时间：2026/11/12 12:00（服务器时间）'))
+            a.sync(root,'endfield',at(16,11),fetch=False)
+            names={r['name'] for r in a.reminders(root,'endfield',at(16,12))}
+            self.assertIn('「密境行者」画外遗光',names);self.assertNotIn('「烟火生缘」趣味活动',names)
+    def test_reported_single_activity_page_enters_the_calendar(self):
         with tempfile.TemporaryDirectory() as tmp:
             a.record(dict(id='e1',scenes=[bound('签到',20),bound('网页投稿',12,scale='minor')]),tmp)
-            self.assertEqual([(r['name'],r['label']) for r in a.running(tmp,'endfield',NOW)],[('签到','还剩10天'),('网页投稿','还剩2天')])
+            self.assertEqual([(r['name'],r['label']) for r in a.running(tmp,'endfield',NOW)],[('网页投稿','还剩2天'),('签到','还剩10天')])
             self.assertEqual([r['name'] for r in a.running(tmp,'endfield',at(15))],['签到'])
             self.assertEqual(a.running(tmp,'arknights',NOW),[])
-    def test_windows_are_found_in_official_text(self):
-        found=a.windows('活动时间：11月5日 16:00 - 11月20日 03:59，另有 2026年12月28日~1月4日 线下展',at(1))
-        self.assertEqual([w['start_at'] for w in found],['2026-11-05T16:00:00+08:00','2026-12-28T00:00:00+08:00'])
-        self.assertEqual([w['end_at'] for w in found],['2026-11-20T03:59:00+08:00','2027-01-04T23:59:59+08:00'])
-        with tempfile.TemporaryDirectory() as tmp:
-            items=Path(tmp)/'data/game-items';items.mkdir(parents=True)
-            rows=[('big','「终末回响」活动开启','活动时间：11月5日 16:00 - 11月20日 03:59'),('mini','同人投稿征集','11月8日 - 11月12日'),('show','线下主题展','11月7日 10:00 - 11月16日 22:00'),('done','旧活动','10月20日 - 11月2日')]
-            for key,title,text in rows:(items/(key+'.json')).write_text(json.dumps(dict(game='endfield',title=title,summary=text,published=at(4).isoformat(),url='u',source_type='official_game_page')),encoding='utf-8')
-            got=a.scan(tmp,'endfield',NOW)
-            self.assertEqual([(r['item_id'],r['kind_guess'],r['scale_guess']) for r in got],[('show','offline','main'),('big','online','main'),('mini','online','minor')])
 
 class PictureChoiceTests(unittest.TestCase):
     GATE=dict(min_short_side=240,min_long_side=480,max_flat=.88,min_entropy=3.0)

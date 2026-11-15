@@ -28,8 +28,16 @@ def describe(episode, publication, timings=None):
             if lines and lines[-1].endswith(title):continue
             lines.append(label)
         sources=list(dict.fromkeys(url for s in episode['scenes'] if not is_overview(s)
-                                   for url in ([e.get('source_url') for e in s['brief_items']] if s.get('brief_items') else [s.get('source_url')]) if url))
+                                   for url in ([e.get('source_url') for e in s['brief_items']] if s.get('brief_items') else s.get('calendar_sources') or [s.get('source_url')]) if url))
         text='\n'.join(lines)
+        for scene in episode['scenes']:
+            # 活动日历: the page shows the most urgent rows; the description carries all of them.
+            if scene.get('calendar_all'):
+                text+='\n\n活动日历（北京时间，以官方公告为准）：'
+                for row in scene['calendar_all']:
+                    line=f"\n· {row['title']}（{row['region']}）：{row['detail']}"
+                    if len(text)+len(line)>1300:text+='\n· 其余见游戏内公告';break
+                    text+=line
         if sources:
             # Story order; stop short of the 2000-character upload limit so the disclaimers below still fit.
             text+='\n\n来源：'
@@ -66,6 +74,7 @@ def title_for(episode, publication):
             if ('games' if is_game(scene) else 'ai')!=kind:raise ValueError('TITLE_CATEGORY_MIXED: '+key)
             if key in seen:raise ValueError('TITLE_EVENT_DUPLICATED: '+key)
             if scene.get('brief_items'):raise ValueError('TITLE_BRIEFS_PAGE: a 快讯 page is not a title story; name a full story')
+            if scene.get('scene_type')=='activity_calendar':raise ValueError('TITLE_CALENDAR_PAGE: the 活动日历 page is a reminder list, not a title story')
             seen.add(key);title=scene['title'].strip()
             if not title or re.search(r'[|｜\n\r]',title):raise ValueError('TITLE_STORY_SEPARATOR_INVALID')
             titles.append(title)

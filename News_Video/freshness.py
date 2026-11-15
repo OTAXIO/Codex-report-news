@@ -159,6 +159,15 @@ def audit_episode(episode,root,reference=None,bind=False):
     cfg=json.loads((Path(root)/'config.json').read_text(encoding='utf-8'))
     for scene in episode['scenes']:
         if is_overview(scene):continue
+        if scene.get('scene_type')=='activity_calendar':
+            # 2026-11-15 活动日历: rows come from data/activity-calendar.json (every running activity,
+            # each window quoted from its official notice), not from one collected item.
+            if scene.get('editorial_role')=='recap' or episode.get('edition_slot')=='temporary' or scene.get('item_id'):
+                raise ValueError('ACTIVITY_CALENDAR: the 活动日历 page belongs to a main game edition and cites no single item_id')
+            from activities import bind_calendar
+            result=dict(item_id=None,ok=True,**bind_calendar(scene,episode,root,reference,bind))
+            if bind:scene['freshness_basis']='activity_calendar';scene['freshness_basis_audit']=result
+            results.append(result);continue
         evidence=evidence_for(root,scene)
         hours=48
         if scene.get('editorial_role')=='recap':hours=24

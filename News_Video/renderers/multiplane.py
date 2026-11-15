@@ -86,7 +86,15 @@ def build(root,episode,plan):
             f=f if isinstance(f,dict) else dict(title=f,detail='')
             facts.append(f)
         if s.get('original_text_page'):mode='original';scene['mode']=mode
-        if mode=='overview':
+        if s.get('scene_type')=='activity_calendar':mode='calendar';scene['mode']=mode
+        if mode=='calendar':
+            # 2026-11-15 活动日历: every running activity with its days left; the game icon stays small beside the title.
+            rows=s.get('calendar_rows') or []
+            if not rows:raise ValueError('ACTIVITY_CALENDAR: bind the calendar rows before rendering')
+            body=(f'<div class="cal-grid" style="--cal-rows:{(len(rows)+1)//2}">'+''.join(
+                f'<article class="cal-row{" urgent" if r["urgent"] else ""}"><div class="cal-days{" word" if r["big"] in ("今天","明天") else ""}"><strong>{text(r["big"])}</strong><b>{text(r["unit"])}</b></div>'
+                f'<div class="cal-text"><h2>{phrase(r["title"])}<i>{text(r["region"])}</i></h2><p>{phrase(r["detail"])}</p></div></article>' for r in rows)+'</div>'+logo)
+        elif mode=='overview':
             if len(facts)>4:raise ValueError('Upgrade the overview to at most four complete highlights before rendering')
             body='<p class="lead">'+text(s.get('lead','本期我们一起了解这些重点动态。'))+'</p><div class="overview-grid">'+''.join(
                 f'<article><div class="category">{text(f.get("category","重点新闻"))}</div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for f in facts)+'</div>'+logo+picture
@@ -94,6 +102,7 @@ def build(root,episode,plan):
             identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
             body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
+        if mode=='calendar':source=f'<div class="source"><b>活动日历</b>　时间均取自官方活动公告（{len(s.get("calendar_sources") or [1])} 份），服务器时间以公告为准'+(f'；另有 {int(s["calendar_more"])} 项进行中未列出' if s.get('calendar_more') else '')+'<span>原文链接见简介</span></div>'
         if s.get('brief_publishers'):source=f'<div class="source"><b>快讯来源</b>　{text(" · ".join(s["brief_publishers"]))}<span>每条出处见括号，原文链接见简介</span></div>'
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
         frame=''

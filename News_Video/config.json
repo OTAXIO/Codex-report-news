@@ -420,6 +420,14 @@
     }
   },
   "rumors": {
+  "activity_calendar": {
+    "decided_20261115": "用户要求：游戏情报每期带一页「活动日历」，列出本系列仍在进行的全部官方活动并提醒还有几天结束；阶段开启（第二段/内容更新等）当天和前一天必须点名；数据存data/activity-calendar.json，由activities.py sync读取官方公告全文生成",
+    "regions": {"arknights": ["cn", "global"], "endfield": ["cn"]},
+    "max_source_age_days": 60,
+    "max_sync_age_hours": 12,
+    "rows_per_page": 12,
+    "upcoming_days": 3
+  },
     "enabled": true,
     "decided": "2026-11-09 用户确认：AI早报加入非官方传闻（新模型优先），非官方在前官方在后；必须标注来源与官方状态",
     "registry": "rumor_sources.json"

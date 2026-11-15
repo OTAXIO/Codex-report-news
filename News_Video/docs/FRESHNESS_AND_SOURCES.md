@@ -99,3 +99,15 @@ Voice_Generate/tools/speech_text.py词组READINGS增加干员→赣员（gàn yu
 - **快讯页**（`briefs.py`，`scene_type:"briefs"`）：一页 2–3 条，每条须为已采集、48h 内、未播过的候选，source_url 与采集记录一致；传闻、lead_only、GitHub、玩家热议、需上下文的 X 帖不能进入。标题 ≤22 字、说明 ≤40 字，`spoken_key` 须在标题中并按画面顺序在口播中念到；媒体条目口播须“据+媒体名”，负责人 X 须点名本人。facts 由各条自动生成并附出处，底部出处条列出全部来源；每条均记入已用新闻。栏目顺序：传闻 → 媒体 → 官方 → 快讯 → GitHub；快讯不能当头条，也不能进 title_groups（TITLE_BRIEFS_PAGE）。自动简介的时间轴列出快讯各条标题，来源链接列出每条（总长保持在 2000 字内）。
 - **新增来源**：媒体 404 Media（只收 AI 相关）、Ars Technica AI；官方 ElevenLabs 博客 RSS；X 账号 ElevenLabs（官方）、OfficialLoganK（谷歌）、elonmusk（xAI，只采信他本人关于 xAI/Grok 的第一手说法）。身份均于 2026-11-11 实测核对；@xai（2026 年新建、0 关注者）疑似仿冒未收录，@elevenlabsio 不存在。
 - **停用**：MiniMax 官网与 Kimi 论坛在本机 TLS 握手失败（直连与代理均为 UNEXPECTED_EOF），已 `enabled:false` 并写明原因；由 X @MiniMax_AI、@Kimi_Moonshot、IT之家与 kimi-blog 覆盖。
+
+## 2026-11-15 活动日历（用户要求，当前有效）
+
+问题：游戏情报只报单独做成页的活动；版本日历里的阶段节点（方舟SS「时间啊，向前！」第三段11/15 16:00、终末地「百趣演武」11/11内容更新、「密境行者」11/19后续开放）和几天后结束的活动都没被提醒。原因：采集只存约100字摘要，起止时间写在公告正文里；旧`data/activity-ledger.json`只记录做过页的活动。
+
+实现（`activities.py`，取代上节的台账与`scan`）：
+- `python -B activities.py sync --series <game>`：读近60天该游戏官方公告全文（官网页面首次读取时归档到`data/articles/`；arknights.global这类脚本渲染页归档为空壳时改用采集到的全文；森空岛、官方X用采集正文），解析每个活动的起止（日期/“「X」版本更新后”/“版本更新维护前”）、阶段（<第N段>、第N阶段/期、Phase N、内容更新、开放后续）和官方原句，写入`data/activity-calendar.json`（schema 2：versions、activities、synced_at）。每次sync按原文重建；同名活动官网优先、森空岛只补阶段；礼包类（category=pack）不进日历；编者`fix`/`hide`的条目保留。旧台账在首次读取时并入（origin=reported_page）。
+- `list`：仍在进行或3天内开启的活动，含还剩N天、“版本更新前结束”（版本结束时间未公布时）、“长期开放”（无结束时间、但有后续开放节点）以及昨天/今天/3天内的阶段。`fix`（须带官方原句）、`hide`、`version`（版本结束时间，原句须见于该item官方正文）。
+- 页面：`scene_type:"activity_calendar"`，不引用单一item；`freshness.audit_episode`经`bind_calendar`绑定：日历须12小时内sync过（ACTIVITY_CALENDAR_STALE），3天内结束/开启或今明两天开下一阶段的活动必须在`spoken`里映射并在口播中同句说出时间（ACTIVITY_CALENDAR_SPOKEN / ACTIVITY_CALENDAR_DAY）。最多12行（rows_per_page），必须点名的排在前面，其余由`publication_policy`写进简介“活动日历”段；简介来源列出该页用到的所有公告链接。
+- 门禁：明日方舟情报/终末地情报（edition_series=arknights/endfield）正片，只要该游戏有进行中活动，缺这一页导入即拒绝（ACTIVITY_CALENDAR_REQUIRED）。该页不能当标题故事（TITLE_CALENDAR_PAGE），在活动段最前。
+- 配置：`config.json` → `activity_calendar`（regions：方舟cn+global、终末地cn；max_source_age_days 60；max_sync_age_hours 12；rows_per_page 12；upcoming_days 3）。
+- 2026-11-15补全：终末地「丹青渡」期间15项、明日方舟国服/国际服23项已同步并人工校正名称、去重（误拆的森空岛子项、卡池重复、说明句、资源预载、X帖首句均已hide）。「丹青渡」版本结束时间国服官方未公布，暂显示“版本更新前结束”。
