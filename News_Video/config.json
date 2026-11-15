@@ -426,7 +426,9 @@
     "max_source_age_days": 60,
     "max_sync_age_hours": 12,
     "rows_per_page": 12,
-    "upcoming_days": 3
+    "upcoming_days": 3,
+    "min_body_pages": 5,
+    "fill_decided_20261115": "用户要求：当期新消息页少于5页（导览、活动日历、玩家热议不计）时，按活动日历最要紧顺序把有截止时间的活动各做一页补足5页，放在活动日历页之前；之后仍有一页包含全部活动的活动日历。sync每期删除已结束活动，漏掉的活动由制作agent用add补录"
   },
     "enabled": true,
     "decided": "2026-11-09 用户确认：AI早报加入非官方传闻（新模型优先），非官方在前官方在后；必须标注来源与官方状态",

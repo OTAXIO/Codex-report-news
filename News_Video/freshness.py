@@ -211,6 +211,11 @@ def audit_episode(episode,root,reference=None,bind=False):
             checks=[]
             for entry in entries:
                 ev=evidence_for(root,dict(item_id=entry.get('item_id')))
+                if entry.get('calendar_key'):
+                    # 2026-11-15 fill page: the window was read from the official notice into the activity calendar
+                    # (a version-bound end comes from the next version's maintenance time).
+                    from activities import calendar_check
+                    checks.append(dict(item_id=entry.get('item_id'),name=entry.get('name'),**calendar_check(root,entry,reference)));continue
                 c=window_check(root,entry.get('item_id'),entry.get('start_at'),entry.get('end_at'),entry.get('window_quote'),reference,
                                window.get('ahead_days',7),window.get('max_announcement_age_days',30),ev,entry.get('source_type'),
                                set(policy.get('source_types',EFFECTIVE_SOURCES)))

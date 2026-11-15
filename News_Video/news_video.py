@@ -567,10 +567,12 @@ def import_editorial(path):
         episode['voice_context_group_sentence_counts']=context_groups(episode['scenes'])
     tibo_audit=episode.get('tibo_audit')
     if leader_audit:episode['leader_audit']=leader_audit
+    import activities
+    # 2026-11-15: calendar fill pages take their window, sentence and source from the activity calendar.
+    activities.fill_from_calendar(episode,ROOT)
     from freshness import audit_episode
     audit_episode(episode,ROOT,bind=True)
     assign_segments(episode,source_catalog)
-    import activities
     activities.arrange(episode)
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)

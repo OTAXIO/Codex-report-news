@@ -103,6 +103,11 @@ def calendar_root(tmp,items):
         (root/'data/articles'/(key+'.json')).write_text(json.dumps(dict(item_id=key,text=text)),encoding='utf-8')
     return root
 
+def calendar_root_add(root,key,title,text,published=None):
+    (Path(root)/'data/game-items'/(key+'.json')).write_text(json.dumps(dict(game='endfield',game_region='cn',title=title,summary=text[:80],url='https://example.test/'+key,
+        published=(published or at(20)).isoformat(),source_type='official_game_page')),encoding='utf-8')
+    (Path(root)/'data/articles'/(key+'.json')).write_text(json.dumps(dict(item_id=key,text=text)),encoding='utf-8')
+
 class CalendarTests(unittest.TestCase):
     def test_version_note_gives_windows_phases_and_open_drops(self):
         found,starts=a.extract(EF_TEXT,'endfield','cn',at(1),'v1')
@@ -155,7 +160,38 @@ class CalendarTests(unittest.TestCase):
             result=a.bind_calendar(ok,ep,root,at(18,10))
             self.assertEqual((result['basis'],ok['badge'],ok['event_key'],ok['source_url']),('activity_calendar','活动日历','endfield-activity-calendar','https://example.test/v1'))
             self.assertEqual(sorted(r['big'] for r in ok['calendar_rows'] if r['urgent']),['!','明天'])
-            a.require_calendar(dict(ep,scenes=[ok]),root,at(18,10))
+            news=[dict(id=f'n{i}',item_id=f'n{i}',narration='消息') for i in range(5)]
+            a.require_calendar(dict(ep,scenes=news+[ok]),root,at(18,10))
+    def test_short_edition_is_filled_with_the_most_pressing_activities(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT),('v2','endfield','「远山行」版本更新说明',
+                               '「远山行」版本更新说明\n■ 「远山行」版本更新维护时间\n2026/11/25 06:00 - 2026/11/25 12:00（UTC+8）')])
+            a.sync(root,'endfield',at(16,10),fetch=False)
+            cal=dict(id='cal',scene_type='activity_calendar',game='endfield',narration='活动日历。')
+            news=[dict(id='n1',item_id='n1',narration='消息'),dict(id='talk',item_id='community-x',segment='community',narration='玩家热议')]
+            ep=dict(id='e',edition_series='endfield',edition_slot='night',scenes=news+[cal])
+            # One message page (玩家热议 is not counted): 4 short; only rows with a deadline qualify, most pressing first.
+            plan=a.fill_plan(ep,root,at(16,10),'endfield')
+            self.assertEqual((plan['news_pages'],plan['need'],plan['keys']),(1,4,['endfield|cn|百趣演武','endfield|cn|烟火生缘']))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_FILL: 1 message pages'):a.require_calendar(ep,root,at(16,10))
+            fills=[dict(id='f2',calendar_key='endfield|cn|烟火生缘',narration='烟火生缘11月25日结束。',facts=[dict(title='参与方式',detail='登录参加')]),
+                   dict(id='f1',calendar_key='endfield|cn|百趣演武',narration='百趣演武11月19日截止。',facts=[dict(title='参与方式',detail='挑战关卡')])]
+            ep['scenes']=news+[cal]+fills
+            a.fill_from_calendar(ep,root,at(16,10))
+            item=fills[0]['activity_items'][0]
+            self.assertEqual((fills[0]['item_id'],fills[0]['freshness_basis'],item['end_at'],item['end_basis']),('v1','active_window','2026-11-25T12:00:00+08:00','next_version_start'))
+            check=a.calendar_check(root,item,at(16,10))
+            self.assertEqual((check['ok'],check['state']),(True,'ongoing'))
+            for s in fills:s['activity']=a.describe(s,s['activity_items'][0],a.calendar_check(root,s['activity_items'][0],at(16,10)),at(16,10),EF_TEXT)
+            a.arrange(ep)
+            self.assertEqual([s['id'] for s in ep['scenes']],['n1','talk','f1','f2','cal'])   # fills, then the full calendar
+            a.validate_pages(ep,6)
+            a.require_calendar(ep,root,at(16,10))
+            self.assertEqual(ep['calendar_fill']['keys'],['endfield|cn|百趣演武','endfield|cn|烟火生缘'])
+            # Five message pages: no fill page is asked for, and an extra one is refused.
+            full=dict(ep,scenes=[dict(id=f'n{i}',item_id=f'n{i}',narration='消息') for i in range(5)]+[cal])
+            a.require_calendar(full,root,at(16,10))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_FILL'):a.require_calendar(dict(full,scenes=full['scenes']+fills),root,at(16,10))
     def test_editor_corrections_survive_a_resync(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])
@@ -166,6 +202,42 @@ class CalendarTests(unittest.TestCase):
             a.sync(root,'endfield',at(16,11),fetch=False)
             names={r['name'] for r in a.reminders(root,'endfield',at(16,12))}
             self.assertIn('「密境行者」画外遗光',names);self.assertNotIn('「烟火生缘」趣味活动',names)
+    def test_sync_deletes_finished_activities_from_the_file(self):
+        nxt="「远山行」版本更新说明\n■ 「远山行」版本更新维护时间\n2026/11/25 06:00 - 2026/11/25 12:00（UTC+8）"
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])
+            a.sync(root,'endfield',at(16,10),fetch=False)
+            a.hide(root,'endfield|cn|特惠武库配额包','礼包')
+            report=a.sync(root,'endfield',at(20,10),fetch=False)
+            stored=json.loads(a.calendar_path(root).read_text(encoding='utf-8'))['activities']
+            # 百趣演武 ended 11-19 04:00; 密境行者 has no end and its last part opened over a day ago; the hidden pack ended too.
+            self.assertEqual(sorted(g['key'] for g in report['expired']),['endfield|cn|密境行者','endfield|cn|特惠武库配额包','endfield|cn|百趣演武'])
+            self.assertEqual(sorted(stored),['endfield|cn|烟火生缘'])   # ends with a version whose end is not known yet
+            self.assertEqual(report['added'],[])
+            # The next version's maintenance time ends the version-bound activity.
+            calendar_root_add(root,'v2','「远山行」版本更新预告',nxt)
+            a.sync(root,'endfield',at(21,10),fetch=False)
+            row=a.reminders(root,'endfield',at(23,10))[0]
+            self.assertEqual((row['name'],row['end_at'],row['end_basis'],row['label']),('「烟火生缘」趣味活动','2026-11-25T12:00:00+08:00','next_version_start','还剩2天'))
+            self.assertEqual([g['key'] for g in a.prune(root,'endfield',at(25,13))['expired']],['endfield|cn|烟火生缘'])
+            self.assertEqual(json.loads(a.calendar_path(root).read_text(encoding='utf-8'))['activities'],{})
+    def test_editor_adds_a_missed_activity_from_the_official_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])
+            a.sync(root,'endfield',at(16,10),fetch=False)
+            args=dict(game='endfield',region='cn',name='「画外遗光」探索奖励',start_at='2026-11-12T12:00:00+08:00',item_id='v1',end_at='2026-11-26T04:00:00+08:00')
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_QUOTE'):a.add(root,quote='编造的句子',reference=at(16,11),**args)
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_END'):a.add(root,quote='· 更新时间：2026/11/12 12:00（服务器时间）',open_end=True,reference=at(16,11),**args)
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_SOURCE'):a.add(root,quote='x',reference=at(16,11),**dict(args,item_id='nope'))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_EXISTS'):
+                a.add(root,quote='· 更新时间：2026/11/12 12:00（服务器时间）',reference=at(16,11),**dict(args,name='「百趣演武」挑战活动'))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_ENDED'):
+                a.add(root,quote='· 更新时间：2026/11/12 12:00（服务器时间）',reference=at(27),**args)
+            added=a.add(root,quote='· 更新时间：2026/11/12 12:00（服务器时间）',reference=at(16,11),**args)
+            self.assertEqual((added['origin'],added['end_rule'],added['category']),('editor_added','fixed','event'))
+            a.sync(root,'endfield',at(20,10),fetch=False)   # kept across a resync
+            self.assertIn('「画外遗光」探索奖励',{r['name'] for r in a.reminders(root,'endfield',at(20,11))})
+            self.assertIn(added['key'],[g['key'] for g in a.sync(root,'endfield',at(26,5),fetch=False)['expired']])
     def test_reported_single_activity_page_enters_the_calendar(self):
         with tempfile.TemporaryDirectory() as tmp:
             a.record(dict(id='e1',scenes=[bound('签到',20),bound('网页投稿',12,scale='minor')]),tmp)

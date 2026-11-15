@@ -14,10 +14,20 @@ Every game edition then carries one 活动日历 page (`scene_type:"activity_cal
 their countdowns come from the calendar, never from the writer; the narration must name every
 activity that ends within 3 days and every phase that opens today or tomorrow, with its day.
 A single activity may still get its own page (`scene_type:"activity"`, one per page, countdown).
+When an edition has fewer than `min_body_pages` (5) message pages — 导览, 活动日历 and 玩家热议 not
+counted — the most pressing calendar rows with a known deadline get their own page
+(`scene_type:"activity"` + `calendar_key`, filled from the calendar) right before the 活动日历 page.
+
+The production agent maintains the file every edition: `sync` rebuilds it from the notices and
+deletes what has ended (a version-bound activity ends when the next version's maintenance starts);
+`add` enters an activity the parser missed, `fix`/`hide` correct one.
 
 CLI:
-  python -B activities.py sync --series endfield     read official notices, update the calendar
+  python -B activities.py sync --series endfield     read official notices, update the calendar, delete ended rows
   python -B activities.py list --series endfield     running activities with days left and phases
+  python -B activities.py fill --series endfield --pages 3   which rows need their own page with 3 message pages
+  python -B activities.py add  --series endfield --name 「X」 --start-at <ISO> (--end-at <ISO>|--version 丹青渡|--open) --quote "<official sentence>" --item <item_id>
+  python -B activities.py prune --series endfield    delete ended rows without a sync
   python -B activities.py fix  --series endfield --key <key> --json '{"end_at":"..."}'  correct an entry
   python -B activities.py hide --series endfield --key <key> --reason "..."  drop a false positive
   python -B activities.py version --series endfield --name 丹青渡 --end-at <ISO> --quote "<official sentence>" --item <item_id>
@@ -88,9 +98,14 @@ def describe(scene,entry,check,reference,official_text):
 def sort_key(activity):return (SCALES[activity['scale']],STATE_ORDER[activity['state']],activity['end_at'])
 
 def arrange(episode):
-    """Calendar page first, then single activity pages in reporting order, inside the slots they occupy."""
+    """Inside the slots they occupy: single activity pages in reporting order, then the calendar fill
+    pages (most pressing first), then the 活动日历 page with every activity."""
+    def key(s):
+        if s.get('scene_type')=='activity_calendar':return (2,0,0,'')
+        if s.get('calendar_key'):return (1,s.get('calendar_rank',0),0,'')
+        return (0,)+sort_key(s['activity'])
     slots=[i for i,s in enumerate(episode['scenes']) if s.get('activity') or s.get('scene_type')=='activity_calendar']
-    ordered=sorted((episode['scenes'][i] for i in slots),key=lambda s:(0,)+('',)*3 if s.get('scene_type')=='activity_calendar' else (1,)+sort_key(s['activity']))
+    ordered=sorted((episode['scenes'][i] for i in slots),key=key)
     for i,scene in zip(slots,ordered):episode['scenes'][i]=scene
 
 def validate_pages(episode,max_pages):
@@ -106,8 +121,9 @@ def validate_pages(episode,max_pages):
         seen.add(key)
     news={s.get('item_id') for s in episode['scenes'] if s.get('item_id') and not s.get('activity') and s.get('scene_type')!='activity_calendar'}
     for s in pages:
-        if s.get('item_id') in news:raise ValueError('ACTIVITY_DUPLICATE: '+s['activity']['name']+' is already a news page in this edition; keep one')
-    body=[s for s in pages if not episode.get('lead_event_id') or s.get('event_key')!=episode['lead_event_id']]
+        # A fill page shows one activity of a notice (often the version note) that may also be a news page.
+        if s.get('item_id') in news and not s.get('calendar_key'):raise ValueError('ACTIVITY_DUPLICATE: '+s['activity']['name']+' is already a news page in this edition; keep one')
+    body=[s for s in pages if (not episode.get('lead_event_id') or s.get('event_key')!=episode['lead_event_id']) and not s.get('calendar_key')]
     wanted=sorted(body,key=lambda s:sort_key(s['activity']))
     if [s['id'] for s in body]!=[s['id'] for s in wanted]:
         raise ValueError('ACTIVITY_ORDER: main activities first, mini web/community activities last; within each, ending soon -> ongoing -> upcoming. Expected order: '+' / '.join(s['activity']['name'] for s in wanted))
@@ -356,6 +372,7 @@ def sync(root,game,reference=None,fetch=True):
     items.sort(key=lambda x:x[0])   # later notices (time adjustments) win
     # Rebuilt from the official text on every sync, so a parser fix also repairs older rows.
     # Kept: editor corrections/hides and activities that entered through a reported page.
+    before={k:json.loads(json.dumps(v)) for k,v in calendar['activities'].items() if v.get('game')==game}
     calendar['activities']={k:v for k,v in calendar['activities'].items()
                             if v.get('game')!=game or v.get('origin')!='official_text' or v.get('hidden') or v.get('fixed_by_editor')}
     for published,item_id,item in items:
@@ -387,21 +404,52 @@ def sync(root,game,reference=None,fetch=True):
                 merged={**old,**{k:v for k,v in entry.items() if v not in (None,[],'')}}
                 merged['phases']=old.get('phases',[])+[p for p in entry['phases'] if all(p['label']!=q['label'] or p['start_at']!=q['start_at'] for q in old.get('phases',[]))]
                 merged['reported']=old.get('reported',[])
-                if merged!=old:calendar['activities'][key]=merged;report['updated'].append(key)
-            else:calendar['activities'][key]=dict(entry,reported=[]);report['added'].append(key)
+                calendar['activities'][key]=merged
+            else:calendar['activities'][key]=dict(entry,reported=[])
+    report['expired']=_prune(calendar,game,reference)
+    # Reported against the file as it was before this sync (rows are rebuilt, so compare contents).
+    now={k:v for k,v in calendar['activities'].items() if v.get('game')==game}
+    report['added']=[k for k in now if k not in before]
+    report['updated']=[k for k in now if k in before and before[k]!=now[k]]
     calendar['synced_at'][game]=reference.isoformat()
     save_calendar(root,calendar)
     return report
 
+def _expired(entry,calendar,reference):
+    """Over for good: its end has passed, or (no end date) its last part opened over a day ago."""
+    end,basis=_resolved_end(entry,calendar)
+    if end is not None:return end<=reference
+    if basis!='open':return False   # ends with a version whose end is not known yet
+    marks=[p['start_at'] for p in entry.get('phases',[]) if p.get('start_at')]+([entry['start_at']] if entry.get('start_at') else [])
+    return bool(marks) and dt.datetime.fromisoformat(max(marks))<reference-dt.timedelta(days=1)
+
+def _prune(calendar,game,reference):
+    """Delete the game's finished activities (editor rows and hidden rows included) from the file."""
+    gone=[dict(key=k,name=v['name'],end_at=_resolved_end(v,calendar)[0].isoformat() if _resolved_end(v,calendar)[0] else None)
+          for k,v in calendar['activities'].items() if v.get('game')==game and _expired(v,calendar,reference)]
+    for g in gone:del calendar['activities'][g['key']]
+    return gone
+
+def prune(root,game,reference=None):
+    calendar=load_calendar(root);gone=_prune(calendar,game,reference or dt.datetime.now(UTC))
+    if gone:save_calendar(root,calendar)
+    return dict(game=game,expired=gone)
+
 def _resolved_end(entry,calendar):
     if entry.get('end_at'):return dt.datetime.fromisoformat(entry['end_at']),'fixed'
     if entry.get('end_rule')=='open':return None,'open'
+    same=[x for x in calendar['versions'].values() if x['game']==entry['game'] and x['region']==entry['region'] and x.get('start_at')]
     version=entry.get('version')
     v=calendar['versions'].get(f"{entry['game']}|{entry['region']}|{version}") if version else None
-    if not v:
-        current=[x for x in calendar['versions'].values() if x['game']==entry['game'] and x['region']==entry['region'] and x.get('start_at')]
-        v=max(current,key=lambda x:x['start_at']) if current else None
+    if not v and entry.get('start_at'):
+        # The version the activity started in: the latest one that had begun by then.
+        began=[x for x in same if x['start_at']<=entry['start_at']]
+        v=max(began,key=lambda x:x['start_at']) if began else None
     if v and v.get('end_at'):return dt.datetime.fromisoformat(v['end_at']),'version_end'
+    if v and v.get('start_at'):
+        # A version ends when the next one starts (its 更新维护时间 is read from the next version note).
+        later=[x['start_at'] for x in same if x['start_at']>v['start_at']]
+        if later:return dt.datetime.fromisoformat(min(later)),'next_version_start'
     return None,'version_end_unknown'
 
 def reminders(root,game,reference=None,calendar=None):
@@ -517,17 +565,87 @@ def bind_calendar(scene,episode,root,reference,bind=True):
     return dict(reason='activity_calendar_bound',basis='activity_calendar',rows=len(rows),synced_at=synced)
 
 def require_calendar(episode,root,reference=None):
-    """A game edition must carry the 活动日历 page whenever its game has running activities."""
+    """A game edition must carry the 活动日历 page whenever its game has running activities,
+    and a short edition is filled up to `min_body_pages` with the most pressing ones on their own pages."""
     from edition_series import series_of
     series=series_of(episode)
     if series not in {'arknights','endfield'} or episode.get('edition_slot') not in {'morning','night'}:return None
     reference=reference or dt.datetime.now(UTC)
-    if any(s.get('scene_type')=='activity_calendar' for s in episode['scenes']):return None
     calendar=load_calendar(root);synced=calendar['synced_at'].get(series)
     if not synced or reference-dt.datetime.fromisoformat(synced)>dt.timedelta(hours=policy(root).get('max_sync_age_hours',12)):
         raise ValueError(f'ACTIVITY_CALENDAR_STALE: run python -B activities.py sync --series {series} before writing this edition')
     rows=reminders(root,series,reference,calendar)
-    if rows:raise ValueError('ACTIVITY_CALENDAR_REQUIRED: add one scene_type="activity_calendar" page; running: '+' / '.join(r['name']+'（'+r['label']+'）' for r in rows[:12]))
+    if rows and not any(s.get('scene_type')=='activity_calendar' for s in episode['scenes']):
+        raise ValueError('ACTIVITY_CALENDAR_REQUIRED: add one scene_type="activity_calendar" page; running: '+' / '.join(r['name']+'（'+r['label']+'）' for r in rows[:12]))
+    require_fill(episode,root,reference,series,calendar)
+
+# ---- filling a short edition from the calendar (2026-11-15) ----
+def is_fill(scene):return bool(scene.get('calendar_key'))
+
+def news_pages(episode):
+    """Body pages that carry a message: not the 导览, the 活动日历, 玩家热议 or a calendar fill page."""
+    from layout_policy import is_overview
+    return [s for s in episode['scenes'] if not is_overview(s) and s.get('scene_type')!='activity_calendar'
+            and s.get('segment')!='community' and not str(s.get('item_id','')).startswith('community-') and not is_fill(s)]
+
+def fill_plan(episode,root,reference,series=None,calendar=None):
+    """Which calendar rows must get their own page: the most pressing rows with a known deadline,
+    not already on a page, until the edition has `min_body_pages` message pages."""
+    from edition_series import series_of
+    series=series or series_of(episode);calendar=calendar or load_calendar(root)
+    target=policy(root).get('min_body_pages',5);news=news_pages(episode)
+    need=max(0,target-len(news))
+    featured={calendar_key(s.get('game'),s.get('game_region') or 'cn',s['activity_items'][0]['name']) for s in news if s.get('activity_items')}
+    narrated={s.get('item_id'):s.get('narration','') for s in news if s.get('item_id')}
+    rows=[]
+    for r in reminders(root,series,reference,calendar):
+        if not r['end_at'] or r['key'] in featured:continue
+        # A news page about the same notice that already names the activity covers it.
+        if r['item_id'] in narrated and any(_norm(r['name'])[i:i+4] in _norm(narrated[r['item_id']]) for i in range(max(1,len(_norm(r['name']))-3))):continue
+        rows.append(r)
+    return dict(news_pages=len(news),target=target,need=need,keys=[r['key'] for r in rows[:need]],rows=rows[:need])
+
+def require_fill(episode,root,reference,series=None,calendar=None):
+    plan=fill_plan(episode,root,reference,series,calendar)
+    have=[s['calendar_key'] for s in episode['scenes'] if is_fill(s)]
+    if have!=plan['keys']:
+        want=' / '.join(f"{r['key']}（{r['name']}，{r['label']}）" for r in plan['rows']) or '无'
+        raise ValueError(f"ACTIVITY_FILL: {plan['news_pages']} message pages (target {plan['target']}); the calendar fill pages must be, in this order: {want}. "
+                         'Write each as scene_type="activity" with "calendar_key", 1-2 facts and the deadline date in the narration, placed right before the 活动日历 page.')
+    episode['calendar_fill']=dict(news_pages=plan['news_pages'],target=plan['target'],keys=plan['keys'])
+
+def fill_from_calendar(episode,root,reference=None):
+    """Complete each calendar fill page from the calendar entry: window, official sentence, source."""
+    reference=reference or dt.datetime.now(UTC);calendar=None
+    for scene in episode['scenes']:
+        if not is_fill(scene):continue
+        calendar=calendar or load_calendar(root);key=scene['calendar_key'];entry=calendar['activities'].get(key)
+        if not entry or entry.get('hidden'):raise ValueError('ACTIVITY_FILL_KEY: '+key+' is not in the activity calendar; see activities.py list')
+        listed=reminders(root,entry['game'],reference,calendar)
+        row=next((r for r in listed if r['key']==key),None)
+        if not row or not row['end_at']:raise ValueError('ACTIVITY_FILL_KEY: '+key+' is not running with a known deadline')
+        scene['calendar_rank']=listed.index(row)
+        if scene.get('scene_type','activity')!='activity' or scene.get('item_id') not in (None,entry.get('item_id')):
+            raise ValueError('ACTIVITY_FILL: a calendar fill page is scene_type="activity" and takes its item from the calendar')
+        item=dict(name=entry['name'],kind=scene.get('kind',entry.get('kind','online')),scale=entry.get('scale','main'),start_at=entry['start_at'],end_at=row['end_at'],
+                  window_quote=entry.get('quote'),item_id=entry.get('item_id'),source_type=entry.get('source_type'),calendar_key=key,end_basis=row['end_basis'])
+        for field in ['location','partner']:
+            if scene.get(field):item[field]=scene[field]
+        scene.update(scene_type='activity',item_id=entry.get('item_id'),source_url=entry.get('source_url'),source_type=entry.get('source_type'),game=entry['game'],
+                     game_region=entry.get('region','cn'),freshness_basis='active_window',activity_items=[item])
+        scene.setdefault('evidence',entry.get('quote'));scene.setdefault('selection_reason','活动日历补页：本期正文不足，按日历最要紧顺序单独展示')
+
+def calendar_check(root,entry,reference):
+    """Freshness of a calendar fill page: the activity is still running/opening and its sentence is official."""
+    from freshness import official_text
+    calendar=load_calendar(root);key=entry['calendar_key'];stored=calendar['activities'].get(key)
+    if not stored:return dict(ok=False,reason='calendar_entry_missing')
+    row=next((r for r in reminders(root,stored['game'],reference,calendar) if r['key']==key),None)
+    if not row or not row['end_at']:return dict(ok=False,reason='calendar_entry_not_running')
+    squash=lambda s:re.sub(r'\s+','',str(s or ''))   # the calendar joins a label and its window with a space
+    if not stored.get('quote') or squash(stored['quote']) not in squash(official_text(root,stored.get('item_id'))):return dict(ok=False,reason='calendar_quote_not_in_official_text')
+    return dict(ok=True,reason='calendar_entry_running',state=row['state'],
+                start_at=dt.datetime.fromisoformat(row['start_at']).astimezone(UTC).isoformat(),end_at=dt.datetime.fromisoformat(row['end_at']).astimezone(UTC).isoformat())
 
 def record(episode,root):
     """Remember which edition reported what; a single activity page also enters the calendar."""
@@ -538,6 +656,11 @@ def record(episode,root):
                 entry=calendar['activities'].get(r['key'])
                 if entry is not None and episode['id'] not in entry.setdefault('reported',[]):entry['reported'].append(episode['id']);touched=True
         if not s.get('activity'):continue
+        if s.get('calendar_key'):
+            # A fill page came from the calendar entry; only note that it was reported.
+            entry=calendar['activities'].get(s['calendar_key'])
+            if entry is not None and episode['id'] not in entry.setdefault('reported',[]):entry['reported'].append(episode['id']);touched=True
+            continue
         a=s['activity'];entry=s['activity_items'][0];region=s.get('game_region') or 'cn'
         key=calendar_key(s.get('game'),region,a['name'])
         value=calendar['activities'].get(key) or dict(name=a['name'],game=s.get('game'),region=region,category=_category(a['name']),phases=[],origin='reported_page',reported=[])
@@ -571,15 +694,48 @@ def set_version(root,game,region,name,end_at,quote,item_id):
     calendar['versions'][key]={**calendar['versions'].get(key,{}),'name':name,'game':game,'region':region,'end_at':end_at,'end_quote':quote,'end_item_id':item_id}
     save_calendar(root,calendar)
 
+def add(root,game,region,name,start_at,quote,item_id,end_at=None,version=None,open_end=False,kind='online',scale='main',reference=None):
+    """An activity the parser missed, entered from an official notice; kept across syncs until it ends."""
+    from freshness import official_text
+    reference=reference or dt.datetime.now(UTC)
+    if sum(map(bool,[end_at,version,open_end]))!=1:raise ValueError('ACTIVITY_END: give exactly one of --end-at, --version, --open')
+    for field,value in [('start_at',start_at),('end_at',end_at)]:
+        if value and dt.datetime.fromisoformat(value).tzinfo is None:raise ValueError(field+' needs a timezone, e.g. 2026-11-20T04:00:00+08:00')
+    item=Path(root)/'data/game-items'/(str(item_id)+'.json')
+    if not item.is_file() or json.loads(item.read_text(encoding='utf-8')).get('game')!=game:
+        raise ValueError(f'ACTIVITY_SOURCE: {item_id} is not a collected {game} official item')
+    if not quote or quote not in official_text(root,item_id):raise ValueError('ACTIVITY_QUOTE: the quote must appear verbatim in the official text of '+str(item_id))
+    calendar=load_calendar(root);key=calendar_key(game,region,name)
+    old=calendar['activities'].get(key)
+    if old and not old.get('hidden'):raise ValueError(f'ACTIVITY_EXISTS: {key} is already listed; correct it with fix')
+    source=json.loads(item.read_text(encoding='utf-8'))
+    entry=dict(name=name,game=game,region=region,category=_category(name),kind=kind,scale=scale,start_at=start_at,start_rule='fixed',
+               end_at=end_at,end_rule='fixed' if end_at else 'open' if open_end else 'version_end',version=version,quote=quote,item_id=item_id,
+               phases=[],source_url=source.get('url'),source_published=source.get('published'),source_type=source.get('source_type'),
+               origin='editor_added',fixed_by_editor=True,reported=(old or {}).get('reported',[]))
+    if _expired(entry,calendar,reference):raise ValueError('ACTIVITY_ENDED: this activity is already over; nothing to add')
+    calendar['activities'][key]=entry;save_calendar(root,calendar)
+    return dict(key=key,**entry)
+
 if __name__=='__main__':
     import argparse
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['sync','list','fix','hide','version'])
+    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['sync','list','add','fix','hide','prune','fill','version'])
+    parser.add_argument('--pages',type=int,default=0,help='fill: message pages planned for this edition (not counting 导览/活动日历/玩家热议)')
     parser.add_argument('--series',required=True,choices=['arknights','endfield']);parser.add_argument('--at',help='ISO time to evaluate at (default now)')
     parser.add_argument('--no-fetch',action='store_true');parser.add_argument('--key');parser.add_argument('--json');parser.add_argument('--reason')
     parser.add_argument('--region',default='cn');parser.add_argument('--name');parser.add_argument('--end-at');parser.add_argument('--quote');parser.add_argument('--item')
+    parser.add_argument('--start-at');parser.add_argument('--version',help='add: ends with this version (name as in versions)');parser.add_argument('--open',action='store_true',help='add: no end date')
+    parser.add_argument('--kind',default='online',choices=['online','offline','collab']);parser.add_argument('--scale',default='main',choices=['main','minor'])
     args=parser.parse_args();at=dt.datetime.fromisoformat(args.at) if args.at else None
     if args.command=='sync':out=sync(ROOT,args.series,at,not args.no_fetch);out['running']=[(r['key'],r['label'],[p['when']+' '+p['label'] for p in r['phases_due']]) for r in reminders(ROOT,args.series,at)]
     elif args.command=='list':out=reminders(ROOT,args.series,at)
+    elif args.command=='prune':out=prune(ROOT,args.series,at)
+    elif args.command=='fill':
+        # Preview before writing: with --pages message pages planned, which calendar rows need their own page.
+        planned=dict(edition_series=args.series,scenes=[dict(id=f'n{i}',item_id=f'planned-{i}') for i in range(args.pages)])
+        out={k:v for k,v in fill_plan(planned,ROOT,at or dt.datetime.now(UTC),args.series).items() if k!='rows'}
+        out['rows']=[dict(key=r['key'],name=r['name'],label=r['label'],end_at=r['end_at']) for r in fill_plan(planned,ROOT,at or dt.datetime.now(UTC),args.series)['rows']]
+    elif args.command=='add':out=add(ROOT,args.series,args.region,args.name,args.start_at,args.quote,args.item,args.end_at,args.version,args.open,args.kind,args.scale,at)
     elif args.command=='fix':fix(ROOT,args.key,json.loads(args.json));out=dict(ok=True)
     elif args.command=='hide':hide(ROOT,args.key,args.reason or '');out=dict(ok=True)
     else:set_version(ROOT,args.series,args.region,args.name,args.end_at,args.quote,args.item);out=dict(ok=True)

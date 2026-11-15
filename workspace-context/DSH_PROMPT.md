@@ -1,6 +1,6 @@
 # DeepSeek Harness 接手指令（2026-11-11 版，替代 2026-11-10 版）
 
-> **2026-11-15 活动日历（用户要求，当前有效）**：以前游戏情报只报单独做成页的活动，版本日历里的阶段开启（如方舟 SS 第三段、终末地内容更新）和几天后结束的活动都漏了。现在两条游戏情报**每期必须有一页「活动日历」**（`scene_type:"activity_calendar"`），列出本系列所有还在进行的官方活动和剩余天数；3 天内结束/开启、今天或明天开下一阶段的，口播必须点名并说出时间。写稿前先跑 `python -B activities.py sync --series <arknights|endfield>`（读官方公告全文，结果在 `data/activity-calendar.json`），超过 12 小时没同步或缺这一页，导入会拒绝。写法见第 3a 节“活动日历”。
+> **2026-11-15 活动日历（用户要求，当前有效）**：以前游戏情报只报单独做成页的活动，版本日历里的阶段开启（如方舟 SS 第三段、终末地内容更新）和几天后结束的活动都漏了。现在两条游戏情报**每期必须有一页「活动日历」**（`scene_type:"activity_calendar"`），列出本系列所有还在进行的官方活动和剩余天数；3 天内结束/开启、今天或明天开下一阶段的，口播必须点名并说出时间。写稿前先跑 `python -B activities.py sync --series <arknights|endfield>`（读官方公告全文，结果在 `data/activity-calendar.json`），超过 12 小时没同步或缺这一页，导入会拒绝。日历由制作 agent 每期维护：sync 自动删除已结束的活动，漏掉的进行中活动用 `add`（须带官方原句）补录。当期新消息页少于 5 页（导览、活动日历、玩家热议不算）时，按日历最要紧顺序把有截止时间的活动各做一页补足 5 页，放在活动日历页之前（`fill` 预览，`calendar_key` 写法）。写法见第 3a 节“活动日历”。
 
 > **2026-11-12 AI 活动（用户确认，当前有效）**：AI 早报和 AI 临时稿改挂「AI IN ALL！」（topic_id 1255303），上传器自动选择，无需手动操作；游戏情报仍是方舟 8314、终末地 1325166，游戏临时稿挂其游戏的活动。覆盖下文及旧版本中 AI 活动“most_popular_free”或“1325166”的写法。
 
@@ -147,9 +147,11 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 
 **活动日历**（2026-11-15 起两条游戏情报每期必有 1 页；`scene_type:"activity_calendar"`）：
 - 写稿前：`python -B activities.py sync --series <game>`。它读近 60 天该游戏所有官方公告的**全文**（版本更新说明、活动公告、森空岛官方帖、官方 X），把每个活动的起止时间、阶段（第二段/第三段、Phase 2、内容更新、后续开放）连同官方原句存进 `data/activity-calendar.json`；同名活动以官网公告为准，森空岛只补阶段。然后 `python -B activities.py list --series <game>` 看本期要提醒的内容。
+- **日历由你（制作 agent）每期维护**：sync 会把已结束的活动从文件里删掉（输出 `expired`；跟版本走的活动在下个版本维护开始时结束，没有结束时间的在最后一个阶段开启一天后删），新解析到的列在 `added`。之后对照本期采集到的官方公告检查 `list`：公告里有、日历里没有的进行中活动用 `python -B activities.py add --series <game> --region cn --name "「活动名」" --start-at <带时区时间> --end-at <带时区时间> --quote "<官方原句，逐字>" --item <item_id>` 补录（跟版本结束用 `--version <版本名>`，没有结束时间用 `--open`；联动/线下加 `--kind collab|offline`，网页小活动加 `--scale minor`）。补录的条目以后每次 sync 都保留，到期后自动删除；已结束的活动 add 会拒绝（ACTIVITY_ENDED），已在日历里的用 fix 改（ACTIVITY_EXISTS）。不需要等 sync 也可单独 `prune` 删除过期项。
 - sync 是自动解析，可能有误：名字乱了、把礼包/说明句当成活动、同一活动拆成两条时，用 `python -B activities.py fix --series <game> --key "<key>" --json '{"name":"…","quote":"<支持更正的官方原句>"}'` 改，用 `hide --key … --reason …` 隐藏；改动在之后的 sync 里保留。版本结束时间官方公布后用 `python -B activities.py version --series <game> --region cn --name <版本名> --end-at <带时区时间> --quote "<官方原句>" --item <item_id>` 写入，之前统一显示“版本更新前结束”，不要自己猜日期。
 - 页面写法：不填 `item_id`、不填 `facts`（行由程序从日历生成，最多 12 行，其余写进简介）。必须填 `game`、`title`、`narration` 和 `spoken`：`spoken` 是 `{日历key: 口播里称呼它的词}`，`list` 里每个“3 天内结束/3 天内开启/今天或明天开下一阶段”的活动都要有一项，这个词必须原样出现在口播里，而且同一句话里要说出时间（今天/明天/N天/具体日期，“两天”可以），否则 ACTIVITY_CALENDAR_SPOKEN / ACTIVITY_CALENDAR_DAY。同一个词可对应多个 key（如“怪物猎人联动”覆盖联动的 5 项）。
-- 这一页排在活动段最前（导入自动排），不能当头条，不进标题；没有进行中的活动时不做（导入会提示 ACTIVITY_CALENDAR_EMPTY）。
+- 这一页排在活动段最后（单活动页、补页之后，导入自动排），不能当头条，不进标题；没有进行中的活动时不做（导入会提示 ACTIVITY_CALENDAR_EMPTY）。
+- **新消息不足 5 页时用日历补页**（2026-11-15 用户要求）：正文消息页（不算 00 导览、活动日历页、玩家热议；快讯页算 1 页，普通单活动页算）少于 5 页时，按 `list` 的顺序（最要紧在前），把**有截止时间**、还没单独成页的活动各做一页，补到 5 页；补页排在活动日历页之前，活动日历页照常列出全部活动。写稿前用 `python -B activities.py fill --series <game> --pages <计划的消息页数>` 看要补哪几条（只是预览；导入时按实际页数核对，不对就报 ACTIVITY_FILL 并给出正确 key 和顺序）。补页写法：`{"id":"fill-1","scene_type":"activity","calendar_key":"<key>","game":"<game>","title":"…","narration":"…（必须说出截止日期，如“十一月十九日凌晨四点结束”）","facts":[1–2条，参与方式/奖励，每条≤54字]}`，不填 item_id/activity_items/source_url（导入从日历补上）；口播事实只能来自该活动的官方公告。已经在某条新闻页口播里点名的活动不用补。补页不算“已用新闻”，可以每期续报。消息页已满 5 页时不要加补页。
 - 示例（key 和数值只是示意，用 `list` 输出里的真实 key）：
 
 ```json
