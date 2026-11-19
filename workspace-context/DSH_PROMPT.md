@@ -212,6 +212,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
   - 分区与活动按系列自动选择（见文首表格）：ai 投科技数码、精确挂 1255303「AI IN ALL！」；arknights 投游戏、精确挂 8314；endfield 投游戏、精确挂 1325166。临时稿按话题挂：AI 临时稿 1255303，游戏临时稿挂其游戏的活动。找不到指定活动就停止（ACTIVITY_NOT_AVAILABLE，保留 release 并汇报），不换别的活动。
 - 读 release 目录的 release.json、upload-attempt.json 和 upload.receipt.json，核对回执中的 bvid、标题、分区、合集、声明和活动标签读回。
 - 然后运行一次 `python -B upload_bridge.py recover <release目录>`。审核中就如实记为已提交、未公开，不要重投。
+- 收尾（2026-11-19 用户要求往期只留三天）：本时段各条都回查完后运行 `python -B cleanup_retention.py --apply`，再清空回收站。它只删北京时间三天前（今天和前两天保留）且 release.json 已 published 的往期发布，以及同期的 episodes 制作目录、data/collections 采集快照、render-temp/multiplane-jobs/frames 渲染临时文件和三天未用的配音分段缓存；未公开/审核中的期次和 6 小时内改动过的东西一律不删，结果里 kept_unpublished 非空要在汇报里点名。不加 --apply 是预演。
 
 ## 停止条件与汇报
 - 遇到登录/验证码/平台故障、素材不足、质检失败或状态未知时，停在当前阶段，保留证据，说明实际状态，不靠绕过门禁完成。
