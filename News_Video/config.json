@@ -66,10 +66,10 @@
       "internal_pause_trigger_seconds": 0.28,
       "internal_pause_target_seconds": 0.22,
       "edge_fade_ms": 10.0,
-      "polish_af": "highpass=f=95,afftdn=nr=5:nf=-35:tn=1,agate=threshold=-33dB:ratio=3.5:attack=6:release=60:range=-16dB,equalizer=f=230:t=q:w=1.2:g=-3.0,equalizer=f=3400:t=q:w=1.0:g=4.0,equalizer=f=6500:t=q:w=2.0:g=-1.5,highshelf=f=10000:g=2.5"
+      "polish_af": "highpass=f=85,agate=threshold=-33dB:ratio=3.5:attack=6:release=60:range=-16dB,equalizer=f=360:t=q:w=1.4:g=-2.8,equalizer=f=2600:t=q:w=0.8:g=1.6,equalizer=f=5000:t=q:w=0.9:g=2.4,highshelf=f=10500:g=3.2"
     },
     "backend": "voxcpm",
-    "reference_sha256": "595ea57863f6afe90762865c1c08fcf719231e13d2c5790302aea737ff83e059"
+    "reference_sha256": "5602ea61edb175c0ac8b52adac5c4e005f1bc1e6113ff887563fe7da762625dc"
   },
   "publication_preset": {
     "category_name": "News",

@@ -128,7 +128,9 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
             args=[executable,'-y','-hide_banner','-loglevel','error']
             # loudnorm's TP range is -9..0. Normalize first, then apply a fixed
             # music attenuation rather than asking loudnorm for invalid -30 TP.
-            filters=f'loudnorm=I=-16:TP=-2:LRA=7,volume={level+16}dB,aresample={SAMPLE_RATE}'
+            tp=-1.5 if name=='voice' else -2
+            lra=11 if name=='voice' else 7
+            filters=f'loudnorm=I=-16:TP={tp}:LRA={lra},volume={level+16}dB,aresample={SAMPLE_RATE}'
             if name=='voice':filters+=f',apad,atrim=end_sample={frames}'
             args+=['-i',str(path),'-vn','-af',filters,
                    '-ar',str(SAMPLE_RATE),'-ac','2','-c:a','pcm_s16le']
