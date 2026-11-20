@@ -18,6 +18,7 @@ CACHE_KEYS = [
     "consistent_unit_seed",
     "cfg_value",
     "inference_timesteps",
+    "streaming",
     "max_len",
     "speech_rate",
     "ffmpeg_executable",

@@ -795,8 +795,8 @@ def voice(episode_id):
     vc=v['voxcpm'];executable=Path(vc['python']);context=vc.get('contextual_generation',False)
     worker=Path(v['repository'])/'tools'/('voxcpm_generate_context.py' if context else 'voxcpm_generate_job.py')
     job.update(model_path=vc['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],synthesis_unit='sentence',cleanup='off',
-               cfg_value=float(vc.get('cfg_value',2.0)),inference_timesteps=int(vc.get('inference_timesteps',14)),
-               max_len=int(vc.get('max_len',4096)),max_context_chars=int(vc.get('max_context_chars',260)))
+               cfg_value=float(vc.get('cfg_value',2.2)),inference_timesteps=int(vc.get('inference_timesteps',26)),
+               streaming=bool(vc.get('streaming',False)),max_len=int(vc.get('max_len',4096)),max_context_chars=int(vc.get('max_context_chars',260)))
     job['consistent_unit_seed']=vc.get('consistent_unit_seed',True)
     job['speech_rate']=vc.get('speech_rate',1);job['ffmpeg_executable']=vc.get('ffmpeg_executable')
     job['compound_pause_max_seconds']=vc.get('compound_pause_max_seconds',.12)

@@ -32,9 +32,9 @@
     "repository": "D:/Basement/Codex_Video/Voice_Generate",
     "asr_model": "D:/Basement/Codex_Video/Voice_Generate/models/asr-paraformer-zh",
     "caption_dictionary": "D:/Basement/Codex_Video/Voice_Generate/models/jieba/dict.txt",
-    "pause": 0.38,
+    "pause": 0.36,
     "reference_audio": "D:/Basement/Codex_Video/media-library/voice/voxcpm-admin-combo-44k.wav",
-    "reference_text": "源石在歌唱，终末地一定会继续前行。过去和现在必须合二为一，我听见了他的声音。帝江号，我已就位，该出发了。",
+    "reference_text": "还不赖，这就是工业的成果。辛苦了，各位。做的不错。帝江号，我已就位，该出发了。",
     "pronunciations": {
       "OpenAI": "Open AI",
       "tibo": "梯啵",
@@ -45,31 +45,32 @@
     "voxcpm": {
       "python": "D:/Basement/Codex_Video/Voice_Generate/.venv-voxcpm/Scripts/python.exe",
       "model_path": "D:/Basement/Codex_Video/Voice_Generate/models/VoxCPM1.5",
-      "status": "user_approved_voxcpm15_11b",
+      "status": "user_approved_voxcpm15_15a",
       "voice_quality_approved": true,
       "pronunciation_targets": {
         "tibo": "tī bo: ti1, bo0; second syllable light, short, unstressed; no internal pause",
         "干员": "gàn yuán; gan4 yuan2; lexical TTS-only override"
       },
-      "cfg_value": 2.0,
-      "inference_timesteps": 14,
+      "cfg_value": 2.2,
+      "inference_timesteps": 26,
+      "streaming": false,
       "max_len": 4096,
       "max_context_chars": 260,
       "consistent_unit_seed": true,
-      "speech_rate": 1.0,
+      "speech_rate": 0.95,
       "ffmpeg_executable": "D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffmpeg.exe",
       "contextual_generation": true,
       "alignment_python": "D:/Basement/Codex_Video/Voice_Generate/runtime-align/python.exe",
       "alignment_model": "D:\\Basement\\Codex_Video\\Voice_Generate\\models\\fa-zh",
-      "paragraph_pause": 0.6,
+      "paragraph_pause": 0.56,
       "compound_pause_max_seconds": 0.12,
       "internal_pause_trigger_seconds": 0.28,
-      "internal_pause_target_seconds": 0.22,
+      "internal_pause_target_seconds": 0.21,
       "edge_fade_ms": 10.0,
-      "polish_af": "highpass=f=85,agate=threshold=-33dB:ratio=3.5:attack=6:release=60:range=-16dB,equalizer=f=360:t=q:w=1.4:g=-2.8,equalizer=f=2600:t=q:w=0.8:g=1.6,equalizer=f=5000:t=q:w=0.9:g=2.4,highshelf=f=10500:g=3.2"
+      "polish_af": "highpass=f=85,afftdn=nr=7:nf=-32:tn=1,anlmdn=s=0.00018:p=0.002:r=0.002,equalizer=f=220:t=q:w=1.2:g=-1.5,equalizer=f=3100:t=q:w=0.9:g=2.4,equalizer=f=6200:t=q:w=1.8:g=-1.2,highshelf=f=8500:g=1.8,lowpass=f=12500"
     },
     "backend": "voxcpm",
-    "reference_sha256": "5602ea61edb175c0ac8b52adac5c4e005f1bc1e6113ff887563fe7da762625dc"
+    "reference_sha256": "f81a0b7f254ef5c1516b9c58f48cd344b24bdf36a4525c615a2541194157f0f8"
   },
   "publication_preset": {
     "category_name": "News",
