@@ -57,7 +57,8 @@ def select_plan(root,episode,backend=None,template=None):
     package=root/'node_modules'/('multiplane' if backend=='multiplane' else 'hyperframes')/'package.json'
     if not package.is_file():raise ValueError('Install the locked renderer dependency first')
     version=load(package)['version']
-    options=dict(cfg.get('multiplane',{})) if backend=='multiplane' else dict(encoder='h264_mf',video_bitrate='4M',fps=30,capture='held_cards',ffmpeg='D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
+    options=dict(cfg.get('multiplane',{})) if backend=='multiplane' else dict(encoder='h264_mf',video_bitrate='4M',fps=30,capture='held_cards',
+                                                                                         ffmpeg=load(root/'config.json').get('voice',{}).get('voxcpm',{}).get('ffmpeg_executable','ffmpeg'))
     plan=dict(schema_version=1,backend=backend,version=version,template=template,options=options,
               artifact_directory=(episode/'visuals'/(backend+'-'+template)).relative_to(root).as_posix(),
               fallback_used=False)

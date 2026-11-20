@@ -34,4 +34,13 @@ class RetentionChecks(unittest.TestCase):
         _,delete,_=self.run_plan()
         self.assertNotIn(busy,delete)
 
+    def test_git_tracked_fixture_folders_are_never_deleted(self):
+        fixture=self.make(self.root/'episodes/sample-20261026')
+        with patch.object(c,'tracked_tops',return_value={fixture.resolve()}):
+            _,delete,_=self.run_plan()
+        self.assertNotIn(fixture,delete)
+    def test_tracked_tops_finds_the_real_sample_fixtures(self):
+        names={p.name for p in c.tracked_tops(c.ROOT)}
+        self.assertIn('sample-20261026',names)
+
 if __name__=='__main__':unittest.main()

@@ -39,6 +39,18 @@ def size(path):
     path=Path(path)
     return path.stat().st_size if path.is_file() else sum(p.stat().st_size for p in path.rglob('*') if p.is_file())
 
+def tracked_tops(root):
+    """Top-level folders under episodes/ and data/collections/ that contain git-tracked files."""
+    import subprocess
+    try:out=subprocess.run(['git','ls-files','-z','--','episodes','data/collections'],cwd=root,capture_output=True,check=True).stdout
+    except (OSError,subprocess.CalledProcessError):return set()
+    tops=set()
+    for name in filter(None,out.decode('utf-8').split('\0')):
+        parts=Path(name).parts
+        base=2 if parts[0]=='episodes' else 3
+        if len(parts)>base:tops.add((Path(root)/Path(*parts[:base])).resolve())
+    return tops
+
 def plan(root=ROOT,days=3,now=None):
     root=Path(root);now=now or time.time()
     cutoff=(dt.datetime.fromtimestamp(now,BEIJING).date()-dt.timedelta(days=days-1)).strftime('%Y%m%d')
@@ -56,9 +68,13 @@ def plan(root=ROOT,days=3,now=None):
             state=json.loads(receipt.read_text(encoding='utf-8')) if receipt.is_file() else {}
             if state.get('published') is True:delete.append(d)
             else:kept.append((d,'not published: '+str(state.get('state'))))
+    # Folders holding git-tracked files are test fixtures (episodes/sample-20261026*), not old
+    # editions; the 2026-11-19 cleanup deleted them by date and broke the caption/pipeline tests.
+    tracked=tracked_tops(root)
     for folder in [root/'episodes',root/'data/collections']:
         if folder.is_dir():
-            delete+=[d for d in sorted(folder.iterdir()) if (date_of(d.name) or '99999999')<cutoff and not fresh(d)]
+            delete+=[d for d in sorted(folder.iterdir()) if (date_of(d.name) or '99999999')<cutoff and not fresh(d)
+                     and d.resolve() not in tracked]
     cache=root/'.cache'
     if cache.is_dir():
         for name in SCRATCH:
