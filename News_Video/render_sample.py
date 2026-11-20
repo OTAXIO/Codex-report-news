@@ -9,7 +9,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parent
 NODE=Path('C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe')
 CLI=ROOT/'node_modules/hyperframes/bin/hyperframes.mjs'
-FFMPEG=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
+FFMPEG=Path('D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffmpeg.exe')
 def render(episode_id,allow_upload=True,preview=False,renderer=None,template=None,resume_render=False):
     episode=ROOT/'episodes'/episode_id
     if (episode/'release.json').exists():raise ValueError('Published edition is archived; create a new revision before rendering')

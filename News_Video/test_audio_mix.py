@@ -34,7 +34,7 @@ class MusicChecks(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'No audible narration'):
             speech_first_mix(np.zeros((4800,2)),np.ones((4800,2))*.01,{})
     def test_real_ffmpeg_loop_cache_and_configured_failure(self):
-        ff=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
+        ff=Path('D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffmpeg.exe')
         if not ff.exists():
             found=shutil.which('ffmpeg')
             if not found:self.skipTest('FFmpeg unavailable; real audio integration not verified')

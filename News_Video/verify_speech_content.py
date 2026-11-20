@@ -42,8 +42,8 @@ def run(episode):
     from funasr import AutoModel
     directory=ROOT/'episodes'/episode
     if not directory.resolve().is_relative_to((ROOT/'episodes').resolve()) or (directory/'release.json').exists():raise ValueError('Use an unarchived working episode')
-    config=json.loads((ROOT/'config.json').read_text(encoding='utf-8'));engine=Path(config['voice']['engine'])
-    model_path=engine/'tools/asr/models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch'
+    config=json.loads((ROOT/'config.json').read_text(encoding='utf-8'))
+    model_path=Path(config['voice']['asr_model'])
     if not (model_path/'model.pt').is_file():raise ValueError('Existing local ASR model missing; do not silently skip')
     torch.set_num_threads(4);model=AutoModel(model=str(model_path),device='cpu',disable_update=True,disable_pbar=True)
     timing=json.loads((directory/'timings.json').read_text(encoding='utf-8'));audio,sr=sf.read(directory/'narration.wav',dtype='float32')

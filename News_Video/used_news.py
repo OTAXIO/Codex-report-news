@@ -10,7 +10,7 @@ from urllib.parse import urlsplit,urlunsplit,parse_qsl,urlencode
 
 CN=dt.timezone(dt.timedelta(hours=8))
 ROOT=Path(__file__).resolve().parent
-PROBE=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffprobe.exe')
+PROBE=Path('D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffprobe.exe')
 
 def canonical_url(url):
     parts=urlsplit(url)

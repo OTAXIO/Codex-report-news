@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 ROOT=Path(__file__).parent
-FF=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
+FF=Path('D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffmpeg.exe')
 PROBE=FF.with_name('ffprobe.exe')
 def verify(episode):
     from episode_paths import episode_directory,release_movie

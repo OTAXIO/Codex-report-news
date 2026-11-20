@@ -10,8 +10,7 @@ TOKEN=re.compile(r'GPT-\d+(?:\.\d+)*\s+(?:Terra|Astra|Sol)|Agents[’\']? Last E
 
 @functools.lru_cache(maxsize=1)
 def dictionary():
-    engine=json.loads((ROOT/'config.json').read_text(encoding='utf-8'))['voice']['engine']
-    path=Path(engine)/'runtime/Lib/site-packages/jieba/dict.txt'
+    path=Path(json.loads((ROOT/'config.json').read_text(encoding='utf-8'))['voice']['caption_dictionary'])
     words={};total=0
     for line in path.read_text(encoding='utf-8').splitlines():
         fields=line.split()

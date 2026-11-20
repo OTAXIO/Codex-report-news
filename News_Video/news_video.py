@@ -789,8 +789,7 @@ def voice(episode_id):
     spoken_path=directory/'spoken_script.txt'
     spoken_path.write_text(spoken_text(display_script,v.get('pronunciations',{})),encoding='utf-8')
     # VoxCPM 1.5 is the only voice backend on main; Qwen3-TTS is archived on branch archive/qwen3-tts-20261119.
-    # voice.engine (the GPT-SoVITS install) still supplies the ASR model, the jieba dictionary,
-    # the alignment Python and ffmpeg used below and by verify_speech_content/caption_layout.
+    # Alignment Python, ffmpeg, ASR model and jieba dictionary are hosted inside Voice_Generate.
     if v.get('backend','voxcpm')!='voxcpm':raise ValueError('VOICE_BACKEND: only voxcpm is supported')
     job=dict(backend='voxcpm',text_file=str(spoken_path),output_file=str(directory/'narration.wav'),pause=v['pause'],seed=42)
     vc=v['voxcpm'];executable=Path(vc['python']);context=vc.get('contextual_generation',False)
@@ -862,9 +861,8 @@ def doctor():
     context=vc.get('contextual_generation',False)
     worker='voxcpm_generate_context.py' if context else 'voxcpm_generate_job.py'
     checks={"voice_backend_voxcpm":v.get('backend','voxcpm')=='voxcpm',"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":Path(vc['python']).is_file(),
-            # The GPT-SoVITS install is no longer a voice backend but still holds the ASR model and caption dictionary.
-            "asr_model":(Path(v['engine'])/'tools/asr/models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/model.pt').is_file(),
-            "caption_dictionary":(Path(v['engine'])/'runtime/Lib/site-packages/jieba/dict.txt').is_file(),
+            "asr_model":(Path(v['asr_model'])/'model.pt').is_file(),
+            "caption_dictionary":Path(v['caption_dictionary']).is_file(),
             "upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
     if context:checks.update(alignment_python=Path(vc['alignment_python']).is_file(),alignment_weights=(Path(vc['alignment_model'])/'model.pt').is_file())
     if cfg.get('background_music',{}).get('enabled'):

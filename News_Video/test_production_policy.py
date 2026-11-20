@@ -39,9 +39,9 @@ class NewProductionChecks(unittest.TestCase):
         self.assertEqual(context_groups([dict(narration='消息。'*30),dict(narration='下一页。')]),[26,4,1])
 
     def test_actual_mp4_duration_gate_not_metadata(self):
-        ff=Path('D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe')
+        ff=Path('D:/Basement/Codex_Video/Voice_Generate/runtime-align/ffmpeg.exe')
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);(root/'config.json').write_text(json.dumps(dict(production=dict(minimum_duration_exclusive_seconds=30),voice=dict(qwen3=dict(ffmpeg_executable=str(ff))))))
+            root=Path(folder);(root/'config.json').write_text(json.dumps(dict(production=dict(minimum_duration_exclusive_seconds=30),voice=dict(voxcpm=dict(ffmpeg_executable=str(ff))))))
             for duration,allowed in [(30,False),(31,True)]:
                 video=root/(str(duration)+'.mp4')
                 subprocess.run([str(ff),'-y','-loglevel','error','-f','lavfi','-i','color=s=64x36:r=1','-t',str(duration),'-c:v','mpeg4',str(video)],check=True,capture_output=True)
