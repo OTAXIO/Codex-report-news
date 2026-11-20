@@ -160,7 +160,8 @@ def tags(values,episode=None):
 def validate_video(root,video):
     cfg=config(root)
     if not cfg.get('production',{}).get('minimum_duration_exclusive_seconds'):return None
-    ff=cfg.get('voice',{}).get('qwen3',{}).get('ffmpeg_executable','ffmpeg')
+    vc=cfg.get('voice',{})
+    ff=vc.get('voxcpm',{}).get('ffmpeg_executable') or vc.get('qwen3',{}).get('ffmpeg_executable','ffmpeg')
     probe=Path(ff).with_name('ffprobe.exe' if str(ff).endswith('.exe') else 'ffprobe')
     p=subprocess.run([str(probe),'-v','error','-show_entries','format=duration:stream=codec_type,duration','-of','json',str(video)],capture_output=True,text=True,check=True)
     data=json.loads(p.stdout);duration=float(data['format']['duration'])

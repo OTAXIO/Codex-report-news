@@ -1,4 +1,14 @@
-# 2026-10-27 语音后端调研与接入
+# 2026-11-19 语音后端升级：迁移至 VoxCPM 1.5 (0.8B)
+
+> **当前唯一生效后端**：`config.voice.backend=voxcpm`（`OpenBMB/VoxCPM1.5`，Apache-2.0 许可）。用户试听对比确认 **11b（播音明快清晰版）** 解决了 Qwen3-TTS 0.6B 中英混读生硬、句间音色跳变、句内停顿倒挂及呼吸声偏大问题。原 Qwen3-TTS 0.6B 代码与历史完整保留在两仓库的 `archive/qwen3-tts-20261119` 分支；`main` 分支及本机磁盘已删除 Qwen3-TTS 模型与 `.venv-qwen3`。
+> - 入口：`Voice_Generate/tools/voxcpm_generate_job.py`、`voxcpm_generate_context.py`，配音缓存继续由 `News_Video/voice_units.py` 维护；
+> - 参考音频：`media-library/voice/voxcpm-admin-combo-44k.wav`（三句去呼吸声 44.1kHz 拼接，SHA-256 固化在 `config.json`）；
+> - 关键参数：`cfg_value=2.0`、`inference_timesteps=14`、`max_context_chars=260`、`streaming=True`（8GB 显存实测峰值 2.6–2.9GB）；
+> - 对齐与 11b 后处理：`pause=0.38s`、`paragraph_pause=0.60s`、句内超长静音 >0.28s 压缩至 0.22s、10ms 淡入淡出、去呼吸声扩展门（`agate`）+ 播音清晰 EQ 链（详见 `config.json` `voice.voxcpm.polish_af`）。
+
+---
+
+# 2026-10-27 语音后端调研与接入（历史记录）
 
 > 2026-11-15：用户确认不再用 GPT-SoVITS 配音，GPT-SoVITS 后端、crisp_tails/analyze_tails/voice_tuning 已删除；下文“保留回退”为历史记录。安装目录仍供 ASR/分词/对齐/ffmpeg 使用。
 

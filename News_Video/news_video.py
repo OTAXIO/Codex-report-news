@@ -788,32 +788,38 @@ def voice(episode_id):
     display_script=(directory/'script.txt').read_text(encoding='utf-8')
     spoken_path=directory/'spoken_script.txt'
     spoken_path.write_text(spoken_text(display_script,v.get('pronunciations',{})),encoding='utf-8')
-    # Qwen3-TTS is the only voice backend; the GPT-SoVITS TTS backend was removed on 2026-11-15.
+    # VoxCPM 1.5 is the only voice backend on main; Qwen3-TTS is archived on branch archive/qwen3-tts-20261119.
     # voice.engine (the GPT-SoVITS install) still supplies the ASR model, the jieba dictionary,
     # the alignment Python and ffmpeg used below and by verify_speech_content/caption_layout.
-    if v.get('backend','qwen3')!='qwen3':raise ValueError('VOICE_BACKEND: only qwen3 is supported')
-    job=dict(text_file=str(spoken_path),output_file=str(directory/'narration.wav'),pause=v['pause'],seed=42)
-    qwen=v['qwen3'];executable=Path(qwen['python']);context=qwen.get('contextual_generation',False)
-    worker=Path(v['repository'])/'tools'/('qwen_generate_context.py' if context else 'qwen_generate_job.py')
-    job.update(model_path=qwen['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],qwen_language='Chinese',synthesis_unit='sentence',max_new_tokens=1024,cleanup='off')
-    job.update(qwen.get('sampling',{}));job['consistent_unit_seed']=qwen.get('consistent_unit_seed',False)
-    job['speech_rate']=qwen.get('speech_rate',1);job['ffmpeg_executable']=qwen.get('ffmpeg_executable')
-    job['compound_pause_max_seconds']=qwen.get('compound_pause_max_seconds',.12)
-    job['context_max_new_tokens']=int(episode.get('voice_context_max_new_tokens',1024))
+    if v.get('backend','voxcpm')!='voxcpm':raise ValueError('VOICE_BACKEND: only voxcpm is supported')
+    job=dict(backend='voxcpm',text_file=str(spoken_path),output_file=str(directory/'narration.wav'),pause=v['pause'],seed=42)
+    vc=v['voxcpm'];executable=Path(vc['python']);context=vc.get('contextual_generation',False)
+    worker=Path(v['repository'])/'tools'/('voxcpm_generate_context.py' if context else 'voxcpm_generate_job.py')
+    job.update(model_path=vc['model_path'],reference=v['reference_audio'],reference_text=v['reference_text'],synthesis_unit='sentence',cleanup='off',
+               cfg_value=float(vc.get('cfg_value',2.0)),inference_timesteps=int(vc.get('inference_timesteps',14)),
+               max_len=int(vc.get('max_len',4096)),max_context_chars=int(vc.get('max_context_chars',260)))
+    job['consistent_unit_seed']=vc.get('consistent_unit_seed',True)
+    job['speech_rate']=vc.get('speech_rate',1);job['ffmpeg_executable']=vc.get('ffmpeg_executable')
+    job['compound_pause_max_seconds']=vc.get('compound_pause_max_seconds',.12)
+    if vc.get('internal_pause_trigger_seconds') is not None:
+        job['internal_pause_trigger_seconds']=float(vc['internal_pause_trigger_seconds'])
+        job['internal_pause_target_seconds']=float(vc.get('internal_pause_target_seconds',.22))
+    if vc.get('edge_fade_ms') is not None:job['edge_fade_ms']=float(vc['edge_fade_ms'])
+    if vc.get('polish_af'):job['polish_af']=vc['polish_af']
     if context:
         from scene_pauses import sentence_scene_ids
         ids=sentence_scene_ids(episode)
-        job.update(context_group_sentence_counts=episode.get('voice_context_group_sentence_counts') or [ids.count(scene['id']) for scene in episode['scenes']],alignment_python=qwen['alignment_python'],alignment_model=qwen['alignment_model'],paragraph_pause=qwen.get('paragraph_pause',.6))
+        job.update(context_group_sentence_counts=episode.get('voice_context_group_sentence_counts') or [ids.count(scene['id']) for scene in episode['scenes']],alignment_python=vc['alignment_python'],alignment_model=vc['alignment_model'],paragraph_pause=vc.get('paragraph_pause',.6))
     worker_cwd=v['repository']
     dump(directory/'voice_job.json',job)
-    env=os.environ.copy();env.update(PYTHONIOENCODING="utf-8",PYTHONUTF8="1",PYTHONDONTWRITEBYTECODE="1")
+    env=os.environ.copy();env.update(PYTHONIOENCODING="utf-8",PYTHONUTF8="1",PYTHONDONTWRITEBYTECODE="1",NUMBA_CACHE_DIR=str(ROOT/'.cache/numba-asr'))
     # Workspace-owned lock; never terminate another voice/desktop process.
     lock=ROOT/"data/voice.lock"
     with lock.open("x",encoding="utf-8") as handle: handle.write(str(os.getpid()))
     try:
         with (directory/"voice.log").open("w",encoding="utf-8") as log:
             flags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0
-            if context and qwen.get('unit_cache',True):
+            if context and vc.get('unit_cache',True):
                 # Only changed paragraph units are synthesized; unchanged ones come from the cache (see voice_units.py).
                 from voice_units import generate as generate_units
                 try:report=generate_units(job,directory/'voice_job.json',executable,v['repository'],env,log,ROOT/'.cache/voice-units',flags)
@@ -844,7 +850,7 @@ def voice(episode_id):
     dump(directory/"timings.json",dict(sample_rate=rate,duration=meta["seconds"],sentences=sentences))
     episode['audio_content_review_required']=True
     dump(directory/'episode.json',episode)
-    local_python=qwen['alignment_python']
+    local_python=vc['alignment_python']
     quality_env=env.copy();quality_env['NUMBA_CACHE_DIR']=str(ROOT/'.cache/numba-asr')
     for check_worker in ['verify_speech_content.py','align_captions.py']:
         subprocess.run([local_python,'-u','-B',str(ROOT/check_worker),episode_id],env=quality_env,cwd=ROOT,check=True,creationflags=subprocess.CREATE_NO_WINDOW if os.name=='nt' else 0)
@@ -852,14 +858,15 @@ def voice(episode_id):
 
 def doctor():
     cfg=config();v=cfg["voice"]
-    context=v['qwen3'].get('contextual_generation',False)
-    worker='qwen_generate_context.py' if context else 'qwen_generate_job.py'
-    checks={"voice_backend_qwen3":v.get('backend','qwen3')=='qwen3',"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":Path(v['qwen3']['python']).is_file(),
+    vc=v['voxcpm']
+    context=vc.get('contextual_generation',False)
+    worker='voxcpm_generate_context.py' if context else 'voxcpm_generate_job.py'
+    checks={"voice_backend_voxcpm":v.get('backend','voxcpm')=='voxcpm',"voice_worker":(Path(v['repository'])/'tools'/worker).is_file(),"voice_python":Path(vc['python']).is_file(),
             # The GPT-SoVITS install is no longer a voice backend but still holds the ASR model and caption dictionary.
             "asr_model":(Path(v['engine'])/'tools/asr/models/speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch/model.pt').is_file(),
             "caption_dictionary":(Path(v['engine'])/'runtime/Lib/site-packages/jieba/dict.txt').is_file(),
             "upload_policy_valid":not cfg.get('upload_enabled') or cfg.get('publisher',{}).get('user_authorized',False),"hourly_model_calls_disabled":not cfg['social_collection_allow_model_calls']}
-    if context:checks.update(alignment_python=Path(v['qwen3']['alignment_python']).is_file(),alignment_weights=(Path(v['qwen3']['alignment_model'])/'model.pt').is_file())
+    if context:checks.update(alignment_python=Path(vc['alignment_python']).is_file(),alignment_weights=(Path(vc['alignment_model'])/'model.pt').is_file())
     if cfg.get('background_music',{}).get('enabled'):
         from audio_mix import digest
         bgm=cfg['background_music'];path=(ROOT/bgm['file']).resolve()
@@ -868,10 +875,10 @@ def doctor():
     if cfg.get('publisher',{}).get('enabled'):
         from upload_bridge import paths
         cli,home=paths(ROOT);checks.update(upload_skill_cli=cli.is_file(),upload_runtime=(home/'runtime.local.json').is_file(),upload_account_bound=(home/'account.json').is_file())
-    q=v['qwen3'];checks.update(qwen_worker=(Path(v['repository'])/'tools/qwen_generate_job.py').is_file(),qwen_weights=(Path(q['model_path'])/'model.safetensors').is_file(),qwen_tokenizer=(Path(q['model_path'])/'speech_tokenizer/model.safetensors').is_file())
+    checks.update(voxcpm_worker=(Path(v['repository'])/'tools/voxcpm_generate_job.py').is_file(),voxcpm_weights=(Path(vc['model_path'])/'model.safetensors').is_file(),voxcpm_audiovae=(Path(vc['model_path'])/'audiovae.pth').is_file())
     reference=Path(v.get('reference_audio',''))
-    checks.update(qwen_reference_audio=reference.is_file(),qwen_reference_text=bool(v.get('reference_text','').strip()))
-    if v.get('reference_sha256'):checks['qwen_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
+    checks.update(voxcpm_reference_audio=reference.is_file(),voxcpm_reference_text=bool(v.get('reference_text','').strip()))
+    if v.get('reference_sha256'):checks['voxcpm_reference_hash']=reference.is_file() and hashlib.sha256(reference.read_bytes()).hexdigest()==v['reference_sha256']
     print(json.dumps(checks,ensure_ascii=False,indent=2)); return all(checks.values())
 
 def game_schedule(days=14):

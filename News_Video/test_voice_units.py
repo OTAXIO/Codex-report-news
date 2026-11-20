@@ -23,10 +23,10 @@ class VoiceUnitCacheChecks(unittest.TestCase):
             self.assertEqual(frames,bytes([2])*400)
 
     def test_key_changes_with_text_or_voice_settings_not_paths(self):
-        job=dict(model_path='m',seed=42,temperature=.7,text_file='a',output_file='b')
+        job=dict(backend='voxcpm',model_path='m',seed=42,cfg_value=2.0,inference_timesteps=14,text_file='a',output_file='b')
         base=v.unit_key('同一段。',job)
         self.assertEqual(base,v.unit_key('同一段。',dict(job,text_file='other',output_file='other')))
         self.assertNotEqual(base,v.unit_key('改过一段。',job))
-        self.assertNotEqual(base,v.unit_key('同一段。',dict(job,temperature=.8)))
+        self.assertNotEqual(base,v.unit_key('同一段。',dict(job,cfg_value=1.7)))
 
 if __name__=='__main__':unittest.main()

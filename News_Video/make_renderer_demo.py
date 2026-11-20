@@ -9,7 +9,8 @@ ROOT=Path(__file__).resolve().parent
 
 def make(suffix=''):
     if not re.fullmatch(r'[a-z0-9-]{0,30}',suffix):raise ValueError('Unsafe demo suffix')
-    releases=release_root(ROOT);ff=load(ROOT/'config.json')['voice']['qwen3']['ffmpeg_executable']
+    vc=load(ROOT/'config.json')['voice']
+    releases=release_root(ROOT);ff=(vc.get('voxcpm') or vc.get('qwen3',{}))['ffmpeg_executable']
     selections=[('2026_10_27_night','overview',None),('2026_10_27_night','coderabbit',None),
                 ('previews/qwen3-voice-demo-context-v6','tibo-reminder',None),
                 ('2026_10_27_temporary_163327_9743c6890cfac08bc51f','eth-research',2),

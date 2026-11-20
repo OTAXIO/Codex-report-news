@@ -31,10 +31,10 @@
   "voice": {
     "repository": "D:/Basement/Codex_Video/Voice_Generate",
     "engine": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604",
-    "engine_note_20261115": "GPT-SoVITS已不作配音后端（只用qwen3）；此目录仍提供ASR听写核验模型、字幕分词词典(jieba)、对齐用Python与ffmpeg，勿删",
-    "pause": 0.4,
-    "reference_audio": "D:/Basement/Codex_Video/media-library/voice/dijiang-ready.wav",
-    "reference_text": "帝江号，我已就位，该出发了。",
+    "engine_note_20261119": "GPT-SoVITS与Qwen3-TTS均已停用（主分支只保留voxcpm）；此目录仍提供ASR听写核验模型、字幕分词词典(jieba)、对齐用Python与ffmpeg，勿删",
+    "pause": 0.38,
+    "reference_audio": "D:/Basement/Codex_Video/media-library/voice/voxcpm-admin-combo-44k.wav",
+    "reference_text": "源石在歌唱，终末地一定会继续前行。过去和现在必须合二为一，我听见了他的声音。帝江号，我已就位，该出发了。",
     "pronunciations": {
       "OpenAI": "Open AI",
       "tibo": "梯啵",
@@ -42,25 +42,19 @@
       "都尉": "督尉"
     },
     "ai_pronunciation": "Connected English letter name sequence, no punctuation or sentence split inside AI",
-    "qwen3": {
-      "python": "D:/Basement/Codex_Video/Voice_Generate/.venv-qwen3/Scripts/python.exe",
-      "model_path": "D:/Basement/Codex_Video/Voice_Generate/models/Qwen3-TTS-12Hz-0.6B-Base",
-      "status": "user_approved_0.6b_base",
+    "voxcpm": {
+      "python": "D:/Basement/Codex_Video/Voice_Generate/.venv-voxcpm/Scripts/python.exe",
+      "model_path": "D:/Basement/Codex_Video/Voice_Generate/models/VoxCPM1.5",
+      "status": "user_approved_voxcpm15_11b",
       "voice_quality_approved": true,
-      "training_target": "0.6B_only_if_needed",
-      "attempt_1_7b_training": false,
       "pronunciation_targets": {
         "tibo": "tī bo: ti1, bo0; second syllable light, short, unstressed; no internal pause",
         "干员": "gàn yuán; gan4 yuan2; lexical TTS-only override"
       },
-      "sampling": {
-        "temperature": 0.8,
-        "top_p": 0.95,
-        "top_k": 50,
-        "subtalker_temperature": 0.8,
-        "subtalker_top_p": 0.95,
-        "subtalker_top_k": 50
-      },
+      "cfg_value": 2.0,
+      "inference_timesteps": 14,
+      "max_len": 4096,
+      "max_context_chars": 260,
       "consistent_unit_seed": true,
       "speech_rate": 1.0,
       "ffmpeg_executable": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/ffmpeg.exe",
@@ -68,10 +62,14 @@
       "alignment_python": "D:/others/TOOLS/GPT-SoVITS-v2pro-20250604/runtime/python.exe",
       "alignment_model": "D:\\Basement\\Codex_Video\\Voice_Generate\\models\\fa-zh",
       "paragraph_pause": 0.6,
-      "compound_pause_max_seconds": 0.12
+      "compound_pause_max_seconds": 0.12,
+      "internal_pause_trigger_seconds": 0.28,
+      "internal_pause_target_seconds": 0.22,
+      "edge_fade_ms": 10.0,
+      "polish_af": "highpass=f=95,afftdn=nr=5:nf=-35:tn=1,agate=threshold=-33dB:ratio=3.5:attack=6:release=60:range=-16dB,equalizer=f=230:t=q:w=1.2:g=-3.0,equalizer=f=3400:t=q:w=1.0:g=4.0,equalizer=f=6500:t=q:w=2.0:g=-1.5,highshelf=f=10000:g=2.5"
     },
-    "backend": "qwen3",
-    "reference_sha256": "e116e06f2c370db13aafa6282e800e27ddb61ab4fb928ef5edea6992b81c6d6a"
+    "backend": "voxcpm",
+    "reference_sha256": "595ea57863f6afe90762865c1c08fcf719231e13d2c5790302aea737ff83e059"
   },
   "publication_preset": {
     "category_name": "News",
@@ -262,7 +260,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "6e212c3cd00e2cd9a904e03e4133c950a75eb6d04592403f3ae88e4bdf193b7c",
+    "implementation_sha256": "1f28b73b9608773da54431f132f5aef84909054b6ea17b8fde1c8f4687ca9524",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -271,7 +269,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "21afee879f8a33aa1a9ecd44dab92637cd52fdc2baa7d3ff58f1cca1d0b838c1"
+    "validation_sha256": "2b168e0a36c7d3249e086452112fa90476d3315893f578ec839d1eaf70b6afdc"
   },
   "workspace_directory": "../..",
   "presentation": {

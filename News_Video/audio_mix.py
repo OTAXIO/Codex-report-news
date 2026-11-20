@@ -115,7 +115,8 @@ def ensure_soundtrack(root,episode,duration,ffmpeg=None):
             # A prior Windows sandbox identity may own a private-temp DACL.
             # Rebuild only this unarchived mix from the original local stems.
             pass
-    executable=str(ffmpeg or cfg.get('voice',{}).get('qwen3',{}).get('ffmpeg_executable') or 'ffmpeg')
+    vc=cfg.get('voice',{})
+    executable=str(ffmpeg or vc.get('voxcpm',{}).get('ffmpeg_executable') or vc.get('qwen3',{}).get('ffmpeg_executable') or 'ffmpeg')
     frames=round(duration*SAMPLE_RATE)
     repeat_from=float(policy.get('repeat_from_seconds',0))
     if not math.isfinite(repeat_from) or repeat_from<0:raise ValueError('Invalid music repeat offset')

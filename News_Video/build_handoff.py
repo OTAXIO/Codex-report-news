@@ -39,12 +39,8 @@ def build(date='2026-10-26'):
         if p.is_file() and '.hyperframes' not in p.parts and 'fonts' not in p.parts and p.suffix in {'.html','.json','.js'}:add(p)
     for p in (ROOT/'episodes').rglob('*'):
         if p.is_file() and p.suffix in {'.json','.txt'}:add(p)
-    for name in ['audio_cleanup.py','prosody.py','qwen_generate_job.py','prepare_qwen_dataset.py','download_qwen3.py','download_qwen3_modelscope.py','qwen_generate_context.py','context_alignment.py','download_alignment_model.py','speech_text.py']:add(WORK/'Voice_Generate/tools'/name)
-    add(WORK/'Voice_Generate/requirements-qwen3.txt')
-    add(WORK/'Voice_Generate/requirements-qwen3-training.txt')
+    for name in ['audio_cleanup.py','prosody.py','voxcpm_generate_job.py','voxcpm_generate_context.py','context_alignment.py','download_alignment_model.py','speech_text.py']:add(WORK/'Voice_Generate/tools'/name)
     add(WORK/'Voice_Generate/README.md')
-    for name in ['dataset.py','prepare_data.py','LICENSE']:add(WORK/'Voice_Generate/vendor/qwen3_official'/name)
-    add(WORK/'Voice_Generate/docs/QWEN3_TTS_INTEGRATION.md')
     add(WORK/'Voice_Generate/docs/CONTEXTUAL_VOICE.md')
     add(WORK/'Voice_Generate/docs/SPEECH_POLICY.md')
     for name in ['test_speech_text.py','test_context_alignment.py']:add(WORK/'Voice_Generate/tests'/name)
