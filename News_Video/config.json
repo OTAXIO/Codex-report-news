@@ -210,15 +210,15 @@
     "trigger": "hourly",
     "executable": "agent-reach",
     "limit_per_account": 10,
-    "timeout_seconds": 60,
-    "warmup_timeout_seconds": 150,
+    "timeout_seconds": 90,
+    "warmup_timeout_seconds": 300,
     "retries": 1,
     "retry_backoff_seconds": 15,
     "max_consecutive_failures": 3,
     "transient_cooldown_seconds": 120,
     "catch_up_pass": true,
     "max_pause_seconds": 180,
-    "robustness_note": "2026-11-11 user: strengthen X. The 06:00 runs hit a cold reader browser and one 55 s timeout stopped every account; now the first read gets 150 s, a timeout skips only that account (one retry, then a catch-up pass at the end), three in a row mean X is unreachable (120 s pause). NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED still stop at once and are never retried. See x_reach.py.",
+    "robustness_note": "2026-11-11 user: strengthen X. The 06:00 runs hit a cold reader browser and one 55 s timeout stopped every account; now the first read gets 150 s, a timeout skips only that account (one retry, then a catch-up pass at the end), three in a row mean X is unreachable (120 s pause). NEED_LOGIN/PLATFORM_BLOCKED/RATE_LIMITED still stop at once and are never retried. See x_reach.py. 2026-11-18: cold reader browser on this machine needed >165 s; warmup raised to 300 s and per-account timeout to 90 s after agent-reach check twitter took 55 s for search.",
     "hourly_polling": true,
     "paid_x_api": false,
     "leader_post_without_official_news_allowed": true,
@@ -262,7 +262,7 @@
     "validation": "live_new_upload_submitted_20261027_BV1WLnf6fEgM",
     "full_live_new_upload_tested": true,
     "verify_approval_before_cleanup": true,
-    "implementation_sha256": "9cefde146898a985b3e2a6b90dc3fa8bbb1a7ee4b29630c82ef6f7890d50eb01",
+    "implementation_sha256": "6e212c3cd00e2cd9a904e03e4133c950a75eb6d04592403f3ae88e4bdf193b7c",
     "activity": {
       "strategy": "explicit",
       "id": 1325166,
@@ -271,7 +271,7 @@
       "fallback": "stop",
       "source_url": "https://www.bilibili.com/blackboard/era/hProYF7NSH5CPvi7.html"
     },
-    "validation_sha256": "d132bfab3b580e25795e798a8811c5cea9e301fdeb35dabb9b79eadf96f556f1"
+    "validation_sha256": "21afee879f8a33aa1a9ecd44dab92637cd52fdc2baa7d3ff58f1cca1d0b838c1"
   },
   "workspace_directory": "../..",
   "presentation": {
@@ -417,7 +417,15 @@
   },
   "activity_calendar": {
     "decided_20261115": "用户要求：游戏情报每期带一页「活动日历」，列出本系列仍在进行的全部官方活动并提醒还有几天结束；阶段开启（第二段/内容更新等）当天和前一天必须点名；数据存data/activity-calendar.json，由activities.py sync读取官方公告全文生成",
-    "regions": {"arknights": ["cn", "global"], "endfield": ["cn"]},
+    "regions": {
+      "arknights": [
+        "cn",
+        "global"
+      ],
+      "endfield": [
+        "cn"
+      ]
+    },
     "max_source_age_days": 60,
     "max_sync_age_hours": 12,
     "rows_per_page": 12,

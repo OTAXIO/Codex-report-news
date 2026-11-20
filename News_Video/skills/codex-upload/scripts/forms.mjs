@@ -107,8 +107,15 @@ async function declarations(page,wanted){
   await clickSettled(page,()=>exactText(page,primary,'.creation-statement-container',false),primary);await pause(350);
   actual=await readForm(page);
   if(actual.declarations.no_reprint!==wanted.no_reprint){
-    if(!await visible(page,'.creation-statement-container .auth-content',false))await (await visible(page,S.statementTrigger)).click();
-    await clickSettled(page,()=>visible(page,'.creation-statement-container .auth-content',false),'内容为自制');await pause(250);
+    // The content-authorization row can start already selected, so one blind click
+    // may turn it off, and a click can also be lost while the list re-renders.
+    // Toggle until the readback matches, then stop.
+    for(let attempt=0;attempt<3;attempt++){
+      if(!await visible(page,'.creation-statement-container .auth-content',false))await (await visible(page,S.statementTrigger)).click();
+      await clickSettled(page,()=>visible(page,'.creation-statement-container .auth-content',false),'内容为自制');await pause(250);
+      actual=await readForm(page);
+      if(actual.declarations.no_reprint===wanted.no_reprint)break;
+    }
   }
   const list=await visible(page,'.creation-statement-container .bcc-select-list-wrap',false);
   if(list)await (await visible(page,S.statementTrigger)).click();

@@ -712,9 +712,10 @@ def segment_for(row,scene,catalog):
     if str(row['source_id']).startswith('rumor-x-') or source.get('rumor'):return 'rumor'
     if row['source_id']=='github-trending':return 'github'
     if str(row['source_id']).startswith('community-'):return 'community'
+    # 快讯页由多条次要消息组成，页自身排在官方动态之后；不能按首条消息的媒体来源归到媒体报道。
+    if scene.get('scene_type')=='briefs':return 'briefs'
     if source.get('tier')=='media':return 'media'
     if scene.get('freshness_basis')=='active_window':return 'activities'
-    if scene.get('scene_type')=='briefs':return 'briefs'
     return 'official'
 
 def assign_segments(episode,catalog):
