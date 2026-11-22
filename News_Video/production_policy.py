@@ -186,9 +186,11 @@ def validate_content(episode):
             if not (s.get('game') and s.get('item_id') and s.get('item_id')==previous.get('item_id') and isinstance(s.get('page_number'),int) and isinstance(previous.get('page_number'),int) and s['page_number']>previous['page_number']):raise ValueError('Duplicate event across sources/languages; same-story pages need explicit page numbers')
         seen[event]=s
         if s.get('game') or s.get('section','').startswith('游戏'):
-            if not s.get('event_key'):raise ValueError('Game news needs a reviewed cross-source event key; translated announcements are one event')
+            pre_bound_calendar=(s.get('scene_type')=='activity_calendar' and not s.get('calendar_audit')) or (bool(s.get('calendar_key')) and not s.get('activity'))
             if s.get('game') not in {'arknights','endfield'}:raise ValueError('Unsupported game')
-            if not s.get('game_region') or s.get('game_topic') not in {'update','event','other'}:raise ValueError('Game news needs verified region and topic')
+            if not pre_bound_calendar:
+                if not s.get('event_key'):raise ValueError('Game news needs a reviewed cross-source event key; translated announcements are one event')
+                if not s.get('game_region') or s.get('game_topic') not in {'update','event','other'}:raise ValueError('Game news needs verified region and topic')
         # Module ranges follow actual scene order, including a headline group.
     first=next((s for s in body if s.get('game')),None)
     if first and episode.get('production_policy_version',0)<3 and not first['narration'].startswith('接下来是游戏资讯'):

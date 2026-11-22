@@ -31,3 +31,18 @@ class LayoutChecks(unittest.TestCase):
     def test_social_only_does_not_invent_ai_section(self):
         ep=dict(scenes=[dict(id='domestic',section='国内新闻',title='研究人员发现化石',narration='研究人员发现了化石。')]);prepare_overview(ep)
         self.assertNotIn('AI',ep['scenes'][0]['lead']);self.assertEqual(len(ep['scenes'][0]['facts']),1)
+    def test_series_overview_allows_rich_hook_and_diverse_segment_cards(self):
+        scenes=[
+            dict(id='lead',game='arknights',game_region='cn',section='游戏资讯',segment='official',title='雪山复刻开启',narration='雪山复刻今日开启，白拿六星溯光星源。'),
+            dict(id='act1',game='arknights',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity',title='网页领奖还剩两天',narration='冻土与火种网页活动还剩两天。'),
+            dict(id='cal1',game='arknights',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity_calendar',title='活动日历（一）',narration='近期活动截止时间如下。'),
+            dict(id='cal2',game='arknights',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity_calendar',title='活动日历（二）',narration='其余版本活动如下。'),
+            dict(id='talk',game='arknights',game_region='cn',section='游戏资讯',segment='community',scene_type='community_pulse',title='玩家怎么看凯尔希',narration='玩家认为M3新形象很像凯尔希。'),
+        ]
+        hook='雪山复刻今日开启，完成任务白拿六星溯光星源！冻土与火种网页领奖还剩最后两天，文末还有双页全活动DDL日历与玩家热议。'
+        ep=dict(edition_slot='night',edition_series='arknights',hook=hook,scenes=scenes)
+        prepare_overview(ep,True);guide=ep['scenes'][0]
+        self.assertEqual(guide['title'],'明日方舟｜今日情报与活动DDL')
+        self.assertEqual(guide['narration'],hook)
+        self.assertEqual([f['scene_id'] for f in guide['facts']],['lead','act1','cal1','talk'])
+        self.assertEqual([f['category'] for f in guide['facts']],['重磅头条','重点活动','全活动DDL','玩家热议'])

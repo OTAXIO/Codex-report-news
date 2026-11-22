@@ -37,6 +37,29 @@ def phrase(value):
     return ''.join('<span class="keep">'+text(p)+'</span>' if re.match(r'[A-Za-z0-9]',p) else text(p)
                    for p in re.split(r'([A-Za-z][A-Za-z0-9.+_-]*(?: [A-Za-z0-9][A-Za-z0-9.+_-]*)*)',str(value)) if p)
 
+def secondary_photo(root,scene,primary_media):
+    """Find one additional verified official picture of the same orientation for mid-scene switching."""
+    if not primary_media or primary_media.get('field')!='image' or not scene.get('item_id'):return None
+    if scene.get('segment')=='community' or scene.get('scene_type') in {'overview','activity_calendar'}:return None
+    from scene_media import article_images,image_info,quality
+    cfg=load(root/'config.json') if (root/'config.json').is_file() else {}
+    gate=cfg.get('presentation',{}).get('image_quality') or {}
+    want_portrait=primary_media.get('layout')=='portrait'
+    primary_rel=Path(primary_media['path']).as_posix()
+    best=None
+    for item in article_images(root,scene.get('item_id')):
+        rel=Path(item['file']).as_posix()
+        if rel==primary_rel:continue
+        try:
+            path,_=image_info(root,rel)
+            q=quality(path,gate)
+        except (ValueError,OSError):continue
+        if q.get('reject') or q.get('long_poster'):continue
+        is_portrait=q['height']>q['width']*1.35
+        if is_portrait!=want_portrait:continue
+        if best is None or q['score']>best[0]:best=(q['score'],path)
+    return best[1] if best else None
+
 def build(root,episode,plan):
     from build_film import source_publication_label
     root=Path(root);episode=Path(episode);ep=load(episode/'episode.json');timing=load(episode/'timings.json')
@@ -61,7 +84,8 @@ def build(root,episode,plan):
         end=next((p['start'] for p in timing['sentences'] if p['start']>=last and p['scene_id']!=s['id']),timing['duration'])
         offsets.append(dict(id=s['id'],start=start,end=end))
         mode='overview' if is_overview(s) else 'game' if s.get('game') else 'leader' if s.get('source_type')=='leader_x' or s.get('speaker_identity') else 'brief' if s.get('scene_type')=='temporary_news' or ep.get('edition_slot')=='temporary' else 'product' if s.get('logo') else 'social'
-        scene=dict(id=s['id'],start=start,end=end,mode=mode,section=group(s),title=s['title'])
+        scene=dict(id=s['id'],start=start,end=end,mode=mode,section=group(s),title=s['title'],
+                   sentences=[dict(start=p['start'],end=p['end'],text=p.get('text','')) for p in parts])
         scenes.append(scene)
         logo='';picture='';diagram=''
         selected=[(s['resolved_media']['field'],s['resolved_media']['path'])] if s.get('resolved_media') else [(field,s.get(field)) for field in ['logo','image']]
@@ -73,7 +97,15 @@ def build(root,episode,plan):
             label=s.get('company') or {'arknights':'明日方舟','endfield':'明日方舟：终末地'}.get(s.get('game'),s.get('resolved_media',{}).get('subject',''))
             if s.get('resolved_media',{}).get('kind')=='game_identity':label+=' · 游戏图标'
             if field=='logo':logo=f'<aside class="brand"><div class="brand-window"><img src="assets/{text(name)}" alt="{text(label)}"></div><b>{text(label)}</b></aside>'
-            else:picture=f'<aside class="photo"><img src="assets/{text(name)}" alt="{text(s.get("image_alt",s["title"]))}"></aside>'
+            else:
+                alt_path=secondary_photo(root,s,s.get('resolved_media'))
+                if alt_path:
+                    alt_name=f'{index}-alt-'+alt_path.name;shutil.copy2(alt_path,assets/alt_name)
+                    picture=(f'<aside class="photo" data-multi="2">'
+                             f'<img class="photo-img" data-idx="0" src="assets/{text(name)}" alt="{text(s.get("image_alt",s["title"]))}">'
+                             f'<img class="photo-img" data-idx="1" src="assets/{text(alt_name)}" alt="{text(s.get("image_alt",s["title"]))}" style="display:none"></aside>')
+                else:
+                    picture=f'<aside class="photo"><img src="assets/{text(name)}" alt="{text(s.get("image_alt",s["title"]))}"></aside>'
         graphic=s.get('diagram',{})
         if graphic:
             if not graphic.get('source_url'):raise ValueError('A factual diagram requires its source URL')
@@ -88,21 +120,31 @@ def build(root,episode,plan):
         if s.get('original_text_page'):mode='original';scene['mode']=mode
         if s.get('scene_type')=='activity_calendar':mode='calendar';scene['mode']=mode
         if mode=='calendar':
-            # 2026-11-15 活动日历: every running activity with its days left; the game icon stays small beside the title.
+            # 2026-11-22 活动日历 (1-3 pages, 8 rows/page, with DDL remaining progress bars & urgency tiers).
             rows=s.get('calendar_rows') or []
             if not rows:raise ValueError('ACTIVITY_CALENDAR: bind the calendar rows before rendering')
-            body=(f'<div class="cal-grid" style="--cal-rows:{(len(rows)+1)//2}">'+''.join(
-                f'<article class="cal-row{" urgent" if r["urgent"] else ""}"><div class="cal-days{" word" if r["big"] in ("今天","明天") else ""}"><strong>{text(r["big"])}</strong><b>{text(r["unit"])}</b></div>'
-                f'<div class="cal-text"><h2>{phrase(r["title"])}<i>{text(r["region"])}</i></h2><p>{phrase(r["detail"])}</p></div></article>' for r in rows)+'</div>'+logo)
+            grid_rows=max(3,(len(rows)+1)//2)
+            def cal_card(r):
+                tier=r.get('urgency_tier') or ('critical' if r.get('urgent') else 'normal')
+                ulabel=r.get('urgency_label') or ''
+                pct=int(r.get('progress_pct',55 if tier=='version' else 60))
+                pill=f'<em class="cal-tier tier-{text(tier)}">{text(ulabel)}</em>' if ulabel else ''
+                return (f'<article class="cal-row tier-{text(tier)}{" urgent" if r.get("urgent") else ""}" data-title="{text(r["title"])}" data-key="{text(r.get("key",""))}">'
+                        f'<div class="cal-days{" word" if r["big"] in ("今天","明天") else ""}"><span class="cal-days-val"><strong>{text(r["big"])}</strong><b>{text(r["unit"])}</b></span></div>'
+                        f'<div class="cal-text"><h2>{phrase(r["title"])}<i>{text(r["region"])}</i>{pill}</h2><p>{phrase(r["detail"])}</p>'
+                        f'<div class="cal-progress"><span style="width:{pct}%"></span></div></div></article>')
+            body=f'<div class="cal-grid" style="--cal-rows:{grid_rows}">'+''.join(cal_card(r) for r in rows)+'</div>'+logo
         elif mode=='overview':
             if len(facts)>4:raise ValueError('Upgrade the overview to at most four complete highlights before rendering')
             body='<p class="lead">'+text(s.get('lead','本期我们一起了解这些重点动态。'))+'</p><div class="overview-grid">'+''.join(
-                f'<article><div class="category">{text(f.get("category","重点新闻"))}</div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for f in facts)+'</div>'+logo+picture
+                f'<article data-idx="{i}"><div class="overview-head"><span class="overview-idx">{i+1:02}</span><div class="category">{text(f.get("category","重点新闻"))}</div></div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for i,f in enumerate(facts))+'</div>'+logo+picture
         else:
             identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
-            body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
+            body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article data-idx="{i}"><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram
         source=(f'<div class="source"><b>{text(s.get("publisher",""))}</b>　{source_publication_label(s)}<span>{text(re.sub(r"^https?://","",s.get("source_url","")))}</span></div>' if s.get('show_source',True) and mode!='overview' else '')
-        if mode=='calendar':source=f'<div class="source"><b>活动日历</b>　时间均取自官方活动公告（{len(s.get("calendar_sources") or [1])} 份），服务器时间以公告为准'+(f'；另有 {int(s["calendar_more"])} 项进行中未列出' if s.get('calendar_more') else '')+'<span>原文链接见简介</span></div>'
+        if mode=='calendar':
+            pg_tag=f'（第 {int(s["calendar_page"])}/{int(s["calendar_total_pages"])} 页）' if int(s.get('calendar_total_pages') or 1)>1 else ''
+            source=f'<div class="source"><b>活动日历{pg_tag}</b>　时间均取自官方活动公告（{len(s.get("calendar_sources") or [1])} 份），服务器时间以公告为准'+(f'；另有 {int(s["calendar_more"])} 项进行中未列出' if s.get('calendar_more') else '')+'<span>原文链接见简介</span></div>'
         if s.get('brief_publishers'):source=f'<div class="source"><b>快讯来源</b>　{text(" · ".join(s["brief_publishers"]))}<span>每条出处见括号，原文链接见简介</span></div>'
         classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
         frame=''

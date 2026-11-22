@@ -1,6 +1,12 @@
-# DeepSeek Harness 接手指令（2026-11-11 版，替代 2026-11-10 版）
+# DeepSeek Harness 接手指令（2026-11-22 版，替代 2026-11-11 版）
 
-> **2026-11-15 活动日历（用户要求，当前有效）**：以前游戏情报只报单独做成页的活动，版本日历里的阶段开启（如方舟 SS 第三段、终末地内容更新）和几天后结束的活动都漏了。现在两条游戏情报**每期必须有一页「活动日历」**（`scene_type:"activity_calendar"`），列出本系列所有还在进行的官方活动和剩余天数；3 天内结束/开启、今天或明天开下一阶段的，口播必须点名并说出时间。写稿前先跑 `python -B activities.py sync --series <arknights|endfield>`（读官方公告全文，结果在 `data/activity-calendar.json`），超过 12 小时没同步或缺这一页，导入会拒绝。日历由制作 agent 每期维护：sync 自动删除已结束的活动，漏掉的进行中活动用 `add`（须带官方原句）补录。当期新消息页少于 5 页（导览、活动日历、玩家热议不算）时，按日历最要紧顺序把有截止时间的活动各做一页补足 5 页，放在活动日历页之前（`fill` 预览，`calendar_key` 写法）。写法见第 3a 节“活动日历”。
+> **2026-11-22 结构、视觉与必投优化（用户确认，当前有效）**：
+> 1. **每期必投保底**：取消“48h 无合格新消息就不出片”的旧条款。早报（AI）和晚报两条游戏（方舟、终末地）**每期必出、必投**；游戏情报只要有进行中/即将开启的活动就必须出片，绝不弃更。
+> 2. **取消硬凑 5 页补页**：废除 `min_body_pages=5` 机械补满 5 页的旧规则，也不再把同一个大活动/联动拆成 4–5 页。游戏情报改为紧凑高密度结构：**`00 吸睛导览页` → `今日新情报（0–N 页，有真消息才做，含长图/配图 OCR 提炼）` → `近期重点活动（每期至少 1 页，无新公告时挑 1–2 个最紧迫/奖励最丰厚的活动详解，最多 2 页 calendar_key 补页）` → `全活动 DDL 日历（1–3 页，每页最多 8 项，放不下自动分 2–3 页）` → `玩家热议（1 页）`**。
+> 3. **开头 `00 导览页` 升级**：`hook` 放宽到 **10–110 字（1–3 句）**，第 1 句用最高价值福利/紧迫 DDL/最重磅新闻做吸睛钩子，随后简述本期核心看点；导览 4 宫格与正文/日历卡片会随口播自动高亮，官方多图公告页支持中段自动切图。
+> 4. **按时段精准采集提速**：早报只跑 `python -B news_video.py collect --kind ai`，晚报只跑 `python -B news_video.py collect --kind games`（不再让晚报浪费 20–30 分钟采 AI 推特与传闻）；VoxCPM 保持 15a 锁定参数（`cfg_value=2.2, inference_timesteps=26`），由精简页数缩短配音耗时。
+
+> **2026-11-15 活动日历（2026-11-22 升级为 1–3 页分页 + DDL 进度条）**：两条游戏情报每期必须带 **1–3 页「活动日历」**（`scene_type:"activity_calendar"`，每页最多 8 项，超过 8 项按 `activities.py list` 给出的 `pages` 拆成 2–3 页），完整列出本系列所有进行中与 3 天内开启的官方活动、阶段节点与剩余 DDL 进度条；3 天内结束/开启、今天或明天开下一阶段、且**尚未在前面单独成页**的活动必须在日历口播里点名并说出时间（已在前面重点活动页讲过的无需重复复读）。写稿前先跑 `python -B activities.py sync --series <arknights|endfield>` 再 `list` 查看分页；用 `fill` 查看推荐的 Top 1–2 近期重点活动。写法见第 3a 节“活动日历”。
 
 > **2026-11-12 AI 活动（用户确认，当前有效）**：AI 早报和 AI 临时稿改挂「AI IN ALL！」（topic_id 1255303），上传器自动选择，无需手动操作；游戏情报仍是方舟 8314、终末地 1325166，游戏临时稿挂其游戏的活动。覆盖下文及旧版本中 AI 活动“most_popular_free”或“1325166”的写法。
 
@@ -21,7 +27,7 @@
 | `endfield`「终末地情报」 | night 18:00 | `daily-YYYYMMDD-night-endfield` | `data/night-endfield-YYYYMMDD/` | `release/YYYY_MM_DD_night_endfield` | 只做明日方舟：终末地 | 游戏 | 1325166 明日方舟终末地创作者应援计划（精确） | 明日方舟终末地、终末地 |
 
 - 晚上的两条各自独立制作、配音、release、投稿，先做完一条再做另一条（配音锁只允许一个）。
-- 某个系列 48h 内没有合格新消息，本期就不出这一条，在汇报里说明，不凑数、不拿另一系列的内容补。
+- **每期必保底出片**：两条游戏情报即使当天没有 48h 新公告，也**必须制作并投稿**——用 `00 吸睛导览` + `1–2 页近期重点活动详解`（用 `calendar_key` 从活动日历挑最紧迫/奖励最丰厚的活动）+ `1–3 页全活动 DDL 日历` + `玩家热议` 完整成片（总时长 > 30 秒），绝不拿另一系列内容混充，也绝不因“无新公告”弃投。
 - 活动、分区、固定标签由上传器按 `edition_series` 自动选择，不要手动改；分区名“游戏”若与平台界面不一致，上传器会在提交前以 PARTITION_MISMATCH 停下，此时停止并汇报，不换分区重试。
 - 代码会拦截：系列和时段不符（SERIES_SLOT_MISMATCH）、ID 不符（SERIES_ID_MISMATCH）、混入别的系列的新闻（SERIES_SCENE_MISMATCH）、缺 hook（HOOK_REQUIRED）。按报错修 editorial，不要绕过。
 - 2026-11-05 版之前的已发布期次（混合版 morning/night）保持原样，不重做、不重传。
@@ -39,7 +45,10 @@
 3. 对本时段的每条 ID 都先运行 `python -B production_flow.py status <ID>` 和 `python -B upload_bridge.py pending`。已 complete/published 的期次只汇报不重做；submitted/reviewing/unknown 只运行 `python -B upload_bridge.py recover <release目录>` 回查，绝不重新上传。已有在制期次按当前阶段续接，已固定的 render-plan 不改模板。
 
 ## 2. 采集
-- `python -B news_video.py collect --kind all`。看报告里每个来源的 ok 和条数：失败或 48h 内 0 条的来源写进 source_gaps，并在汇报里点名。skland 显示 CAPTURE_REQUIRED 属正常，下一步补。
+- **按时段精准采集（2026-11-22 提速）**：
+  - 早报（`ai`）：先 `python -B x_reach.py probe` 预热，再运行 `python -B news_video.py collect --kind ai`（只采 AI 官网/RSS/媒体/AI X 账号/传闻/GitHub 热门，不采游戏）。
+  - 晚报（`arknights` + `endfield`）：先 `python -B x_reach.py probe` 预热，再运行 `python -B news_video.py collect --kind games`（只采两款游戏官网与官方 X `ArknightsEN`/`AKEndfield`，不跑 30+ 个 AI 推特和传闻搜索，可省 20–30 分钟）。
+  - 看报告里每个来源的 ok 和条数：失败或 48h 内 0 条的来源写进 source_gaps，并在汇报里点名。skland 显示 CAPTURE_REQUIRED 属正常，下一步补。
 - 2026-11-02 起新增来源：xAI、Mistral、Gemini 博客、GitHub Copilot changelog、Cursor changelog、NVIDIA 博客；X 官方号 MistralAI、AIatMeta、GeminiApp、cursor_ai；ArknightsEN/AKEndfield 每次读 20 条。fetch 已处理 gzip（DeepMind RSS），Anthropic/MiniMax 文章日期会从正文补抓并缓存在 data/article-dates.json。
 - **森空岛（国服两款游戏的主力来源）**：
   - 用一个隔离、未登录的浏览器依次打开 `https://www.skland.com/game/arknights?cateId=1` 和 `https://www.skland.com/game/endfield?cateId=12`。可以用项目本地 `.cache/playwright` 的 Chromium 配一个全新的临时 profile。
@@ -48,7 +57,7 @@
   - **只有长图、没有文字的官方帖**（如「卫戍协议：规程」玩法介绍）不要直接放弃：运行 `python -B skland_sources.py ocr <item_id或森空岛文章数字id>`，用本机 Windows 中文 OCR 把官方长图读成正文（记录 text_source=image_ocr，图存在 assets/game-news/）。OCR 会认错数字、日期和名字：写进口播和 facts 的每一项都要打开对应图片核对，对不上就不用；配图用该帖 related_images。OCR 报“too little readable text”就记为缺口。
   - 用户的限制：不登录，不读取或提取 Cookie，不逆向签名，不重放或伪造 API 请求，不用用户的 Chrome、BrowserSkill 或任何已登录的 profile。没有符合条件的浏览器就记 skland 缺口，继续用官网/RSS/X。
   - 导入有 3 小时新鲜度检查，超时要重新采集。
-- 采集每个时段都跑一次 `collect --kind all`（AI 和游戏都采，供去重与回顾使用）。
+- 按时段只采本时段对应类别（早报 `--kind ai`，晚报 `--kind games`）；无需在晚报重复抓 AI 源。
 - 2026-11-07 新增：X 官方号 XiaomiMiMo、StepFun_ai、Baidu_Inc（百度是公司号，只选 AI 模型与产品）。
 - 2026-11-09 新增（都由 `collect --kind all` 自动采集，失败只记缺口、不中断）：
   - **媒体源**：量子位 `qbitai-leads`（不再是 lead_only）、TechCrunch AI、The Verge AI、IT之家（只收 AI 相关标题）。候选里带 `media:true, segment:"media"`。
@@ -71,7 +80,7 @@
 - 运行 `python -B news_video.py game-schedule --days 14`，找当天生效的旧公告（见第 3 节生效时间规则）。
 
 ## 3. 选题规则
-- 每条视频只讲本系列：ai 只选 kind=ai；arknights 只选明日方舟（国服、英文国际服）；endfield 只选终末地。游戏按这些逐项检查：新版本或 SideStory、新玩法（如卫戍协议规程）、新干员与卡池、活动开启与规则、福利兑换补偿、维护闪断、联动、直播前瞻、制作组通讯、创作活动。“维护结束”“服饰上架”“音乐上架”“创作集锦”这类小消息默认不单独成条。
+- 每条视频只讲本系列：ai 只选 kind=ai；arknights 只选明日方舟（国服、英文国际服）；endfield 只选终末地。游戏按这些逐项检查：新版本或 SideStory、新玩法（如卫戍协议规程）、新干员与卡池、活动开启与规则、福利兑换补偿、维护闪断、联动、直播前瞻、制作组通讯、创作活动。“维护结束”“服饰上架”“音乐上架”“创作集锦”这类小消息默认不单独成条。**严禁把同一公告/同一联动拆成多页**；遇到“正文只有一句、玩法机制或版本细节在配图/长图里”的官方帖（如国际服机制说明图、版本一图流），必须看图或跑 `skland_sources.py ocr` 提炼核心干货做成 1 页，不得直接以“细节在配图内”为由跳过。
 - 游戏新闻写清玩家要做什么：开始/截止时间、能领什么、需要准备什么、是否限时；只从官方原文推导，不评价强度，不建议抽不抽。
 - **48h 门禁**：只选原始发布 48 小时内、事实完整的新消息。离边界不足约 12 小时的不选，避免制作中途过期。
 - **生效时间例外**（用户确认，只适用于游戏）：公告原发布超过 48h，但开服/活动/卡池/维护的生效时间落在本期前后 24h 内时可以入选。做法：
@@ -145,43 +154,51 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 ```
 - 配图：每个活动用它自己公告里的图（主视觉/活动海报）。`python -B scene_media.py rank <item_id>` 会把该公告的图片按清晰度和信息量从好到差列出，优先选靠前且不是超长海报的那张。
 
-**活动日历**（2026-11-15 起两条游戏情报每期必有 1 页；`scene_type:"activity_calendar"`）：
-- 写稿前：`python -B activities.py sync --series <game>`。它读近 60 天该游戏所有官方公告的**全文**（版本更新说明、活动公告、森空岛官方帖、官方 X），把每个活动的起止时间、阶段（第二段/第三段、Phase 2、内容更新、后续开放）连同官方原句存进 `data/activity-calendar.json`；同名活动以官网公告为准，森空岛只补阶段。然后 `python -B activities.py list --series <game>` 看本期要提醒的内容。
+**活动日历与近期重点活动保底**（2026-11-22 升级：每期必有 ≥1 页近期重点活动 + 1–3 页全活动 DDL 日历）：
+- 写稿前：`python -B activities.py sync --series <game>`。它读近 60 天该游戏所有官方公告的**全文**（版本更新说明、活动公告、森空岛官方帖、官方 X），把每个活动的起止时间、阶段（第二段/第三段、Phase 2、内容更新、后续开放）连同官方原句存进 `data/activity-calendar.json`；同一公告的附属关卡/商店会自动归并到主活动下，不再拆出多个子项。然后 `python -B activities.py list --series <game>` 查看分页结果（`pages`，每页最多 8 项，最多 3 页）。
 - **日历由你（制作 agent）每期维护**：sync 会把已结束的活动从文件里删掉（输出 `expired`；跟版本走的活动在下个版本维护开始时结束，没有结束时间的在最后一个阶段开启一天后删），新解析到的列在 `added`。之后对照本期采集到的官方公告检查 `list`：公告里有、日历里没有的进行中活动用 `python -B activities.py add --series <game> --region cn --name "「活动名」" --start-at <带时区时间> --end-at <带时区时间> --quote "<官方原句，逐字>" --item <item_id>` 补录（跟版本结束用 `--version <版本名>`，没有结束时间用 `--open`；联动/线下加 `--kind collab|offline`，网页小活动加 `--scale minor`）。补录的条目以后每次 sync 都保留，到期后自动删除；已结束的活动 add 会拒绝（ACTIVITY_ENDED），已在日历里的用 fix 改（ACTIVITY_EXISTS）。不需要等 sync 也可单独 `prune` 删除过期项。
 - sync 是自动解析，可能有误：名字乱了、把礼包/说明句当成活动、同一活动拆成两条时，用 `python -B activities.py fix --series <game> --key "<key>" --json '{"name":"…","quote":"<支持更正的官方原句>"}'` 改，用 `hide --key … --reason …` 隐藏；改动在之后的 sync 里保留。版本结束时间官方公布后用 `python -B activities.py version --series <game> --region cn --name <版本名> --end-at <带时区时间> --quote "<官方原句>" --item <item_id>` 写入，之前统一显示“版本更新前结束”，不要自己猜日期。
-- 页面写法：不填 `item_id`、不填 `facts`（行由程序从日历生成，最多 12 行，其余写进简介）。必须填 `game`、`title`、`narration` 和 `spoken`：`spoken` 是 `{日历key: 口播里称呼它的词}`，`list` 里每个“3 天内结束/3 天内开启/今天或明天开下一阶段”的活动都要有一项，这个词必须原样出现在口播里，而且同一句话里要说出时间（今天/明天/N天/具体日期，“两天”可以），否则 ACTIVITY_CALENDAR_SPOKEN / ACTIVITY_CALENDAR_DAY。同一个词可对应多个 key（如“怪物猎人联动”覆盖联动的 5 项）。
-- 这一页排在活动段最后（单活动页、补页之后，导入自动排），不能当头条，不进标题；没有进行中的活动时不做（导入会提示 ACTIVITY_CALENDAR_EMPTY）。
-- **新消息不足 5 页时用日历补页**（2026-11-15 用户要求）：正文消息页（不算 00 导览、活动日历页、玩家热议；快讯页算 1 页，普通单活动页算）少于 5 页时，按 `list` 的顺序（最要紧在前），把**有截止时间**、还没单独成页的活动各做一页，补到 5 页；补页排在活动日历页之前，活动日历页照常列出全部活动。写稿前用 `python -B activities.py fill --series <game> --pages <计划的消息页数>` 看要补哪几条（只是预览；导入时按实际页数核对，不对就报 ACTIVITY_FILL 并给出正确 key 和顺序）。补页写法：`{"id":"fill-1","scene_type":"activity","calendar_key":"<key>","game":"<game>","title":"…","narration":"…（必须说出截止日期，如“十一月十九日凌晨四点结束”）","facts":[1–2条，参与方式/奖励，每条≤54字]}`，不填 item_id/activity_items/source_url（导入从日历补上）；口播事实只能来自该活动的官方公告。已经在某条新闻页口播里点名的活动不用补。补页不算“已用新闻”，可以每期续报。消息页已满 5 页时不要加补页。
-- 示例（key 和数值只是示意，用 `list` 输出里的真实 key）：
+- **每期至少 1 页近期重点活动（取代旧“凑满 5 页”规则）**：
+  - 废除 `min_body_pages=5` 强凑 5 页补页；改为每期游戏情报**必须至少包含 1 页近期重点活动详解**（`scene_type:"activity"`，可用新公告自写或用 `"calendar_key"` 从日历引入；当天完全没有新公告时，挑 **1–2 个**最紧迫或奖励最丰厚的主活动用 `calendar_key` 单独成页，讲清“还剩几天、能白拿什么奖励、今天上号要做什么”，最多不超过 2–3 页 `calendar_key`）。
+  - 写稿前可运行 `python -B activities.py fill --series <game> --pages <新情报页数>` 查看推荐的 Top 1–3 重点活动（优先紧迫 DDL 与主活动，自动避开连续重复的非紧急网页小活动）。补页写法：`{"id":"fill-1","scene_type":"activity","calendar_key":"<key>","game":"<game>","title":"…","narration":"…（必须说出截止或开启日期）","facts":[1–2条，参与方式/能领什么奖励，每条≤54字]}`。
+- **全活动 DDL 日历支持 1–3 页分页**（`scene_type:"activity_calendar"`，每页最多 8 行，自带 DDL 剩余时间进度条）：
+  - 当 `list` 返回的 `pages` 为 1 页（≤8 项）时写 1 个 `activity_calendar` 场景；当进行中活动 > 8 项时，按 `list` 的 `pages` 写成 **2 页（或 3 页）** `activity_calendar`（例如 `id:"calendar-1"` 讲近期截止与即将开启，`id:"calendar-2"` 讲进行中与版本常驻活动），程序自动按每页 8 行切片并分配唯一 `event_key`（也可显式传 `"calendar_keys":[...]` 指定本页放哪些活动）。
+  - 不填 `item_id`、不填 `facts`（行由程序从日历生成）。必须填 `game`、`title`、`narration` 和 `spoken`：`spoken` 是 `{日历key: 口播里称呼它的词}`。**去重免复读**：已经在前面重点活动页或新闻页单独介绍过的活动，日历页口播**无需再重复念截止日期**；其余“3 天内结束/3 天内开启/今天或明天开下一阶段”的活动在任意一页日历口播里点名并说出时间即可。
+  - 活动日历排在活动段最后（单活动页之后，导入自动排），不能当头条，不进标题；没有进行中的活动时不做（导入会提示 ACTIVITY_CALENDAR_EMPTY）。
+- 双页活动日历写法示例（key 和数值只是示意，用 `list` 输出里的真实 key）：
 
 ```json
-{"id":"calendar","scene_type":"activity_calendar","game":"endfield",
- "title":"活动日历：百趣演武还剩3天","short_title":"活动日历",
- "narration":"来看终末地的活动日历。百趣演武挑战活动还剩三天，十一月十九日凌晨四点结束；理智补给两天后开启。其余活动都持续到版本更新前，完整列表在简介里。",
- "spoken":{"endfield|cn|百趣演武":"百趣演武","endfield|cn|理智补给":"理智补给"}}
+{"id":"calendar-1","scene_type":"activity_calendar","game":"arknights",
+ "title":"活动日历（一）：近期截止与开启","short_title":"活动日历1/2",
+ "narration":"来看明日方舟近期活动DDL。冻土与火种网页还剩两天，十一月二十四日凌晨截止；国际服足球锦标赛明天晚上十一点开启，怪物猎人联动第二阶段后天开放。",
+ "spoken":{"arknights|cn|冻土与火种网页·web":"冻土与火种","arknights|global|positionalfootballchampionshiplimitedtimeevent":"足球锦标赛","arknights|global|arknightsxmonsterhuntersidestorythunderintheazuredream":"怪物猎人联动"}},
+{"id":"calendar-2","scene_type":"activity_calendar","game":"arknights",
+ "title":"活动日历（二）：进行中与版本活动","short_title":"活动日历2/2",
+ "narration":"其余进行中的常驻与版本活动持续到十二月上旬或版本更新前，剩余天数与进度条都列在看板里，完整链接见简介。",
+ "spoken":{}}
 ```
 
 **玩家热议**（`scene_type:"community_pulse"`，每期最多 3 页）：
 - 填 `item_id`（快照ID）、`game`、`subject:{game, entity_type, entity_name}`（entity_type 取 glossary 的 character/event/mode/banner/item/place）、`videos:[bvid]`（来自快照且标题属于本游戏）、`sample_count`（所引视频去重后的评论＋弹幕总条数，须 ≥30 且其中提到该对象的 ≥5 条；填错时报错信息会给出正确数字，口播里用阿拉伯数字原样写出）、可选 `quotes`（≤3 条、每条 ≤20 字，从样本原样照抄）。
-- 口播必须说明是玩家看法（“玩家……认为/觉得/吐槽/期待”），并念出样本条数；不点名用户、不带 @，不放粗口、引战和剧透。
+- 口播去掉死板的“最后来看玩家热议。本期读了 X 个视频 Y 条评论和弹幕，Z 是这轮被反复提到的对象”套话，直接自然切入玩家争论的核心观点或痛点（如“围绕今天的雪山复刻，325 条玩家评论和弹幕里讨论最多的是……”），仍须包含样本数与“玩家……认为/觉得/吐槽/期待”，不点名用户、不带 @，不放粗口、引战和剧透。
 - 配图不用填：导入时自动取所引视频里提到该对象最多的那个视频封面（采集时已保存）。若自己指定 `image`，必须是所引视频之一的封面，不能用游戏图标或无关图片。
 
 ## 4. 写稿与导入
 - 参照最近一期 editorial.json 的格式，在本系列的编辑目录写 editorial.json，producer 填 `"DeepSeek Harness"`。顶层必须有：
   - `"id"`（见表格）、`"edition_date"`、`"edition_slot"`（ai 填 morning，两款游戏填 night）、`"edition_series"`（ai / arknights / endfield）；
-  - `"hook"`：一句 8–45 字、以句号/叹号/问号结尾的头条句，直接说当天最重要的事，例如“卫戍协议改为赛季制常驻，每周期两个序列。”。它替代过去的“这是本视频的导览。”，作为开场口播；不能含“导览”二字，内容必须来自正文01的原文事实。
+  - `"hook"`：**10–110 字（1–3 句）**、以句号/叹号/问号结尾的开场核心看点综述。第一句直接抛当天最重磅新闻、最高价值奖励或最紧迫 DDL 做吸睛钩子，随后简述本期其他看点（如“雪山复刻今日开启，通关任务白拿六星溯光星源！冻土与火种网页领奖还剩最后两天，文末还有全活动DDL看板与玩家热议。”）。不能含“导览”二字，内容必须来自本期已核实事实。
 - X 来源要有 author_handle、claim_type、attribution_checked、author_spoken_aliases、context_evidence、evidence。事实只写原文有的。
 - 每条都读完整官方原文。口播 150–250 字，facts 3–4 条；补原文里的背景、时间、适用范围和影响对象，不加原文没有的评价。文风按项目 help-me-speech 的 news 模式，X 消息写明主体和北京时间原分钟。三个系列的 00 页开场口播都由 hook 生成，不再播“这是本视频的导览。”；系列内只有一个栏目，正文不再加“先来看/接下来是”的栏目过渡。
 - 运行 `python -B news_video.py import-editorial <editorial路径>`。
 - 在期次目录写两个文件：
   - publication.json：title_groups 只能有一组，kind 为本系列的类别（ai 填 `ai`，两款游戏填 `games`），event_ids 放 1–2 条（第一条是头条），lead_event_id 一致，auto_publish 为 true。生成的标题形如“头条事件标题、次要事件标题｜明日方舟情报 11.7”（直接取正文页 title），不带“AI：/游戏：”前缀，超过 60 字会报 TITLE_TOO_LONG，请把正文标题写短。tags 只填本期事实相关的词，系列固定标签由代码自动放在最前面。标签不要带感叹号等符号，平台会以 TAG_REJECTED 拒收。
-    - 2026-11-09：可加 `title_hook`（≤16 字，放在标题最前）和 `title_hook_evidence:[短语]`。每个短语必须同时出现在 hook 和所选正文里，否则报 TITLE_HOOK_UNSUPPORTED。标题和封面不得使用“震惊、炸裂、惊呆、速看、必看、绝了、吊打、跪了”（PUBLIC_WORD_BANNED）。
+    - 2026-11-09 / 2026-11-22 标题吸引力：优先善用 `title_hook`（≤16 字，放在标题最前，如“白拿六星溯光星源”“1000嵌晶玉倒计时”）和 `title_hook_evidence:[短语]`（每个短语须同时出现在 hook 和所选正文里），搭配核心活动/热议事件组合标题，避免《XX明天截止》这种干瘪标题。标题和封面不得使用“震惊、炸裂、惊呆、速看、必看、绝了、吊打、跪了”（PUBLIC_WORD_BANNED）。
     - 2026-11-11 标题热词：标题是观众点进来的主要原因。AI早报在不超过 60 字的前提下，title_groups 里放 2–3 条最热的事件（优先 must_review 靠前、观众能直接行动的：额度重置、封号/政策、降价免费、新模型上线），事件标题写短、把模型名或产品名放前面。快讯页不能放进标题（TITLE_BRIEFS_PAGE）。
     - 简介：publication.json 写了 `description` 就用它；没写时 release 会自动生成（章节时间点、来源链接，有传闻或玩家热议时附免责声明）。
   - cover.json：headline_top、headline_main、highlight 必须是头条标题、口播或 facts 里原样出现的文字，并且要短。
 - 再运行 `python -B publication_policy.py title episodes/<ID> --write`。所有 JSON 用无 BOM 的 UTF-8。
 
-## 5. 配音（本地 Qwen3-TTS，不改 Voice_Generate）
+## 5. 配音（本地 VoxCPM 1.5，不改 Voice_Generate）
 - 运行 `python -B news_video.py voice <ID>`。若提示 data/voice.lock 已存在：读锁内的 PID，确认该进程已不存在才删锁，否则等待。
 - **按段缓存**（voice_units.py，缓存在 `.cache/voice-units/`）：
   - 同一文字输出完全相同，原样重跑没有用。

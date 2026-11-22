@@ -18,8 +18,33 @@ def overview_group(scene):
     return section or '重点新闻'
 
 
+def overview_bucket(scene):
+    st=scene.get('scene_type');seg=scene.get('segment')
+    if st=='activity_calendar':return 'activity_calendar'
+    if st=='community_pulse' or seg=='community':return 'community'
+    if st=='activity' or seg=='activities':return 'activities'
+    if st=='briefs' or seg=='briefs':return 'briefs'
+    if st=='github_trending' or seg=='github':return 'github'
+    if st=='rumor' or seg=='rumor':return 'rumor'
+    return overview_group(scene)
+
+
+def overview_category(scene,index,series=None):
+    if not series:return overview_group(scene)
+    if index==0:return '重磅头条'
+    st=scene.get('scene_type');seg=scene.get('segment')
+    if st=='activity_calendar':return '全活动DDL'
+    if st=='activity' or seg=='activities':return '重点活动'
+    if st=='community_pulse' or seg=='community':return '玩家热议'
+    if st=='rumor' or seg=='rumor':return '传闻动态'
+    if st=='briefs' or seg=='briefs':return '今日快讯'
+    if st=='github_trending' or seg=='github':return 'GitHub热门'
+    if seg=='media':return '媒体速递'
+    return '今日情报' if series in {'arknights','endfield'} else '官方动态'
+
+
 def overview_highlights(scenes,limit=4):
-    """Keep story order while representing actual sections, never fill gaps."""
+    """Keep story order while representing actual sections/segments, never fill gaps."""
     unique=[];seen=set()
     for scene in scenes:
         key=scene.get('event_key') or scene.get('item_id') or scene.get('id')
@@ -27,8 +52,8 @@ def overview_highlights(scenes,limit=4):
         seen.add(key);unique.append(scene)
     chosen=[];groups=set()
     for i,scene in enumerate(unique):
-        group=overview_group(scene)
-        if group not in groups and len(chosen)<limit:chosen.append(i);groups.add(group)
+        bucket=overview_bucket(scene)
+        if bucket not in groups and len(chosen)<limit:chosen.append(i);groups.add(bucket)
     for i in range(len(unique)):
         if len(chosen)>=limit:break
         if i not in chosen:chosen.append(i)
@@ -41,7 +66,7 @@ def overview_detail(scene):
     # Skip navigation/recap preambles, but retain the actual attributed claim,
     # qualifications and original sentence. Do not slice words or invent facts.
     sentences=[s.strip() for s in re.split(r'(?<=[。！？!?])\s*',narration) if s.strip()]
-    useful=[s for s in sentences if not s.startswith(('接下来是','先来看','回顾此前的重要动态','这是本视频的导览'))]
+    useful=[s for s in sentences if not s.startswith(('接下来是','先来看','先看','来看','最后来看','最后看','接下来看','回顾此前的重要动态','这是本视频的导览'))]
     if useful:return useful[0]
     for fact in scene.get('facts',[]):
         if isinstance(fact,dict) and fact.get('detail'):return fact['detail'].strip()
@@ -110,24 +135,26 @@ def prepare_overview(ep,preferred=True):
     # details and short navigation labels, so refresh those before voicing.
     if existing and not ep.get('story_order') and not existing.get('overview_generated') and sum(bool(isinstance(f,dict) and f.get('detail')) for f in existing.get('facts',[]))>1:
         existing.setdefault('lead',overview_lead(body,ep.get('edition_slot')=='temporary'));return
+    from edition_series import series_of
+    series=series_of(ep)
     highlights,count=overview_highlights(body)
     facts=[]
-    for s in highlights:
+    for idx,s in enumerate(highlights):
         value=overview_title(s,bool(ep.get('overview_subject_policy')))
         title,subject=value if isinstance(value,tuple) else (value,None)
-        facts.append(dict(title=title,subject=subject,detail=overview_detail(s),category=overview_group(s),scene_id=s['id']))
-    guide=dict(id=existing['id'] if existing else 'overview',scene_type='overview',section='概览',title='本期新闻导览',short_title='导览',
+        facts.append(dict(title=title,subject=subject,detail=overview_detail(s),category=overview_category(s,idx,series),scene_id=s['id']))
+    series_titles={'ai':'AI早报｜今日核心看点','arknights':'明日方舟｜今日情报与活动DDL','endfield':'终末地｜今日情报与活动DDL'}
+    guide=dict(id=existing['id'] if existing else 'overview',scene_type='overview',section='概览',
+               title=series_titles.get(series,'本期新闻导览'),short_title='导览',
                lead=overview_lead(body,ep.get('edition_slot')=='temporary'),facts=facts,narration='这是本视频的导览。',
                hold_after_seconds=2.0,show_source=False,overview_generated=True,overview_schema_version=2,
                total_stories=count,footer_note='本页展示本期重点，其余内容可通过底部导航查看。' if count>len(facts) else '本期重点将按正文顺序展开。')
-    from edition_series import series_of
-    if series_of(ep):
-        # Series videos open on the headline itself, not on "this is the guide":
-        # the first seconds decide whether a viewer stays.
+    if series:
+        # Series videos open with an engaging 1-3 sentence hook summarizing the lead news and key highlights.
         hook=re.sub(r'\s+','',str(ep.get('hook') or ''))
-        if not 8<=len(hook)<=45 or '导览' in hook or not hook.endswith(('。','！','？')):
-            raise ValueError('HOOK_REQUIRED: editorial needs "hook", one 8-45 character sentence stating the lead news, ending in punctuation')
-        guide.update(narration=hook,lead=hook,hold_after_seconds=0.8)
+        if not 8<=len(hook)<=110 or re.search(r'(?:本视频|本期|新闻)的?导览',hook) or not hook.endswith(('。','！','？')):
+            raise ValueError('HOOK_REQUIRED: editorial needs "hook", 1-3 punchy sentences (8-110 chars) summarizing the lead news and key highlights, ending in punctuation')
+        guide.update(narration=hook,lead=hook,hold_after_seconds=0.6)
     if existing:existing.update(guide)
     else:scenes.insert(0,guide)
     validate_overview(ep)

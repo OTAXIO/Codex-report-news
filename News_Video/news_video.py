@@ -576,7 +576,8 @@ def import_editorial(path):
     activities.arrange(episode)
     from production_policy import apply_story_order
     apply_story_order(episode,ROOT)
-    activities.validate_pages(episode,cfg.get('freshness',{}).get('effective_window',{}).get('active_window',{}).get('max_pages',6))
+    activities.validate_pages(episode,cfg.get('freshness',{}).get('effective_window',{}).get('active_window',{}).get('max_pages',6),
+                              cfg.get('activity_calendar',{}).get('max_pages',3))
     activities.require_calendar(episode,ROOT)
     from layout_policy import prepare_overview
     prepare_overview(episode,cfg.get('presentation',{}).get('prefer_overview',True))
@@ -759,9 +760,12 @@ def selection_report(episode):
     db=database()
     try:
         runs={}
-        for kind in ('all','leaders'):
-            row=db.execute("SELECT report FROM runs WHERE kind=? ORDER BY started DESC LIMIT 1",(kind,)).fetchone()
-            if row:runs[kind]=json.loads(row['report'])
+        main_kinds=('all','games') if series in {'arknights','endfield'} else ('all','ai') if series=='ai' else ('all','ai','games')
+        placeholders=','.join('?'*len(main_kinds))
+        row=db.execute(f"SELECT report FROM runs WHERE kind IN ({placeholders}) ORDER BY started DESC LIMIT 1",main_kinds).fetchone()
+        if row:runs['main']=json.loads(row['report'])
+        row=db.execute("SELECT report FROM runs WHERE kind='leaders' ORDER BY started DESC LIMIT 1").fetchone()
+        if row:runs['leaders']=json.loads(row['report'])
     finally:db.close()
     # Skland captures are imported after collect, so re-read their status now instead of the collect-time snapshot.
     from skland_sources import capture_status
@@ -769,7 +773,7 @@ def selection_report(episode):
     catalog={s['id']:s for s in load(ROOT/'sources.json')} if (ROOT/'sources.json').is_file() else {}
     now=dt.datetime.now(UTC)
     current=[capture_status(ROOT,catalog[s['source_id']],now) if s.get('source_type')=='skland_capture' and s.get('source_id') in catalog else s
-             for kind in ('all','leaders') for s in runs.get(kind,{}).get('sources',[])]
+             for key in ('main','leaders') for s in runs.get(key,{}).get('sources',[])]
     health=[dict(source_id=s.get('source_id'),ok=s.get('ok'),count=s.get('count',s.get('accepted')),error=s.get('error') or s.get('error_code'))
             for s in current]
     by=lambda key:dict(sorted({k:sum(1 for r in rows if r.get(key)==k) for k in {r.get(key) for r in rows}}.items(),key=lambda kv:-kv[1]))

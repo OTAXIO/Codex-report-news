@@ -95,9 +95,11 @@ AK_TEXT="""SideStory「时间啊，向前！」活动
 【活动时间】
 11月01日 12:00 - 11月29日 03:59"""
 
-def calendar_root(tmp,items):
+def calendar_root(tmp,items,cal_cfg=None):
     root=Path(tmp);(root/'data/game-items').mkdir(parents=True);(root/'data/articles').mkdir(parents=True)
-    (root/'config.json').write_text(json.dumps(dict(activity_calendar=dict(regions=dict(endfield=['cn'],arknights=['cn']),max_sync_age_hours=12,rows_per_page=12,upcoming_days=3))),encoding='utf-8')
+    cfg=dict(regions=dict(endfield=['cn'],arknights=['cn']),max_sync_age_hours=12,rows_per_page=8,max_pages=3,upcoming_days=3,min_body_pages=0,min_featured_activities=1,max_fill_pages=2)
+    if cal_cfg:cfg.update(cal_cfg)
+    (root/'config.json').write_text(json.dumps(dict(activity_calendar=cfg)),encoding='utf-8')
     for key,game,title,text in items:
         (root/'data/game-items'/(key+'.json')).write_text(json.dumps(dict(game=game,game_region='cn',title=title,summary=text[:80],url='https://example.test/'+key,published=at(1).isoformat() if game=='endfield' else '2026-10-24T20:30:00+08:00',source_type='official_game_page')),encoding='utf-8')
         (root/'data/articles'/(key+'.json')).write_text(json.dumps(dict(item_id=key,text=text)),encoding='utf-8')
@@ -160,9 +162,48 @@ class CalendarTests(unittest.TestCase):
             result=a.bind_calendar(ok,ep,root,at(18,10))
             self.assertEqual((result['basis'],ok['badge'],ok['event_key'],ok['source_url']),('activity_calendar','活动日历','endfield-activity-calendar','https://example.test/v1'))
             self.assertEqual(sorted(r['big'] for r in ok['calendar_rows'] if r['urgent']),['!','明天'])
-            news=[dict(id=f'n{i}',item_id=f'n{i}',narration='消息') for i in range(5)]
-            a.require_calendar(dict(ep,scenes=news+[ok]),root,at(18,10))
-    def test_short_edition_is_filled_with_the_most_pressing_activities(self):
+            self.assertTrue(all(0<r['progress_pct']<=100 and r['urgency_tier'] for r in ok['calendar_rows']))
+            # At least 1 featured activity page is required alongside the calendar.
+            act=dict(id='f1',scene_type='activity',calendar_key='endfield|cn|百趣演武',narration='百趣演武11月19日截止。',facts=[dict(title='参与方式',detail='挑战关卡')])
+            a.require_calendar(dict(ep,scenes=[act,ok]),root,at(18,10))
+    def test_same_notice_subitems_and_companion_shop_merge_into_parent(self):
+        notice="""一、SideStory「雪山降临1101」限时复刻开启
+活动时间：11月22日 04:00 - 12月06日 03:59
+◆「圣巡之旅」&「变革之路」&「喀兰之心」：11月22日 04:00 - 12月02日 03:59
+【观测站后勤处】
+开放时间：11月22日 04:00 - 12月06日 03:59"""
+        found,_=a.extract(notice,'arknights','cn',dt.datetime(2026,11,17,17,tzinfo=BJ),'ak-snow')
+        self.assertEqual([a.key_name(e['name']) for e in found],['雪山降临1101'])
+    def test_multipage_calendar_and_dedup_against_featured_activity(self):
+        # 10 running activities -> 2 calendar pages at 8 rows/page; featured urgent activity does not need to be repeated on calendar.
+        lines=['「测试版本」版本更新说明']
+        for i in range(1,11):
+            end_day=18 if i<=2 else 25
+            lines.append(f'{i}.「活动{i}」限时活动\n· 活动时间：2026/11/10 04:00 - 2026/11/{end_day:02d} 04:00（服务器时间）')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=calendar_root(tmp,[('v1','endfield','「测试版本」版本更新说明','\n'.join(lines))])
+            a.sync(root,'endfield',at(16,10),fetch=False)
+            rows=a.reminders(root,'endfield',at(16,10))
+            self.assertEqual(len(rows),10)
+            pages=a.calendar_pages(rows,8,3,at(16,10))
+            self.assertEqual((len(pages),len(pages[0]['rows']),len(pages[1]['rows'])),(2,8,2))
+            # Feature 活动1 on its own page -> calendar only needs to mention 活动2!
+            feat=dict(id='f1',scene_type='activity',calendar_key='endfield|cn|活动1',narration='活动1将在11月18日截止。',facts=[dict(title='奖励',detail='嵌晶玉')])
+            cal1=dict(id='cal-1',scene_type='activity_calendar',game='endfield',title='活动日历',short_title='活动日历',
+                      narration='活动2还剩两天，11月18日截止。',spoken={'endfield|cn|活动2':'活动2'})
+            cal2=dict(id='cal-2',scene_type='activity_calendar',game='endfield',title='活动日历',short_title='活动日历',
+                      narration='其余活动持续到11月25日。',spoken={})
+            ep=dict(id='e',edition_series='endfield',edition_slot='night',scenes=[feat,cal1,cal2])
+            a.fill_from_calendar(ep,root,at(16,10))
+            a.bind_calendar(cal1,ep,root,at(16,10),bind=True)
+            a.bind_calendar(cal2,ep,root,at(16,10),bind=True)
+            self.assertEqual((len(cal1['calendar_rows']),len(cal2['calendar_rows'])),(8,2))
+            self.assertEqual((cal1['event_key'],cal2['event_key']),('endfield-activity-calendar-1','endfield-activity-calendar-2'))
+            self.assertIn('calendar_all',cal1);self.assertNotIn('calendar_all',cal2)
+            self.assertEqual((cal1['calendar_more'],cal2['calendar_more']),(0,0))
+            self.assertNotEqual(cal1['title'],cal2['title'])
+            a.validate_pages(ep,6,3);a.require_calendar(ep,root,at(16,10))
+    def test_short_edition_requires_at_least_one_recent_activity_without_5_page_spam(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT),('v2','endfield','「远山行」版本更新说明',
                                '「远山行」版本更新说明\n■ 「远山行」版本更新维护时间\n2026/11/25 06:00 - 2026/11/25 12:00（UTC+8）')])
@@ -170,28 +211,25 @@ class CalendarTests(unittest.TestCase):
             cal=dict(id='cal',scene_type='activity_calendar',game='endfield',narration='活动日历。')
             news=[dict(id='n1',item_id='n1',narration='消息'),dict(id='talk',item_id='community-x',segment='community',narration='玩家热议')]
             ep=dict(id='e',edition_series='endfield',edition_slot='night',scenes=news+[cal])
-            # One message page (玩家热议 is not counted): 4 short; only rows with a deadline qualify, most pressing first.
             plan=a.fill_plan(ep,root,at(16,10),'endfield')
-            self.assertEqual((plan['news_pages'],plan['need'],plan['keys']),(1,4,['endfield|cn|百趣演武','endfield|cn|烟火生缘']))
-            with self.assertRaisesRegex(ValueError,'ACTIVITY_FILL: 1 message pages'):a.require_calendar(ep,root,at(16,10))
-            fills=[dict(id='f2',calendar_key='endfield|cn|烟火生缘',narration='烟火生缘11月25日结束。',facts=[dict(title='参与方式',detail='登录参加')]),
-                   dict(id='f1',calendar_key='endfield|cn|百趣演武',narration='百趣演武11月19日截止。',facts=[dict(title='参与方式',detail='挑战关卡')])]
-            ep['scenes']=news+[cal]+fills
+            self.assertEqual((plan['mode'],plan['need']),('featured_recent',1))
+            with self.assertRaisesRegex(ValueError,'ACTIVITY_FILL: every game edition needs at least 1'):a.require_calendar(ep,root,at(16,10))
+            # Adding just ONE featured recent activity page satisfies the gate (no 5-page filler required!).
+            fill1=dict(id='f1',calendar_key='endfield|cn|百趣演武',narration='百趣演武11月19日截止。',facts=[dict(title='参与方式',detail='挑战关卡')])
+            ep['scenes']=news+[cal,fill1]
             a.fill_from_calendar(ep,root,at(16,10))
-            item=fills[0]['activity_items'][0]
-            self.assertEqual((fills[0]['item_id'],fills[0]['freshness_basis'],item['end_at'],item['end_basis']),('v1','active_window','2026-11-25T12:00:00+08:00','next_version_start'))
+            item=fill1['activity_items'][0]
+            self.assertEqual((fill1['item_id'],fill1['freshness_basis'],item['end_at']),('v1','active_window','2026-11-19T04:00:00+08:00'))
             check=a.calendar_check(root,item,at(16,10))
-            self.assertEqual((check['ok'],check['state']),(True,'ongoing'))
-            for s in fills:s['activity']=a.describe(s,s['activity_items'][0],a.calendar_check(root,s['activity_items'][0],at(16,10)),at(16,10),EF_TEXT)
+            self.assertEqual((check['ok'],check['state']),(True,'ending'))
+            fill1['activity']=a.describe(fill1,item,check,at(16,10),EF_TEXT)
             a.arrange(ep)
-            self.assertEqual([s['id'] for s in ep['scenes']],['n1','talk','f1','f2','cal'])   # fills, then the full calendar
-            a.validate_pages(ep,6)
-            a.require_calendar(ep,root,at(16,10))
-            self.assertEqual(ep['calendar_fill']['keys'],['endfield|cn|百趣演武','endfield|cn|烟火生缘'])
-            # Five message pages: no fill page is asked for, and an extra one is refused.
-            full=dict(ep,scenes=[dict(id=f'n{i}',item_id=f'n{i}',narration='消息') for i in range(5)]+[cal])
-            a.require_calendar(full,root,at(16,10))
-            with self.assertRaisesRegex(ValueError,'ACTIVITY_FILL'):a.require_calendar(dict(full,scenes=full['scenes']+fills),root,at(16,10))
+            self.assertEqual([s['id'] for s in ep['scenes']],['n1','talk','f1','cal'])
+            a.validate_pages(ep,6);a.require_calendar(ep,root,at(16,10))
+            self.assertEqual(ep['calendar_fill']['keys'],['endfield|cn|百趣演武'])
+            # Too many fill pages (>3) are rejected to prevent filler padding.
+            too_many=[dict(id=f'f{i}',calendar_key='endfield|cn|百趣演武') for i in range(4)]
+            with self.assertRaisesRegex(ValueError,'at most 3 calendar fill pages'):a.require_calendar(dict(ep,scenes=news+[cal]+too_many),root,at(16,10))
     def test_editor_corrections_survive_a_resync(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=calendar_root(tmp,[('v1','endfield','「丹青渡」版本更新说明',EF_TEXT)])

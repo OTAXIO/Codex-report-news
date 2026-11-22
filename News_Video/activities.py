@@ -99,18 +99,19 @@ def sort_key(activity):return (SCALES[activity['scale']],STATE_ORDER[activity['s
 
 def arrange(episode):
     """Inside the slots they occupy: single activity pages in reporting order, then the calendar fill
-    pages (most pressing first), then the 活动日历 page with every activity."""
+    pages (most pressing first), then the 活动日历 page(s) in page order."""
     def key(s):
-        if s.get('scene_type')=='activity_calendar':return (2,0,0,'')
+        if s.get('scene_type')=='activity_calendar':return (2,int(s.get('calendar_page') or s.get('page_number') or 1),0,'')
         if s.get('calendar_key'):return (1,s.get('calendar_rank',0),0,'')
         return (0,)+sort_key(s['activity'])
     slots=[i for i,s in enumerate(episode['scenes']) if s.get('activity') or s.get('scene_type')=='activity_calendar']
     ordered=sorted((episode['scenes'][i] for i in slots),key=key)
     for i,scene in zip(slots,ordered):episode['scenes'][i]=scene
 
-def validate_pages(episode,max_pages):
-    """Episode-level rules for single-activity pages; scenes already carry `activity`."""
-    if sum(s.get('scene_type')=='activity_calendar' for s in episode['scenes'])>1:raise ValueError('ACTIVITY_CALENDAR: one 活动日历 page per edition')
+def validate_pages(episode,max_pages,max_calendar_pages=3):
+    """Episode-level rules for single-activity and 活动日历 pages; scenes already carry `activity`."""
+    cal_count=sum(s.get('scene_type')=='activity_calendar' for s in episode['scenes'])
+    if cal_count>max_calendar_pages:raise ValueError(f'ACTIVITY_CALENDAR: at most {max_calendar_pages} 活动日历 pages per edition')
     pages=[s for s in episode['scenes'] if s.get('activity')]
     if not pages:return
     if len(pages)>max_pages:raise ValueError(f'ACTIVITY_PAGES: at most {max_pages} activity pages; drop minor ones first')
@@ -263,7 +264,10 @@ def extract(text,game,region,published,item_id,versions=None,title=''):
             if is_heading(line):
                 bare=BARE.match(line)
                 if SECTION.match(line) or not section:section=line
-                heading=clean_name(section)+'·'+bare.group(1).strip('「」【】') if bare and section and section!=line else line
+                bare_text=bare.group(1).strip('「」【】') if bare else ''
+                if bare and section and section!=line and not re.fullmatch(r'(?:挑战|活动|奖励|任务|兑换)?(?:开放|领取|持续|参与|活动)?时间',bare_text):
+                    heading=clean_name(section)+'·'+bare_text
+                else:heading=section if bare and section and section!=line else line
                 stage=None
             single=SINGLE_POINT.search(line)
             if single and heading and PHASE_TIME.search(line) and not NOT_ACTIVITY.search(line):
@@ -295,7 +299,9 @@ def extract(text,game,region,published,item_id,versions=None,title=''):
             if heading is None and own is None:heading=title or lines[0]
             parent=clean_name(heading) if heading else clean_name(own.group(1))
             if own and _norm(own.group(1)) not in _norm(parent) and not phase:
-                name=parent+'·'+own.group(1).strip('「」【】[]') if heading else clean_name(own.group(1))
+                sub_label=own.group(1).strip('「」【】[]')
+                if re.fullmatch(r'(?:挑战|活动|奖励|任务|兑换)?(?:开放|领取|持续|参与|活动)?时间',sub_label):name=parent
+                else:name=parent+'·'+sub_label if heading else clean_name(own.group(1))
             else:name=parent
             key=key_name(name)
             if phase and key in found:
@@ -311,6 +317,30 @@ def extract(text,game,region,published,item_id,versions=None,title=''):
                        quote=quote,item_id=item_id,phases=[])
             if phase:entry['phases'].append(dict(label=re.sub(r'[<>\s]','',phase),start_at=entry['start_at'],quote=quote,item_id=item_id))
             found[key]=entry;order.append(key)
+    # 2026-11-22: merge sub-items of the same notice (e.g. 「雪山降临1101」·变革之路 / 观测站后勤处,
+    # or a companion event exchange shop starting at the same time as the main event) into the parent
+    # activity so one event never spawns 3-5 redundant calendar rows.
+    dropped=set()
+    for key in list(order):
+        if key in dropped:continue
+        entry=found[key]
+        if '·' in key:
+            base,sub=key.split('·',1)
+            if base in found and base not in dropped:
+                parent_entry=found[base]
+                if entry.get('start_at') and entry.get('start_at')!=parent_entry.get('start_at'):
+                    _add_phase(parent_entry,dict(label=sub,start_at=entry['start_at'],quote=entry.get('quote',''),item_id=item_id))
+                for p in entry.get('phases',[]):_add_phase(parent_entry,p)
+                dropped.add(key);continue
+        # Companion shop/exchange in the same notice (not standalone outfit/skin sales).
+        is_companion_shop=(entry.get('category')=='shop' or bool(re.search(r'奖杯兑换|活动商店|后勤处|兑换商店|Trophies|Workshop',entry['name'],re.I))) and not re.search(r'时装|服饰|Outfit|Fashion|风尚',entry['name'],re.I)
+        if is_companion_shop and entry.get('start_at'):
+            host=next((found[k] for k in order if k!=key and k not in dropped and found[k].get('category')=='event' and found[k].get('start_at')==entry['start_at']),None)
+            if host is not None:
+                for p in entry.get('phases',[]):_add_phase(host,p)
+                dropped.add(key);continue
+    order=[k for k in order if k not in dropped]
+    for k in dropped:found.pop(k,None)
     for entry in found.values():
         phases=[p for p in entry['phases'] if p['start_at']]
         if phases and (not entry['start_at'] or min(p['start_at'] for p in phases)<entry['start_at']):entry['start_at']=min(p['start_at'] for p in phases)
@@ -500,15 +530,16 @@ def must_mention(row):
     return row['state'] in {'ending','upcoming'} or any(0<=p['day']<=1 for p in row['phases_due'])
 
 def _day_tokens(row):
-    tokens={'今天','明天','今晚','明晚','今日','明日'}
+    tokens={'今天','明天','后天','今晚','明晚','今日','明日','本周','下周','周末','最后一天','最后两天','最后三天'}
     if row.get('days') is not None:
-        tokens|={f"{row['days']}天",chinese_number(row['days'])+'天'}
-        if row['days']==2:tokens.add('两天')   # spoken Chinese says 两天, not 二天
+        tokens|={f"{row['days']}天",chinese_number(row['days'])+'天',f"还剩{row['days']}天",f"仅剩{row['days']}天"}
+        if row['days']==2:tokens|={'两天','还剩两天','仅剩两天'}   # spoken Chinese says 两天, not 二天
     for value in [row.get('end_at'),row.get('start_at')]+[p['start_at'] for p in row['phases_due']]:
         if value:tokens|=spoken_dates(dt.datetime.fromisoformat(value).astimezone(BEIJING))
     return tokens
 
-def calendar_rows(rows,limit):
+def calendar_rows(rows,limit,reference=None):
+    reference=reference or dt.datetime.now(UTC)
     out=[]
     for r in rows[:limit]:
         soon=any(0<=p['day']<=1 for p in r['phases_due'])
@@ -521,12 +552,61 @@ def calendar_rows(rows,limit):
         elif days is None:big,unit='—',''
         elif days<=1:big,unit=('今天' if days==0 else '明天'),('开' if opening else '止')   # never "0天"
         else:big,unit=str(days),('天后开' if opening else '天')
+        if soon:
+            urgency_tier='critical';urgency_label='今日阶段' if r['phases_due'][0]['day']==0 else '明日阶段'
+        elif r['state']=='ending':
+            urgency_tier='critical';urgency_label='紧急截止'
+        elif opening:
+            urgency_tier='upcoming';urgency_label='即将开启'
+        elif r.get('end_at') is None:
+            urgency_tier='version';urgency_label='跟版本'
+        else:
+            urgency_tier='normal';urgency_label='进行中'
+        if opening:progress_pct=100
+        elif r.get('start_at') and r.get('end_at'):
+            s_dt=dt.datetime.fromisoformat(r['start_at']);e_dt=dt.datetime.fromisoformat(r['end_at'])
+            total=max(1.0,(e_dt-s_dt).total_seconds());rem=max(0.0,(e_dt-reference).total_seconds())
+            progress_pct=max(6,min(100,round(100*rem/total)))
+        else:progress_pct=55
         out.append(dict(key=r['key'],title=r['name'],detail=detail,region=REGION_LABEL[r['region']],category=r['category'],
-                        big=big,unit=unit,urgent=r['state']=='ending' or soon or (opening and days is not None and days<=1)))
+                        big=big,unit=unit,urgent=r['state']=='ending' or soon or (opening and days is not None and days<=1),
+                        progress_pct=progress_pct,urgency_tier=urgency_tier,urgency_label=urgency_label))
     return out
 
+def calendar_pages(rows,rows_per_page=8,max_pages=3,reference=None):
+    """Split running activities into 1..max_pages clean calendar pages (default 8 rows/page)."""
+    if not rows:return []
+    limit=max(1,int(rows_per_page));cap=max(1,int(max_pages))
+    sliced=[rows[i*limit:(i+1)*limit] for i in range(cap) if rows[i*limit:(i+1)*limit]]
+    total=len(sliced);cn_page=('一','二','三','四','五')
+    pages=[]
+    for idx,chunk in enumerate(sliced):
+        urgent=sum(1 for r in chunk if must_mention(r))
+        hint=(f'活动日历（{cn_page[idx]}）：' if total>1 else '活动日历：')+(f'{urgent}项近期变动' if urgent else '进行中与版本活动')
+        pages.append(dict(page=idx+1,total_pages=total,title_hint=hint,keys=[r['key'] for r in chunk],
+                          rows=calendar_rows(chunk,len(chunk),reference)))
+    return pages
+
+def _covered_keys(episode,rows):
+    """Activities already featured on a dedicated activity or news page in this episode."""
+    covered=set()
+    narrated_items={}
+    for s in episode.get('scenes',[]):
+        if s.get('scene_type')=='activity_calendar':continue
+        if s.get('calendar_key'):covered.add(s['calendar_key'])
+        for entry in s.get('activity_items') or []:
+            if entry.get('calendar_key'):covered.add(entry['calendar_key'])
+            if entry.get('name'):covered.add(calendar_key(s.get('game'),s.get('game_region') or 'cn',entry['name']))
+        if s.get('item_id') and s.get('narration'):
+            narrated_items[s['item_id']]=narrated_items.get(s['item_id'],'')+' '+s['narration']
+    for r in rows:
+        text=narrated_items.get(r.get('item_id'),'')
+        if text and any(_norm(r['name'])[i:i+4] in _norm(text) for i in range(max(1,len(_norm(r['name']))-3))):
+            covered.add(r['key'])
+    return covered
+
 def bind_calendar(scene,episode,root,reference,bind=True):
-    """Fill the 活动日历 page from the calendar and check that the narration names what is due."""
+    """Fill one (of 1-3) 活动日历 pages from the calendar and verify due items are named."""
     game=scene.get('game')
     if game not in {'arknights','endfield'}:raise ValueError('ACTIVITY_CALENDAR: the 活动日历 page names its game (arknights/endfield)')
     calendar=load_calendar(root);rule=policy(root)
@@ -535,51 +615,91 @@ def bind_calendar(scene,episode,root,reference,bind=True):
         raise ValueError(f'ACTIVITY_CALENDAR_STALE: run python -B activities.py sync --series {game} before writing this edition')
     rows=reminders(root,game,reference,calendar)
     if not rows:raise ValueError('ACTIVITY_CALENDAR_EMPTY: no running activity in the calendar; drop the 活动日历 page')
-    narration=scene.get('narration','');spoken=scene.get('spoken') or {}
-    sentences=[s for s in re.split(r'(?<=[。！？!?；])',narration) if s.strip()]
+    limit=rule.get('rows_per_page',8);max_pages=rule.get('max_pages',3)
+    cal_scenes=[s for s in episode.get('scenes',[]) if s.get('scene_type')=='activity_calendar']
+    if scene not in cal_scenes:cal_scenes=[scene]
+    page_count=len(cal_scenes)
+    if page_count>max_pages:raise ValueError(f'ACTIVITY_CALENDAR: at most {max_pages} 活动日历 pages per edition')
+    page_index=cal_scenes.index(scene);page_num=page_index+1
+    by_key={r['key']:r for r in rows}
+    if scene.get('calendar_keys'):
+        page_rows=[by_key[k] for k in scene['calendar_keys'] if k in by_key][:limit]
+        if not page_rows:raise ValueError('ACTIVITY_CALENDAR_EMPTY: calendar_keys matched no running activities')
+    else:
+        page_rows=rows[page_index*limit:(page_index+1)*limit]
+        if not page_rows:raise ValueError(f'ACTIVITY_CALENDAR_EMPTY: calendar page {page_num} has no remaining rows (only {len(rows)} running activities)')
+    # Combine narration and spoken maps across all 活动日历 pages so multi-page calendars validate smoothly,
+    # and skip repeating deadlines for activities already featured on their own dedicated page this episode.
+    all_narration='\n'.join(str(s.get('narration','')) for s in cal_scenes)
+    all_spoken={}
+    for s in cal_scenes:all_spoken.update(s.get('spoken') or {})
+    sentences=[s for s in re.split(r'(?<=[。！？!?；\n])',all_narration) if s.strip()]
+    covered=_covered_keys(episode,rows)
     missing=[]
-    for r in rows:
-        if not must_mention(r):continue
-        phrase=str(spoken.get(r['key'],'')).strip()
-        if not phrase or phrase not in narration:missing.append(f"{r['key']} ({r['name']}: {r['phases_due'][0]['when']+' '+r['phases_due'][0]['label'] if r['phases_due'] else r['label']})");continue
+    for r in page_rows:
+        if not must_mention(r) or r['key'] in covered:continue
+        phrase=str(all_spoken.get(r['key'],'')).strip()
+        if not phrase or phrase not in all_narration:
+            missing.append(f"{r['key']} ({r['name']}: {r['phases_due'][0]['when']+' '+r['phases_due'][0]['label'] if r['phases_due'] else r['label']})");continue
         if re.search(r'[一-鿿]',r['name']) and not any(_norm(phrase)[i:i+2] in _norm(r['name']) for i in range(max(1,len(_norm(phrase))-1))):
             raise ValueError(f'ACTIVITY_CALENDAR_SPOKEN: "{phrase}" does not name {r["name"]}')
-        sentence=next(s for s in sentences if phrase in s)
-        if not any(t in sentence for t in _day_tokens(r)):
-            raise ValueError(f'ACTIVITY_CALENDAR_DAY: the sentence naming {r["name"]} must say when (今天/明天/N天/日期): {sentence.strip()}')
+        matching=[s for s in sentences if phrase in s]
+        if not any(any(t in sent for t in _day_tokens(r)) for sent in matching):
+            raise ValueError(f'ACTIVITY_CALENDAR_DAY: the sentence naming {r["name"]} must say when (今天/明天/N天/日期): {matching[0].strip()}')
     if missing:
         raise ValueError('ACTIVITY_CALENDAR_SPOKEN: name these in the narration and map them in "spoken" {key: phrase as spoken}: '+'; '.join(missing))
-    limit=rule.get('rows_per_page',12)
     if bind:
-        scene['calendar_rows']=calendar_rows(rows,limit);scene['calendar_more']=max(0,len(rows)-limit)
-        # Rows beyond the page still reach viewers: the description lists every running activity.
-        scene['calendar_all']=[dict(title=r['title'],region=r['region'],detail=r['detail']) for r in calendar_rows(rows,len(rows))]
-        scene['facts']=[dict(title=r['title'],detail=r['detail']) for r in scene['calendar_rows']]
-        scene['badge']='活动日历';scene['segment']='activities'
-        # The page cites every notice it draws from; the most cited one (usually the version note) is its source link.
-        urls=[r['source_url'] for r in rows if r.get('source_url')]
+        shown=calendar_rows(page_rows,limit,reference)
+        scene['calendar_rows']=shown
+        scene['calendar_page']=page_num;scene['calendar_total_pages']=page_count
+        shown_total=min(len(rows),page_count*limit)
+        scene['calendar_more']=max(0,len(rows)-shown_total) if page_index==page_count-1 else 0
+        # Attach the full description list only on the first calendar page to avoid duplicating it in description.txt.
+        if page_index==0:
+            scene['calendar_all']=[dict(title=r['title'],region=r['region'],detail=r['detail']) for r in calendar_rows(rows,len(rows),reference)]
+        else:
+            scene.pop('calendar_all',None)
+        scene['facts']=[dict(title=r['title'],detail=r['detail']) for r in shown]
+        scene['badge']=f'活动日历 {page_num}/{page_count}' if page_count>1 else '活动日历'
+        scene['segment']='activities'
+        cn_page=('一','二','三')
+        if page_count>1:
+            scene['page_number']=page_num
+            titles=[str(s.get('title','')) for s in cal_scenes]
+            if titles.count(scene.get('title',''))>1:
+                scene['title']=str(scene.get('title','活动日历'))+f'（{cn_page[page_index]}）'
+            shorts=[str(s.get('short_title','')) for s in cal_scenes]
+            if not scene.get('short_title') or shorts.count(scene.get('short_title',''))>1:
+                scene['short_title']=f'活动日历{page_num}/{page_count}'
+        urls=[r['source_url'] for r in page_rows if r.get('source_url')] or [r['source_url'] for r in rows if r.get('source_url')]
         scene['calendar_sources']=list(dict.fromkeys(urls))
         if urls:scene['source_url']=max(scene['calendar_sources'],key=urls.count)
-        scene.setdefault('game_region','cn');scene['game_topic']='event';scene['event_key']=f'{game}-activity-calendar'
-        scene['calendar_audit']=dict(synced_at=synced,rows=[dict(key=r['key'],end_at=r['end_at'],end_basis=r['end_basis'],phases_due=[p['label'] for p in r['phases_due']],item_id=r['item_id']) for r in rows])
-    return dict(reason='activity_calendar_bound',basis='activity_calendar',rows=len(rows),synced_at=synced)
+        scene.setdefault('game_region','cn');scene['game_topic']='event'
+        scene.setdefault('section','游戏资讯');scene.setdefault('company','明日方舟' if game=='arknights' else '明日方舟：终末地')
+        scene['event_key']=f'{game}-activity-calendar' if page_count==1 else f'{game}-activity-calendar-{page_num}'
+        scene['calendar_audit']=dict(synced_at=synced,page=page_num,total_pages=page_count,
+                                     rows=[dict(key=r['key'],end_at=r['end_at'],end_basis=r['end_basis'],phases_due=[p['label'] for p in r['phases_due']],item_id=r['item_id']) for r in page_rows])
+    return dict(reason='activity_calendar_bound',basis='activity_calendar',rows=len(page_rows),total_rows=len(rows),page=page_num,total_pages=page_count,synced_at=synced)
 
 def require_calendar(episode,root,reference=None):
-    """A game edition must carry the 活动日历 page whenever its game has running activities,
-    and a short edition is filled up to `min_body_pages` with the most pressing ones on their own pages."""
+    """A game edition must carry 1..max_pages 活动日历 pages whenever its game has running activities,
+    plus at least `min_featured_activities` (1) recent activity page."""
     from edition_series import series_of
     series=series_of(episode)
     if series not in {'arknights','endfield'} or episode.get('edition_slot') not in {'morning','night'}:return None
-    reference=reference or dt.datetime.now(UTC)
+    reference=reference or dt.datetime.now(UTC);rule=policy(root)
     calendar=load_calendar(root);synced=calendar['synced_at'].get(series)
-    if not synced or reference-dt.datetime.fromisoformat(synced)>dt.timedelta(hours=policy(root).get('max_sync_age_hours',12)):
+    if not synced or reference-dt.datetime.fromisoformat(synced)>dt.timedelta(hours=rule.get('max_sync_age_hours',12)):
         raise ValueError(f'ACTIVITY_CALENDAR_STALE: run python -B activities.py sync --series {series} before writing this edition')
     rows=reminders(root,series,reference,calendar)
-    if rows and not any(s.get('scene_type')=='activity_calendar' for s in episode['scenes']):
-        raise ValueError('ACTIVITY_CALENDAR_REQUIRED: add one scene_type="activity_calendar" page; running: '+' / '.join(r['name']+'（'+r['label']+'）' for r in rows[:12]))
+    cal_scenes=[s for s in episode['scenes'] if s.get('scene_type')=='activity_calendar']
+    if rows and not cal_scenes:
+        raise ValueError('ACTIVITY_CALENDAR_REQUIRED: add 1-3 scene_type="activity_calendar" page(s); running: '+' / '.join(r['name']+'（'+r['label']+'）' for r in rows[:12]))
+    if len(cal_scenes)>rule.get('max_pages',3):
+        raise ValueError(f'ACTIVITY_CALENDAR: at most {rule.get("max_pages",3)} 活动日历 pages per edition')
     require_fill(episode,root,reference,series,calendar)
 
-# ---- filling a short edition from the calendar (2026-11-15) ----
+# ---- featured recent activities from the calendar (2026-11-22: >=1 recent activity, no 5-page spam) ----
 def is_fill(scene):return bool(scene.get('calendar_key'))
 
 def news_pages(episode):
@@ -589,30 +709,59 @@ def news_pages(episode):
             and s.get('segment')!='community' and not str(s.get('item_id','')).startswith('community-') and not is_fill(s)]
 
 def fill_plan(episode,root,reference,series=None,calendar=None):
-    """Which calendar rows must get their own page: the most pressing rows with a known deadline,
-    not already on a page, until the edition has `min_body_pages` message pages."""
+    """Recommended recent activity page(s) from the calendar: urgent/main activities first,
+    deprioritizing non-urgent minor web events that were already reported."""
     from edition_series import series_of
-    series=series or series_of(episode);calendar=calendar or load_calendar(root)
-    target=policy(root).get('min_body_pages',5);news=news_pages(episode)
-    need=max(0,target-len(news))
+    series=series or series_of(episode);calendar=calendar or load_calendar(root);rule=policy(root)
+    legacy_target=rule.get('min_body_pages',0)
+    min_featured=rule.get('min_featured_activities',1)
+    max_fill=rule.get('max_fill_pages',2)
+    news=news_pages(episode)
+    explicit_activities=[s for s in news if s.get('scene_type')=='activity' or s.get('activity')]
     featured={calendar_key(s.get('game'),s.get('game_region') or 'cn',s['activity_items'][0]['name']) for s in news if s.get('activity_items')}
     narrated={s.get('item_id'):s.get('narration','') for s in news if s.get('item_id')}
     rows=[]
     for r in reminders(root,series,reference,calendar):
         if not r['end_at'] or r['key'] in featured:continue
-        # A news page about the same notice that already names the activity covers it.
         if r['item_id'] in narrated and any(_norm(r['name'])[i:i+4] in _norm(narrated[r['item_id']]) for i in range(max(1,len(_norm(r['name']))-3))):continue
         rows.append(r)
-    return dict(news_pages=len(news),target=target,need=need,keys=[r['key'] for r in rows[:need]],rows=rows[:need])
+    if legacy_target>0:
+        need=max(0,legacy_target-len(news))
+        return dict(mode='legacy_min_body',news_pages=len(news),target=legacy_target,need=need,keys=[r['key'] for r in rows[:need]],rows=rows[:need])
+    # 2026-11-22 mode: prioritize urgent/main activities, deprioritize repeatedly-reported non-urgent minor web events.
+    cal_entries=calendar.get('activities',{})
+    def rank_featured(r):
+        entry=cal_entries.get(r['key'],{})
+        repeated_minor=int(r['scale']=='minor' and not must_mention(r) and bool(entry.get('reported')))
+        return (repeated_minor,not must_mention(r),SCALES[r['scale']],STATE_ORDER[r['state']],r['end_at'] or '9999')
+    rows.sort(key=rank_featured)
+    need=max(0,min_featured-len(explicit_activities))
+    recommended_count=max(need,min(max_fill,len(rows))) if len(news)==0 else max(need,min(1,len(rows)))
+    return dict(mode='featured_recent',news_pages=len(news),explicit_activities=len(explicit_activities),
+                min_featured=min_featured,max_fill=max_fill,need=min(need,len(rows)),
+                recommended_count=min(recommended_count,len(rows)),
+                keys=[r['key'] for r in rows[:recommended_count]],rows=rows[:max(recommended_count,3)])
 
 def require_fill(episode,root,reference,series=None,calendar=None):
-    plan=fill_plan(episode,root,reference,series,calendar)
+    rule=policy(root);plan=fill_plan(episode,root,reference,series,calendar)
     have=[s['calendar_key'] for s in episode['scenes'] if is_fill(s)]
-    if have!=plan['keys']:
-        want=' / '.join(f"{r['key']}（{r['name']}，{r['label']}）" for r in plan['rows']) or '无'
-        raise ValueError(f"ACTIVITY_FILL: {plan['news_pages']} message pages (target {plan['target']}); the calendar fill pages must be, in this order: {want}. "
-                         'Write each as scene_type="activity" with "calendar_key", 1-2 facts and the deadline date in the narration, placed right before the 活动日历 page.')
-    episode['calendar_fill']=dict(news_pages=plan['news_pages'],target=plan['target'],keys=plan['keys'])
+    if plan.get('mode')=='legacy_min_body':
+        if have!=plan['keys']:
+            want=' / '.join(f"{r['key']}（{r['name']}，{r['label']}）" for r in plan['rows']) or '无'
+            raise ValueError(f"ACTIVITY_FILL: {plan['news_pages']} message pages (target {plan['target']}); the calendar fill pages must be, in this order: {want}. "
+                             'Write each as scene_type="activity" with "calendar_key", 1-2 facts and the deadline date in the narration, placed right before the 活动日历 page.')
+        episode['calendar_fill']=dict(news_pages=plan['news_pages'],target=plan['target'],keys=plan['keys'])
+        return
+    cap=max(int(rule.get('max_fill_pages',2)),3)
+    if len(have)>cap:
+        raise ValueError(f'ACTIVITY_FILL: at most {cap} calendar fill pages; keep the episode concise instead of padding')
+    total_featured=plan['explicit_activities']+len(have)
+    # Every game edition must include at least min_featured_activities (1) concrete recent activity page
+    # when the calendar has running activities with a known deadline.
+    if total_featured<plan['min_featured'] and plan['rows']:
+        want=' / '.join(f"{r['key']}（{r['name']}，{r['label']}）" for r in plan['rows'][:3])
+        raise ValueError(f"ACTIVITY_FILL: every game edition needs at least {plan['min_featured']} recent activity page (scene_type=\"activity\" with calendar_key or activity_items). Recommended: {want}")
+    episode['calendar_fill']=dict(mode='featured_recent',news_pages=plan['news_pages'],min_featured=plan['min_featured'],keys=have)
 
 def fill_from_calendar(episode,root,reference=None):
     """Complete each calendar fill page from the calendar entry: window, official sentence, source."""
@@ -633,7 +782,9 @@ def fill_from_calendar(episode,root,reference=None):
             if scene.get(field):item[field]=scene[field]
         scene.update(scene_type='activity',item_id=entry.get('item_id'),source_url=entry.get('source_url'),source_type=entry.get('source_type'),game=entry['game'],
                      game_region=entry.get('region','cn'),freshness_basis='active_window',activity_items=[item])
-        scene.setdefault('evidence',entry.get('quote'));scene.setdefault('selection_reason','活动日历补页：本期正文不足，按日历最要紧顺序单独展示')
+        scene.setdefault('event_key',key);scene.setdefault('game_topic','event')
+        scene.setdefault('section','游戏资讯');scene.setdefault('company','明日方舟' if entry['game']=='arknights' else '明日方舟：终末地')
+        scene.setdefault('evidence',entry.get('quote'));scene.setdefault('selection_reason','近期重点活动提醒：从活动日历精选展示')
 
 def calendar_check(root,entry,reference):
     """Freshness of a calendar fill page: the activity is still running/opening and its sentence is official."""
@@ -727,14 +878,23 @@ if __name__=='__main__':
     parser.add_argument('--start-at');parser.add_argument('--version',help='add: ends with this version (name as in versions)');parser.add_argument('--open',action='store_true',help='add: no end date')
     parser.add_argument('--kind',default='online',choices=['online','offline','collab']);parser.add_argument('--scale',default='main',choices=['main','minor'])
     args=parser.parse_args();at=dt.datetime.fromisoformat(args.at) if args.at else None
-    if args.command=='sync':out=sync(ROOT,args.series,at,not args.no_fetch);out['running']=[(r['key'],r['label'],[p['when']+' '+p['label'] for p in r['phases_due']]) for r in reminders(ROOT,args.series,at)]
-    elif args.command=='list':out=reminders(ROOT,args.series,at)
+    rule=policy(ROOT);rpp=rule.get('rows_per_page',8);mp=rule.get('max_pages',3)
+    if args.command=='sync':
+        out=sync(ROOT,args.series,at,not args.no_fetch)
+        running_rows=reminders(ROOT,args.series,at)
+        out['running']=[(r['key'],r['label'],[p['when']+' '+p['label'] for p in r['phases_due']]) for r in running_rows]
+        out['calendar_pages']=len(calendar_pages(running_rows,rpp,mp,at))
+    elif args.command=='list':
+        running_rows=reminders(ROOT,args.series,at)
+        out=dict(series=args.series,total=len(running_rows),rows_per_page=rpp,max_pages=mp,
+                 pages=calendar_pages(running_rows,rpp,mp,at),rows=running_rows)
     elif args.command=='prune':out=prune(ROOT,args.series,at)
     elif args.command=='fill':
-        # Preview before writing: with --pages message pages planned, which calendar rows need their own page.
+        # Preview before writing: top 1-3 recommended recent activities to feature on their own page(s).
         planned=dict(edition_series=args.series,scenes=[dict(id=f'n{i}',item_id=f'planned-{i}') for i in range(args.pages)])
-        out={k:v for k,v in fill_plan(planned,ROOT,at or dt.datetime.now(UTC),args.series).items() if k!='rows'}
-        out['rows']=[dict(key=r['key'],name=r['name'],label=r['label'],end_at=r['end_at']) for r in fill_plan(planned,ROOT,at or dt.datetime.now(UTC),args.series)['rows']]
+        plan=fill_plan(planned,ROOT,at or dt.datetime.now(UTC),args.series)
+        out={k:v for k,v in plan.items() if k!='rows'}
+        out['rows']=[dict(key=r['key'],name=r['name'],label=r['label'],scale=r['scale'],end_at=r['end_at']) for r in plan['rows']]
     elif args.command=='add':out=add(ROOT,args.series,args.region,args.name,args.start_at,args.quote,args.item,args.end_at,args.version,args.open,args.kind,args.scale,at)
     elif args.command=='fix':fix(ROOT,args.key,json.loads(args.json));out=dict(ok=True)
     elif args.command=='hide':hide(ROOT,args.key,args.reason or '');out=dict(ok=True)
