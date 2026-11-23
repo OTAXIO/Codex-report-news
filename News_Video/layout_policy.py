@@ -29,9 +29,14 @@ def overview_bucket(scene):
     return overview_group(scene)
 
 
+def _is_global_game(scene):
+    return bool(scene.get('game') and str(scene.get('game_region') or 'cn').strip().casefold()=='global')
+
+
 def overview_category(scene,index,series=None):
     if not series:return overview_group(scene)
     if index==0:return '重磅头条'
+    if _is_global_game(scene):return '国际服动态'
     st=scene.get('scene_type');seg=scene.get('segment')
     if st=='activity_calendar':return '全活动DDL'
     if st=='activity' or seg=='activities':return '重点活动'
@@ -44,7 +49,7 @@ def overview_category(scene,index,series=None):
 
 
 def overview_highlights(scenes,limit=4):
-    """Keep story order while representing actual sections/segments, never fill gaps."""
+    """Keep story order while representing actual sections/segments, prioritizing CN game content over global."""
     unique=[];seen=set()
     for scene in scenes:
         key=scene.get('event_key') or scene.get('item_id') or scene.get('id')
@@ -52,8 +57,12 @@ def overview_highlights(scenes,limit=4):
         seen.add(key);unique.append(scene)
     chosen=[];groups=set()
     for i,scene in enumerate(unique):
+        if _is_global_game(scene):continue
         bucket=overview_bucket(scene)
         if bucket not in groups and len(chosen)<limit:chosen.append(i);groups.add(bucket)
+    for i,scene in enumerate(unique):
+        if len(chosen)>=limit:break
+        if i not in chosen and not _is_global_game(scene):chosen.append(i)
     for i in range(len(unique)):
         if len(chosen)>=limit:break
         if i not in chosen:chosen.append(i)

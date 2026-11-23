@@ -12,7 +12,7 @@ SEGMENT_ORDER={'ai':{'rumor':0,'media':1,'official':2,'briefs':3,'github':4},
                'games':{'official':0,'activities':1,'community':2}}
 SEGMENT_GROUP={'rumor':{'ai':'rumor'},'media':{'ai':'media'},'official':{'ai':'ai','games':'games'},'github':{'ai':'github'},'briefs':{'ai':'briefs'},
                'activities':{'games':'activities'},'community':{'games':'community'}}
-GROUP_LABELS={'headline':'头条','games':'游戏资讯','ai':'AI 动态','rumor':'传闻','media':'媒体报道','github':'GitHub热门','activities':'活动一览','community':'玩家热议','briefs':'快讯'}
+GROUP_LABELS={'headline':'头条','games':'游戏资讯','global_games':'国际服动态','ai':'AI 动态','rumor':'传闻','media':'媒体报道','github':'GitHub热门','activities':'活动一览','community':'玩家热议','briefs':'快讯'}
 
 def edition_order(episode,root=None):
     # Persisted plans stay stable when a default changes during recovery.
@@ -35,6 +35,9 @@ def event_id(scene):
 
 def is_game(scene):
     return bool(scene.get('game') or scene.get('section','').startswith('游戏'))
+
+def is_global_game(scene):
+    return is_game(scene) and str(scene.get('game_region') or 'cn').strip().casefold()=='global'
 
 def is_major(scene,root=None):
     """Editorial semantic review is explicit; keywords never grant priority."""
@@ -68,13 +71,25 @@ def apply_story_order(episode,root=None):
     if not groups:raise ValueError('No body news to order')
     major=[key for key,pages in groups.items() if any(is_major(s,root) for s in pages)]
     games=[key for key,pages in groups.items() if is_game(pages[0])]
+    # 2026-11-23: Bilibili audience is predominantly CN; put CN game items ahead of global items.
+    games.sort(key=lambda k:1 if is_global_game(groups[k][0]) else 0)
     default_order=edition_order(episode,root)
+    single_module=len(default_order)==1
     # Pick artwork from the slot's first available module, unless a reviewed
     # major story takes priority. Ordinary leaders follow their company.
     requested=episode.get('lead_event_id')
     company_keys=[k for k,v in groups.items() if v[0].get('source_type')!='leader_x']
     preferred=games if default_order[0]=='games' else [k for k in groups if k not in games]
-    eligible=major or [k for k in preferred if k in company_keys] or preferred or company_keys or list(groups)
+    cn_leadable=[]
+    if single_module and default_order[0]=='games':
+        cn_leadable=[k for k in groups if not is_global_game(groups[k][0]) and groups[k][0].get('scene_type')!='activity_calendar']
+    if cn_leadable:
+        if requested and requested in groups and is_global_game(groups[requested][0]):
+            raise ValueError('LEAD_REGION_GLOBAL: prefer a CN (国服) news or activity story as lead_event_id when CN content exists; global (国际服) items go near the end')
+        cn_major=[k for k in major if k in cn_leadable]
+        eligible=cn_major or [k for k in cn_leadable if k in company_keys] or cn_leadable
+    else:
+        eligible=major or [k for k in preferred if k in company_keys] or preferred or company_keys or list(groups)
     if requested and requested not in eligible:raise ValueError('lead_event_id must name a verified major event, or an event in the edition first module when available')
     lead=requested or eligible[0]
     remaining=[key for key in groups if key not in major and key not in games]
@@ -88,25 +103,45 @@ def apply_story_order(episode,root=None):
         ai.extend(related);leaders=[k for k in leaders if k not in related]
     ai+=leaders
     modules_by_kind={'games':games,'ai':ai}
-    single_module=len(default_order)==1
     order=list(dict.fromkeys([lead]+major+[key for kind in default_order for key in modules_by_kind[kind]]))
     segmented=single_module and any(pages[0].get('segment') for pages in groups.values())
     if segmented:
         # 2026-11-09 series order: AI rumor -> media -> official -> GitHub (always last);
-        # games official -> activities -> community. The lead opens the video, then segments.
+        # 2026-11-23 games order: CN official -> CN activities -> 活动日历 -> 玩家热议 -> global (国际服动态) last.
         ranks=SEGMENT_ORDER[default_order[0]]
         segment=lambda key:groups[key][0].get('segment') or 'official'
         if segment(lead)=='github' and len(groups)>1:raise ValueError('LEAD_SEGMENT: the GitHub trending page closes the video; pick a news story as lead')
         if segment(lead)=='briefs' and len(groups)>1:raise ValueError('LEAD_SEGMENT: a 快讯 page collects secondary stories; pick a full story as lead')
-        if requested is None and segment(lead)!=min((segment(k) for k in groups),key=lambda s:ranks.get(s,9)) and not major:
-            lead=min(groups,key=lambda k:(ranks.get(segment(k),9),list(groups).index(k)))
+        if groups[lead][0].get('scene_type')=='activity_calendar' and len(groups)>1:raise ValueError('LEAD_SEGMENT: the 活动日历 page is a reminder list; pick a CN news or activity story as lead')
+        if default_order[0]=='games':
+            def game_rank(k):
+                sc=groups[k][0]
+                return (1 if is_global_game(sc) else 0,ranks.get(segment(k),9),1 if sc.get('scene_type')=='activity_calendar' else 0)
+            if requested is None and not major:
+                pool=cn_leadable or [k for k in groups if groups[k][0].get('scene_type')!='activity_calendar'] or list(groups)
+                lead=min(pool,key=lambda k:(game_rank(k),list(groups).index(k)))
+            rest=[k for k in order if k!=lead]
+            position={k:i for i,k in enumerate(rest)}
+            rest.sort(key=lambda k:(game_rank(k),0 if k in major else 1,position[k]))
+            order=[lead]+rest
+        else:
+            if requested is None and segment(lead)!=min((segment(k) for k in groups),key=lambda s:ranks.get(s,9)) and not major:
+                lead=min(groups,key=lambda k:(ranks.get(segment(k),9),list(groups).index(k)))
+            rest=[k for k in order if k!=lead]
+            position={k:i for i,k in enumerate(rest)}  # list.sort empties the list while sorting
+            rest.sort(key=lambda k:(ranks.get(segment(k),9),0 if k in major else 1,position[k]))
+            order=[lead]+rest
+    elif single_module and default_order[0]=='games':
+        # Non-segmented game series: still keep CN stories before global stories after lead.
         rest=[k for k in order if k!=lead]
-        position={k:i for i,k in enumerate(rest)}  # list.sort empties the list while sorting
-        rest.sort(key=lambda k:(ranks.get(segment(k),9),0 if k in major else 1,position[k]))
+        position={k:i for i,k in enumerate(rest)}
+        rest.sort(key=lambda k:(1 if is_global_game(groups[k][0]) else 0,0 if k in major else 1,position[k]))
         order=[lead]+rest
     body=[s for key in order for s in groups[key]]
     for scene in body:
-        if segmented:scene['navigation_group']=SEGMENT_GROUP.get(scene.get('segment') or 'official',{}).get(default_order[0],'ai')
+        if segmented:
+            if default_order[0]=='games' and is_global_game(scene):scene['navigation_group']='global_games'
+            else:scene['navigation_group']=SEGMENT_GROUP.get(scene.get('segment') or 'official',{}).get(default_order[0],'ai')
         else:scene['navigation_group']='headline' if event_id(scene) in major else 'games' if is_game(scene) else 'ai'
         old=scene.pop('module_intro_text',None)
         if old and scene.get('narration','').startswith(old):scene['narration']=scene['narration'][len(old):]

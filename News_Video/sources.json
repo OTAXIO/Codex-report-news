@@ -291,7 +291,7 @@
     "game": "arknights",
     "game_region": "global",
     "enabled": true,
-    "source_priority": 0,
+    "source_priority": 50,
     "rss_verified": false
   },
   {
@@ -319,7 +319,7 @@
     "game": "endfield",
     "game_region": "global",
     "enabled": true,
-    "source_priority": 0,
+    "source_priority": 50,
     "rss_verified": false
   },
   {

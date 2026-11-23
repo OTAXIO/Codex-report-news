@@ -61,5 +61,30 @@ class EditionSeriesChecks(unittest.TestCase):
         self.assertEqual(p.tags(['OpenAI'])[:2],['明日方舟','终末地'])  # legacy/temporary unchanged
         self.assertEqual(len(p.tags([str(i) for i in range(20)],dict(edition_series='endfield'))),9)
 
+    def test_cn_first_order_lead_and_title_gate_for_game_series(self):
+        global_news={**game('en_news'),'game_region':'global','segment':'official','title':'国际服足球活动上线'}
+        cn_act={**game('cn_act'),'game_region':'cn','segment':'activities','scene_type':'activity','title':'国服雪山复刻白拿六星'}
+        cal={**game('cal'),'game_region':'cn','segment':'activities','scene_type':'activity_calendar','title':'活动日历'}
+        talk={**game('talk'),'game_region':'cn','segment':'community','scene_type':'community_pulse','title':'玩家热议银灰'}
+        # Even without CN official news, CN activity leads and global news is placed last after community.
+        ep=series_episode('arknights',[global_news,cal,talk,cn_act])
+        p.apply_story_order(ep);prepare_overview(ep,True);p.validate_content(ep)
+        self.assertEqual(ep['lead_event_id'],'cn_act')
+        self.assertEqual(ep['story_order']['event_ids'],['cn_act','cal','talk','en_news'])
+        self.assertEqual(ep['scenes'][-1]['navigation_group'],'global_games')
+        mods=p.modules(ep,[dict(start=i*10) for i in range(len(ep['scenes']))],50)
+        self.assertEqual(mods[-1][1],'国际服动态')
+        # Reject global as explicit lead or in title_groups when CN stories exist.
+        with self.assertRaisesRegex(ValueError,'LEAD_REGION_GLOBAL'):
+            p.apply_story_order(series_episode('arknights',[dict(global_news),dict(cn_act)],lead_event_id='en_news'))
+        with self.assertRaisesRegex(ValueError,'TITLE_GLOBAL_GAME'):
+            title_for(ep,dict(title_groups=[dict(kind='games',event_ids=['cn_act','en_news'])]))
+        self.assertEqual(title_for(ep,dict(title_groups=[dict(kind='games',event_ids=['cn_act'])])),'国服雪山复刻白拿六星｜明日方舟情报 11.7')
+        # Graceful fallback when an episode has ONLY global content and zero CN stories.
+        only_global=series_episode('arknights',[dict(global_news)])
+        p.apply_story_order(only_global);prepare_overview(only_global,True)
+        self.assertEqual(only_global['lead_event_id'],'en_news')
+        self.assertEqual(title_for(only_global,dict(title_groups=[dict(kind='games',event_ids=['en_news'])])),'国际服足球活动上线｜明日方舟情报 11.7')
+
 
 if __name__=='__main__':unittest.main()

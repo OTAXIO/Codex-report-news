@@ -354,13 +354,18 @@
     ]
   },
   "game_news": {
+    "decided_20261123": "用户确认（B站中文用户为主）：游戏情报以国服为主，国际服内容尽量不作为标题与封面头条，正片、活动推荐与活动日历均排在国服之后。",
     "games": [
       "arknights",
       "endfield"
     ],
+    "region_priority": [
+      "cn",
+      "global"
+    ],
     "targets": {
       "arknights_cn": 1,
-      "arknights_global": 1,
+      "arknights_global": 0,
       "endfield_update": 1,
       "endfield_event": 1
     },

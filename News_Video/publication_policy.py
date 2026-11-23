@@ -1,7 +1,7 @@
 """Bind public promises to final stories and reviewed cover pixels."""
 import argparse, hashlib, json, re
 from pathlib import Path
-from production_policy import event_id, is_game, validate_lead_contract
+from production_policy import event_id, is_game, is_global_game, validate_lead_contract
 from layout_policy import is_overview
 
 
@@ -62,6 +62,7 @@ def title_for(episode, publication):
     if not isinstance(groups,list) or not groups:raise ValueError('TITLE_CONTENT_REQUIRED: select final events in title_groups')
     from edition_series import spec
     series=spec(episode)
+    cn_title_eligible=[k for k,sc in stories.items() if is_game(sc) and not is_global_game(sc) and not sc.get('brief_items') and sc.get('scene_type')!='activity_calendar']
     parts=[];seen=set();kinds=set()
     for group in groups:
         kind=group.get('kind');ids=group.get('event_ids')
@@ -75,6 +76,8 @@ def title_for(episode, publication):
             if key in seen:raise ValueError('TITLE_EVENT_DUPLICATED: '+key)
             if scene.get('brief_items'):raise ValueError('TITLE_BRIEFS_PAGE: a 快讯 page is not a title story; name a full story')
             if scene.get('scene_type')=='activity_calendar':raise ValueError('TITLE_CALENDAR_PAGE: the 活动日历 page is a reminder list, not a title story')
+            if series and 'games' in series['kinds'] and cn_title_eligible and is_global_game(scene):
+                raise ValueError('TITLE_GLOBAL_GAME: avoid putting global-server (国际服) stories in the title when CN (国服) content is available: '+key)
             seen.add(key);title=scene['title'].strip()
             if not title or re.search(r'[|｜\n\r]',title):raise ValueError('TITLE_STORY_SEPARATOR_INVALID')
             titles.append(title)

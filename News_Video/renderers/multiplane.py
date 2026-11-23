@@ -9,7 +9,7 @@ from renderer_backends import save,load
 
 EXTRA_FONTS={'persona':['impact.ttf']}
 # 2026-11-09 segment badges: rumors are visibly unconfirmed, player views visibly opinions.
-BADGE_COLORS={'rumor':'#F06A00','community':'#12925A','media':'#5B6470','github':'#24292F','activities':'#0A6FB5'}
+BADGE_COLORS={'rumor':'#F06A00','community':'#12925A','media':'#5B6470','github':'#24292F','activities':'#0A6FB5','global_games':'#5B6470'}
 ACTIVITY_COLORS={'online':'#0A6FB5','offline':'#0A8F6A','collab':'#B8327C'}
 FIT_MODES={'game','product','social','brief'}
 
@@ -153,7 +153,7 @@ def build(root,episode,plan):
         if mode in FIT_MODES:classes+=' fit'
         if s.get('activity'):classes+=' activity'
         badge=s.get('badge')
-        badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{ACTIVITY_COLORS[s["activity"]["kind"]] if s.get("activity") else BADGE_COLORS.get(s.get("segment"),"#101218")}">{text(badge)}</b>' if badge else '')
+        badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{ACTIVITY_COLORS[s["activity"]["kind"]] if s.get("activity") else (BADGE_COLORS.get(s.get("navigation_group")) or BADGE_COLORS.get(s.get("segment"),"#101218"))}">{text(badge)}</b>' if badge else '')
         cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"'+(f' style="{frame}"' if frame else '')+f'><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
         chapters.append(dict(id=s['id'],label=s.get('short_title',s['title']),start=start,end=end))
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]

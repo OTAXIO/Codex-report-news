@@ -91,18 +91,20 @@ def describe(scene,entry,check,reference,official_text):
     moment=start if info['phase']=='upcoming' else end
     if not any(token in scene.get('narration','') for token in spoken_dates(moment.astimezone(BEIJING))|spoken_dates(moment.astimezone(dt.datetime.fromisoformat(str(entry['end_at'])).tzinfo))):
         raise ValueError('ACTIVITY_DEADLINE_NOT_SPOKEN: say when "'+entry['name']+'" '+('starts' if info['phase']=='upcoming' else 'ends')+' ('+(info['start_label'] if info['phase']=='upcoming' else info['end_label'])+') in the narration')
-    return dict(name=entry['name'].strip(),kind=kind,kind_label=KINDS[kind],scale=scale,state=check['state'],
+    return dict(name=entry['name'].strip(),region=scene.get('game_region') or 'cn',kind=kind,kind_label=KINDS[kind],scale=scale,state=check['state'],
                 location=str(entry.get('location','')).strip(),partner=str(entry.get('partner','')).strip(),
                 start_at=check['start_at'],end_at=check['end_at'],item_id=entry.get('item_id'),**info)
 
-def sort_key(activity):return (SCALES[activity['scale']],STATE_ORDER[activity['state']],activity['end_at'])
+def _region_rank(region):return 0 if str(region or 'cn').strip().casefold()=='cn' else 1
+
+def sort_key(activity):return (_region_rank(activity.get('region','cn')),SCALES[activity['scale']],STATE_ORDER[activity['state']],activity['end_at'])
 
 def arrange(episode):
-    """Inside the slots they occupy: single activity pages in reporting order, then the calendar fill
-    pages (most pressing first), then the 活动日历 page(s) in page order."""
+    """Inside the slots they occupy: single activity pages in reporting order (CN first), then the calendar fill
+    pages (CN first, most pressing first), then the 活动日历 page(s) in page order."""
     def key(s):
-        if s.get('scene_type')=='activity_calendar':return (2,int(s.get('calendar_page') or s.get('page_number') or 1),0,'')
-        if s.get('calendar_key'):return (1,s.get('calendar_rank',0),0,'')
+        if s.get('scene_type')=='activity_calendar':return (2,int(s.get('calendar_page') or s.get('page_number') or 1),0,0,'')
+        if s.get('calendar_key'):return (1,_region_rank(s.get('game_region','cn')),s.get('calendar_rank',0),0,'')
         return (0,)+sort_key(s['activity'])
     slots=[i for i,s in enumerate(episode['scenes']) if s.get('activity') or s.get('scene_type')=='activity_calendar']
     ordered=sorted((episode['scenes'][i] for i in slots),key=key)
@@ -127,7 +129,7 @@ def validate_pages(episode,max_pages,max_calendar_pages=3):
     body=[s for s in pages if (not episode.get('lead_event_id') or s.get('event_key')!=episode['lead_event_id']) and not s.get('calendar_key')]
     wanted=sorted(body,key=lambda s:sort_key(s['activity']))
     if [s['id'] for s in body]!=[s['id'] for s in wanted]:
-        raise ValueError('ACTIVITY_ORDER: main activities first, mini web/community activities last; within each, ending soon -> ongoing -> upcoming. Expected order: '+' / '.join(s['activity']['name'] for s in wanted))
+        raise ValueError('ACTIVITY_ORDER: CN activities before global; within each, main activities first, mini web/community activities last, ending soon -> ongoing -> upcoming. Expected order: '+' / '.join(s['activity']['name'] for s in wanted))
 
 # ---- reading official wording ----
 MONTHS={m:i+1 for i,m in enumerate(['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'])}
@@ -515,9 +517,8 @@ def reminders(root,game,reference=None,calendar=None):
         rows.append(dict(key=key,name=entry['name'],region=entry.get('region','cn'),category=entry.get('category','event'),kind=entry.get('kind','online'),
                          scale=entry.get('scale','main'),state=state,start_at=entry['start_at'],end_at=end.isoformat() if end else None,end_basis=basis,
                          phases_due=due,item_id=entry.get('item_id'),source_url=entry.get('source_url'),**info))
-    # What must be said aloud (ending in 3 days, opening in 3 days, a part opening today/tomorrow) leads,
-    # so it is always on the page; then the soonest deadline.
-    rows.sort(key=lambda r:(not must_mention(r),r['end_at'] or '9999',STATE_ORDER[r['state']],SCALES[r['scale']]))
+    # 2026-11-23: CN activities always precede global activities; within each region, what must be said aloud leads, then soonest deadline.
+    rows.sort(key=lambda r:(_region_rank(r.get('region','cn')),not must_mention(r),r['end_at'] or '9999',STATE_ORDER[r['state']],SCALES[r['scale']]))
     return rows
 
 def running(root,game,reference=None,ahead_days=7):
@@ -582,7 +583,9 @@ def calendar_pages(rows,rows_per_page=8,max_pages=3,reference=None):
     pages=[]
     for idx,chunk in enumerate(sliced):
         urgent=sum(1 for r in chunk if must_mention(r))
-        hint=(f'活动日历（{cn_page[idx]}）：' if total>1 else '活动日历：')+(f'{urgent}项近期变动' if urgent else '进行中与版本活动')
+        all_global=all(_region_rank(r.get('region','cn'))==1 for r in chunk)
+        suffix='国际服活动汇总' if all_global else (f'{urgent}项近期变动' if urgent else '进行中与版本活动')
+        hint=(f'活动日历（{cn_page[idx]}）：' if total>1 else '活动日历：')+suffix
         pages.append(dict(page=idx+1,total_pages=total,title_hint=hint,keys=[r['key'] for r in chunk],
                           rows=calendar_rows(chunk,len(chunk),reference)))
     return pages
@@ -733,7 +736,7 @@ def fill_plan(episode,root,reference,series=None,calendar=None):
     def rank_featured(r):
         entry=cal_entries.get(r['key'],{})
         repeated_minor=int(r['scale']=='minor' and not must_mention(r) and bool(entry.get('reported')))
-        return (repeated_minor,not must_mention(r),SCALES[r['scale']],STATE_ORDER[r['state']],r['end_at'] or '9999')
+        return (_region_rank(r.get('region','cn')),repeated_minor,not must_mention(r),SCALES[r['scale']],STATE_ORDER[r['state']],r['end_at'] or '9999')
     rows.sort(key=rank_featured)
     need=max(0,min_featured-len(explicit_activities))
     recommended_count=max(need,min(max_fill,len(rows))) if len(news)==0 else max(need,min(1,len(rows)))

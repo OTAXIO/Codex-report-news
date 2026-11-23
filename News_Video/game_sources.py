@@ -73,13 +73,13 @@ def article(root,item_id,data,page):
     return data
 
 def coverage(rows):
-    targets={'arknights_cn':1,'arknights_global':1,'endfield_update':1,'endfield_event':1};buckets={k:[] for k in targets};seen=set()
-    for row in sorted(rows,key=lambda x:({'update':0,'event':1}.get(x.get('game_topic'),2),0 if x.get('source_type')!='official_x' else 1)):
+    targets={'arknights_cn':1,'arknights_global':0,'endfield_update':1,'endfield_event':1};buckets={k:[] for k in targets};seen=set()
+    for row in sorted(rows,key=lambda x:(0 if x.get('game_region','cn')=='cn' else 1,{'update':0,'event':1}.get(x.get('game_topic'),2),0 if x.get('source_type')!='official_x' else 1)):
         key=row.get('event_key') or row.get('url')
         if key in seen or row.get('kind')!='games':continue
         seen.add(key)
         slot='arknights_'+('cn' if row.get('game_region')=='cn' else 'global') if row.get('game')=='arknights' else 'endfield_'+row.get('game_topic','other')
         if slot in buckets:buckets[slot].append(row['id'])
     return dict(targets=targets,candidate_ids=buckets,advisory_only=True,maximum_items=None,enforce_minimum=False,
-                selection_policy='Review all independent fresh events, not one per bucket; prefer updates then meaningful activities. No filler.',
-                counts={k:len(v) for k,v in buckets.items()},shortfall={k:max(0,1-len(v)) for k,v in buckets.items()})
+                selection_policy='CN-first for Bilibili audience; review all independent fresh CN events first, keep global secondary and placed near the end.',
+                counts={k:len(v) for k,v in buckets.items()},shortfall={k:max(0,targets[k]-len(v)) for k,v in buckets.items()})

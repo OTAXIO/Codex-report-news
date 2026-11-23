@@ -470,7 +470,7 @@ def candidate_order(item):
     # Discovery order only; leader_editorial applies verified reset exceptions
     # and the final company-before-ordinary-leaders scene order at import.
     ai=item['kind']=='ai'
-    if item['kind']=='games':return (-1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),0,-dt.datetime.fromisoformat(item['published']).timestamp())
+    if item['kind']=='games':return (-1,0 if item.get('game_region','cn')=='cn' else 1,{'update':0,'event':1}.get(item.get('game_topic'),2),item.get('source_priority',100),-dt.datetime.fromisoformat(item['published']).timestamp())
     prerelease=bool(re.search(r'/(?:releases/tag)/[^/]*(?:alpha|beta|nightly|preview)',item.get('url',''),re.I))
     repost=bool(re.match(r'^(?:RT\s+@|转发)',item.get('title',''),re.I))
     link_only=bool(re.fullmatch(r'https?://\S+',item.get('title','').strip(),re.I))
@@ -731,6 +731,7 @@ def assign_segments(episode,catalog):
             scene['segment']=segment_for(dict(row),scene,catalog)
             badge={'rumor':'传闻·未经官方证实','media':'媒体报道','github':'GitHub 今日热门','community':'玩家热议','activities':'进行中活动','briefs':'快讯'}.get(scene['segment'])
             if scene.get('activity'):badge=scene['activity']['kind_label']
+            elif scene.get('game') and str(scene.get('game_region') or 'cn').strip().casefold()=='global' and not badge:badge='国际服动态'
             if badge:scene['badge']=badge
             if scene['segment']=='github':
                 from github_trending import bind_media

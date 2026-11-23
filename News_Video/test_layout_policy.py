@@ -46,3 +46,18 @@ class LayoutChecks(unittest.TestCase):
         self.assertEqual(guide['narration'],hook)
         self.assertEqual([f['scene_id'] for f in guide['facts']],['lead','act1','cal1','talk'])
         self.assertEqual([f['category'] for f in guide['facts']],['重磅头条','重点活动','全活动DDL','玩家热议'])
+    def test_overview_prioritizes_cn_cards_and_labels_global(self):
+        cn=[
+            dict(id='c1',game='arknights',game_region='cn',section='游戏资讯',segment='official',title='国服新版本',narration='国服新版本上线。'),
+            dict(id='c2',game='arknights',game_region='cn',section='游戏资讯',segment='official',title='国服新干员',narration='国服公开新干员。'),
+            dict(id='c3',game='arknights',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity',title='国服活动',narration='国服活动进行中。'),
+            dict(id='c4',game='arknights',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity_calendar',title='活动日历',narration='活动日历汇总。'),
+        ]
+        en=dict(id='g1',game='arknights',game_region='global',section='游戏资讯',segment='official',title='国际服活动',narration='国际服推出活动。')
+        ep=dict(edition_slot='night',edition_series='arknights',hook='国服新版本与新干员今天上线！',scenes=cn+[en])
+        prepare_overview(ep,True)
+        self.assertEqual([f['scene_id'] for f in ep['scenes'][0]['facts']],['c1','c2','c3','c4'])
+        ep2=dict(edition_slot='night',edition_series='arknights',hook='国服新版本今天上线！',scenes=cn[:2]+[en])
+        prepare_overview(ep2,True)
+        self.assertEqual([f['scene_id'] for f in ep2['scenes'][0]['facts']],['c1','c2','g1'])
+        self.assertEqual(ep2['scenes'][0]['facts'][2]['category'],'国际服动态')

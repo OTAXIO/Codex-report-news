@@ -282,6 +282,27 @@ class CalendarTests(unittest.TestCase):
             self.assertEqual([(r['name'],r['label']) for r in a.running(tmp,'endfield',NOW)],[('网页投稿','还剩2天'),('签到','还剩10天')])
             self.assertEqual([r['name'] for r in a.running(tmp,'endfield',at(15))],['签到'])
             self.assertEqual(a.running(tmp,'arknights',NOW),[])
+    def test_cn_activities_precede_global_in_reminders_and_fill_plan(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'config.json').write_text(json.dumps(dict(activity_calendar=dict(
+                regions=dict(arknights=['cn','global']),max_sync_age_hours=12,rows_per_page=2,max_pages=3,
+                upcoming_days=3,min_body_pages=0,min_featured_activities=1,max_fill_pages=2))),encoding='utf-8')
+            cal=dict(version=1,synced_at=dict(arknights=at(16,10).isoformat()),versions={},activities={
+                'arknights|global|urgenten':dict(name='EN Urgent Event',game='arknights',region='global',category='event',kind='online',scale='main',
+                    start_at='2026-11-10T04:00:00+08:00',end_at='2026-11-17T04:00:00+08:00',end_rule='fixed',phases=[],item_id='en1',quote='q',source_url='https://arknights.global/1',reported=[]),
+                'arknights|cn|cnmain1':dict(name='国服主活动一',game='arknights',region='cn',category='event',kind='online',scale='main',
+                    start_at='2026-11-10T04:00:00+08:00',end_at='2026-11-28T04:00:00+08:00',end_rule='fixed',phases=[],item_id='cn1',quote='q',source_url='https://ak.hypergryph.com/1',reported=[]),
+                'arknights|cn|cnmain2':dict(name='国服主活动二',game='arknights',region='cn',category='event',kind='online',scale='main',
+                    start_at='2026-11-10T04:00:00+08:00',end_at='2026-11-29T04:00:00+08:00',end_rule='fixed',phases=[],item_id='cn2',quote='q',source_url='https://ak.hypergryph.com/2',reported=[]),
+            })
+            a.save_calendar(root,cal)
+            rows=a.reminders(root,'arknights',at(16,11),cal)
+            self.assertEqual([r['region'] for r in rows],['cn','cn','global'])
+            plan=a.fill_plan(dict(edition_series='arknights',scenes=[]),root,at(16,11),'arknights',cal)
+            self.assertEqual(plan['keys'],['arknights|cn|cnmain1','arknights|cn|cnmain2'])
+            pages=a.calendar_pages(rows,rows_per_page=2,max_pages=3,reference=at(16,11))
+            self.assertEqual(len(pages),2)
+            self.assertIn('国际服活动汇总',pages[1]['title_hint'])
 
 class PictureChoiceTests(unittest.TestCase):
     GATE=dict(min_short_side=240,min_long_side=480,max_flat=.88,min_entropy=3.0)
