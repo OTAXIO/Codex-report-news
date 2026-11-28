@@ -6,7 +6,9 @@ const modules=document.getElementById('modules');
 const chapters=document.getElementById('chapters');
 const markers=document.getElementById('markers');
 const wipe=document.getElementById('wipe');
-const persona=story.template==='persona';
+// Cornerstone shares the persona kicker tags and cut wipe (unslanted), with its own layout pass.
+const cornerstone=story.template==='cornerstone';
+const persona=story.template==='persona'||cornerstone;
 // Persona kicker: the category and its scope ("游戏资讯 / 明日方舟…") become two separate slanted tags.
 if(persona)document.querySelectorAll('.kicker span').forEach(n=>{
   const [head,...rest]=n.textContent.split(' / ');
@@ -91,7 +93,7 @@ function render(t){
     // Persona snaps its larger entry slide to whole pixels; fractional offsets rasterized differently across runs.
     n.style.transform='translateX('+(persona?Math.round(shift):shift)+'px)';
     if(active)applyFocus(n,story.scenes[i],time);});
-  if(persona){const x=wipeAt(time);wipe.style.visibility=x===null?'hidden':'visible';wipe.style.transform='translateX('+(x===null?-3100:x)+'px) skewX(-18deg)';}
+  if(persona){const x=wipeAt(time);wipe.style.visibility=x===null?'hidden':'visible';wipe.style.transform='translateX('+(x===null?-3100:x)+'px)'+(cornerstone?'':' skewX(-18deg)');}
   const cue=story.captions.find(c=>time>=c.start&&time<c.end);caption.textContent=cue?cue.text:'';
   document.getElementById('now-label').textContent=current>=0?story.scenes[current].section+' / '+story.scenes[current].title:'';
   document.getElementById('clock').textContent=clock(time)+' / '+clock(story.duration);
@@ -101,6 +103,81 @@ function render(t){
 }
 // Fact type grows to use the page: the largest step that still clears the source line, then spare
 // height becomes breathing room. Measured once after fonts and images, in layout pixels.
+// Cornerstone (2026-11-26): label/value facts, condensed numerals, title breaks, hero sizing and a column fit.
+function titleBreaks(){
+  // Two-line titles break after punctuation near the middle, else at a Chinese/Latin boundary,
+  // else the browser balances the lines; a break that adds a line is undone.
+  document.querySelectorAll('.scene>h1').forEach(h=>{
+    const lh=parseFloat(getComputedStyle(h).lineHeight),lines=()=>Math.round(h.offsetHeight/lh);
+    if(lines()<2)return;const before=lines();
+    const ink=h.querySelector('.title-ink'),full=ink.textContent,n=full.length,mid=n/2,ok=i=>i>=n*.3&&i<=n*.7;
+    const near=list=>list.filter(ok).sort((x,y)=>Math.abs(x-mid)-Math.abs(y-mid))[0];
+    const punct=[];for(let i=1;i<n-1;i++)if('，：｜、；'.includes(full[i]))punct.push(i+1);
+    const bounds=[];let pos=0;ink.childNodes.forEach(c=>{const len=c.textContent.length;if(c.nodeType===1&&c.classList.contains('keep')){bounds.push(pos,pos+len);}pos+=len;});
+    const at=near(punct)??near(bounds.filter(i=>i>0&&i<n&&!/\s/.test(full[i-1]||'')));
+    if(at===undefined){h.style.textWrap='balance';return;}
+    const walker=document.createTreeWalker(ink,NodeFilter.SHOW_TEXT);let seen=0,node;
+    while((node=walker.nextNode())){
+      if(seen+node.length>=at){const br=document.createElement('br');
+        if(at-seen===node.length)node.parentNode.closest('.keep')?node.parentNode.closest('.keep').after(br):node.after(br);
+        else if(at===seen)(node.parentNode.closest('.keep')||node).before(br);
+        else{const rest=node.splitText(at-seen);rest.before(br);}
+        if(lines()>before){br.remove();h.style.textWrap='balance';}return;}
+      seen+=node.length;
+    }
+  });
+}
+function dossier(){
+  // Long English runs (quoted posts) may wrap; short model names stay whole.
+  document.querySelectorAll('.facts .keep').forEach(k=>{if(k.textContent.length>22&&/\s/.test(k.textContent))k.classList.add('long');});
+  document.querySelectorAll('.scene .facts').forEach(f=>{
+    const heads=Array.from(f.querySelectorAll('h2'),h=>h.textContent.trim());
+    if(heads.length&&heads.every(h=>h.length<=6))f.classList.add('kv');
+    f.querySelectorAll('p').forEach(p=>{
+      const walker=document.createTreeWalker(p,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+      // A date never breaks inside ("12月23日"); digits get the condensed numeral face.
+      const numify=text=>{const frag=document.createDocumentFragment();text.split(/(\d[\d.,:×%]*)/).forEach((t,i)=>{if(!t)return;if(i%2){const s=document.createElement('span');s.className='num';s.textContent=t;frag.append(s);}else frag.append(t);});return frag;};
+      const RX=/(\d{2,4}年\d{1,2}月\d{1,2}日|\d{1,2}月\d{1,2}日|\d[\d.,:×%]*)/;
+      nodes.forEach(n=>{const parts=n.textContent.split(RX);if(parts.length<2)return;
+        const frag=document.createDocumentFragment();parts.forEach((t,i)=>{if(!t)return;if(i%2&&/[月日]/.test(t)){const s=document.createElement('span');s.className='nb';s.append(numify(t));frag.append(s);}else frag.append(i%2?numify(t):t);});n.replaceWith(frag);});
+    });
+  });
+}
+// The picture takes its own shape inside the 860x540 hero box (upscale at most 2.2x); very tall
+// posters keep a 420px-wide top crop. Logos grow up to 3x their file size inside the seal disc.
+function heroFit(){
+  document.querySelectorAll('.scene>.photo').forEach(ph=>{
+    const img=ph.querySelector('img');if(!img||!img.naturalWidth)return;
+    const w=img.naturalWidth,h=img.naturalHeight,pad=10;let fw,fh;
+    if(h>w*2.2){fw=Math.min(420,w*2.2);fh=540;ph.querySelectorAll('img').forEach(i=>{i.style.objectFit='cover';i.style.objectPosition='top';});}
+    else{const s=Math.min(860/w,540/h,2.2);fw=w*s;fh=h*s;}
+    ph.style.setProperty('--hw',Math.round(fw+2*pad)+'px');ph.style.setProperty('--hh',Math.round(fh+2*pad)+'px');
+  });
+  document.querySelectorAll('.scene>.brand').forEach(b=>{const img=b.querySelector('img');if(!img)return;const n=Math.max(img.naturalWidth,img.naturalHeight)||330;b.style.setProperty('--lw',Math.round(Math.min(190,n*3))+'px');});
+}
+// Largest type that keeps the column above the reading bottom; then spare height becomes card
+// padding. The official excerpt gives way first, then overview summaries drop to one line.
+function fitColumn(){
+  const floor=story.progress.reading_area_bottom-5;
+  document.querySelectorAll('.scene').forEach(scene=>{
+    const list=scene.querySelector(':scope>.facts,:scope>.overview-grid');if(!list||!list.children.length)return;
+    const flow=()=>Array.from(scene.children).filter(n=>getComputedStyle(n).position!=='absolute');
+    const fits=()=>Math.max(...flow().map(n=>n.offsetTop+n.offsetHeight))<=floor&&list.scrollWidth<=list.clientWidth+1&&Array.from(list.querySelectorAll('p')).every(p=>p.scrollWidth<=p.clientWidth+1&&p.scrollHeight<=p.clientHeight+1);
+    const steps=[1.5,1.42,1.34,1.26,1.18,1.1,1.03,.96,.9,.85];
+    scene.style.setProperty('--air','0px');
+    const pick=()=>steps.find(s=>{scene.style.setProperty('--fs',s);return fits();});
+    const isOv=list.classList.contains('overview-grid');
+    let s=isOv?steps.filter(x=>x>=1).find(x=>{scene.style.setProperty('--fs',x);return fits();}):pick();
+    if(s===undefined&&isOv){scene.style.setProperty('--clamp',1);s=pick();}
+    if(s===undefined){const ev=scene.querySelector(':scope>.evidence');if(ev){ev.remove();s=pick();}}
+    scene.style.setProperty('--fs',s??steps[steps.length-1]);
+    const tail=scene.querySelector(':scope>.evidence')||scene.querySelector(':scope>.source');
+    const spare=(tail?tail.offsetTop-20:floor)-(list.offsetTop+list.offsetHeight);
+    let air=Math.max(0,Math.min(22,Math.floor(spare/(2*list.children.length))));
+    for(;air>0;air--){scene.style.setProperty('--air',air+'px');if(fits())break;}
+    if(!air)scene.style.setProperty('--air','0px');
+  });
+}
 function fitFacts(){
   document.querySelectorAll('.scene.fit').forEach(scene=>{
     const facts=scene.querySelector('.facts'),source=scene.querySelector('.source');
@@ -115,6 +192,6 @@ function fitFacts(){
   });
 }
 Shot.define({duration:story.duration,fps:30,cuts:story.scenes.slice(1).map(s=>s.start),
-  fonts:[['700 64px NewsSans','新闻导览国内国际'],['400 29px NewsSans','来源北京时间'],...(persona?[['400 168px PersonaDisplay','0123456789']]:[])],
-  setup:()=>Promise.all(Array.from(document.images,img=>img.decode().catch(()=>{}))).then(fitFacts),
+  fonts:[['700 64px NewsSans','新闻导览国内国际'],['400 29px NewsSans','来源北京时间'],...(persona?[['400 168px PersonaDisplay','0123456789']]:[]),...(cornerstone?[['900 64px TitleSerif','新闻导览国内国际活动'],['300 176px HudNum','0123456789NO.']]:[])],
+  setup:()=>Promise.all(Array.from(document.images,img=>img.decode().catch(()=>{}))).then(()=>{if(cornerstone){dossier();titleBreaks();heroFit();fitColumn();}else fitFacts();}),
   render,post:{motionBlur:1,grain:0},meta:{template:story.template,chapters:story.progress.chapters}});

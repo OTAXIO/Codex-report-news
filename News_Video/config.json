@@ -315,7 +315,7 @@
   },
   "rendering": {
     "default_backend": "multiplane",
-    "default_template": "persona",
+    "default_template": "cornerstone",
     "node_executable": "C:/Users/35303/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe",
     "multiplane": {
       "ffmpeg": ".tools/ffmpeg/ffmpeg.exe",

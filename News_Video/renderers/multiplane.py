@@ -1,5 +1,5 @@
 """Build local, deterministic news shots with the existing episode data."""
-import html,json,re,shutil
+import datetime as dt,html,json,re,shutil
 from pathlib import Path
 from caption_layout import sentence_captions
 from layout_policy import is_overview,folio_numbers
@@ -7,7 +7,12 @@ from progress_overlay import group,navigation_layout
 from audio_mix import ensure_soundtrack
 from renderer_backends import save,load
 
-EXTRA_FONTS={'persona':['impact.ttf']}
+EXTRA_FONTS={'persona':['impact.ttf'],'cornerstone':['impact.ttf','NotoSerifSC-VF.ttf','bahnschrift.ttf']}
+# The progress/chapter highlight colour; verify_progress_video derives its pixel mask from it.
+TEMPLATE_BLUE={'cornerstone':'#2335E8'}
+SERIES_NAMES={'arknights':'明日方舟','endfield':'明日方舟：终末地'}
+SIDE_CODES={'ai':'AI DAILY','endfield':'ENDFIELD INTEL','arknights':'ARKNIGHTS INTEL'}
+OFFICIAL_SOURCES={'skland_capture','official_game_page','official_rss','official_site','official_x'}
 # 2026-11-09 segment badges: rumors are visibly unconfirmed, player views visibly opinions.
 BADGE_COLORS={'rumor':'#F06A00','community':'#12925A','media':'#5B6470','github':'#24292F','activities':'#0A6FB5','global_games':'#5B6470'}
 ACTIVITY_COLORS={'online':'#0A6FB5','offline':'#0A8F6A','collab':'#B8327C'}
@@ -32,6 +37,40 @@ def countdown(activity):
             f'<div class="when"><h3>{text(activity["start_label"] if upcoming else activity["end_label"])}</h3><p>{text(activity["window_label"])}</p>'+(f'<p class="place">{text(place)}</p>' if place else '')+'</div></div>')
 
 def text(value):return html.escape(str(value),quote=True)
+
+def beijing(iso):
+    t=dt.datetime.fromisoformat(iso.replace('Z','+00:00')).astimezone(dt.timezone(dt.timedelta(hours=8)));return t.strftime('%m.%d %H:%M')
+
+def brand_label(s):
+    """Return (is_series_art, caption) for a logo window. Series art is captioned by the series'
+    proper name only, never with an "icon" suffix or a lowercase company slug."""
+    media=s.get('resolved_media',{});subject=media.get('subject','')
+    if media.get('kind')=='game_identity':
+        return True,SERIES_NAMES.get(s.get('game')) or SERIES_NAMES.get(subject) or s.get('company') or subject
+    return False,s.get('company') or SERIES_NAMES.get(s.get('game'),subject)
+
+def cornerstone_extras(s):
+    """Cornerstone reading-column extras: fact chips (region, source kind, publish time) and a short
+    excerpt of the original text. Only facts already on the scene are shown; nothing is inferred."""
+    if s.get('scene_type') in ('overview','activity_calendar','briefs'):return ''
+    chips=[]
+    if s.get('game_region'):chips.append(('国服' if s['game_region']=='cn' else '国际服',False))
+    if s.get('activity'):chips.append((s['activity'].get('kind_label','活动'),False))
+    elif s.get('source_type') in OFFICIAL_SOURCES:chips.append(('官方公告',False))
+    elif s.get('scene_type')=='community_pulse':chips.append(('B站玩家评论',False))
+    if not s.get('game_region') and s.get('publisher'):chips.append((s['publisher'],False))
+    if s.get('published'):chips.append((beijing(s['published'])+' 发布',False))
+    if s.get('activity',{}).get('end_at'):chips.append(('截止 '+beijing(s['activity']['end_at']),True))
+    leader=s.get('speaker_identity') or s.get('source_type')=='leader_x'
+    meta='' if s.get('activity') or leader or not chips else '<div class="meta">'+''.join(f'<span class="{"hot" if hot else ""}">{text(c)}</span>' for c,hot in chips)+'</div>'
+    ev=s.get('evidence') or ''
+    if not ev or s.get('scene_type')=='community_pulse' or leader:return meta
+    out=''
+    for x in [x.strip(' ·') for x in re.split(r'…|\.\.\.',ev) if x.strip()]:
+        if len(out)>=70:break
+        out+=('……' if out else '')+x
+    label='官方原文' if s.get('source_type') in OFFICIAL_SOURCES else '原文摘录'
+    return meta+f'<blockquote class="evidence"><b>{label}</b><p>{text(out)}</p></blockquote>'
 def phrase(value):
     # Keep English/model tokens intact; Chinese still wraps naturally.
     return ''.join('<span class="keep">'+text(p)+'</span>' if re.match(r'[A-Za-z0-9]',p) else text(p)
@@ -73,6 +112,10 @@ def build(root,episode,plan):
         shutil.copy2(Path('C:/Windows/Fonts')/name,fonts/name)
     for name in ['news-shot.css','news-shot.js']:
         shutil.copy2(Path(__file__).parent/name,out/name)
+    cornerstone=plan['template']=='cornerstone'
+    if cornerstone:
+        from renderers.cornerstone_art import write_assets
+        shutil.copy2(Path(__file__).parent/'cornerstone.css',out/'cornerstone.css');write_assets(assets)
     soundtrack=ensure_soundtrack(root,episode,timing['duration'])
     # Audio is attached by the renderer CLI, never advanced by browser playback.
     offsets=[];scenes=[];cards=[];chapters=[];folios=folio_numbers(ep['scenes'])
@@ -94,9 +137,10 @@ def build(root,episode,plan):
             source=(root/value).resolve()
             if not source.is_file():raise ValueError('Missing local verified '+field+': '+value)
             name=f'{index}-'+source.name;shutil.copy2(source,assets/name)
-            label=s.get('company') or {'arknights':'明日方舟','endfield':'明日方舟：终末地'}.get(s.get('game'),s.get('resolved_media',{}).get('subject',''))
-            if s.get('resolved_media',{}).get('kind')=='game_identity':label+=' · 游戏图标'
-            if field=='logo':logo=f'<aside class="brand"><div class="brand-window"><img src="assets/{text(name)}" alt="{text(label)}"></div><b>{text(label)}</b></aside>'
+            # 2026-11-26 (user): series art carries the series' proper name, never a "· 游戏图标" caption
+            # or a lowercase company slug.
+            series,label=brand_label(s)
+            if field=='logo':logo=f'<aside class="brand{" series-mark" if series else ""}"><div class="brand-window"><img src="assets/{text(name)}" alt="{text(label)}"></div><b>{text(label)}</b></aside>'
             else:
                 alt_path=secondary_photo(root,s,s.get('resolved_media'))
                 if alt_path:
@@ -146,7 +190,8 @@ def build(root,episode,plan):
             pg_tag=f'（第 {int(s["calendar_page"])}/{int(s["calendar_total_pages"])} 页）' if int(s.get('calendar_total_pages') or 1)>1 else ''
             source=f'<div class="source"><b>活动日历{pg_tag}</b>　时间均取自官方活动公告（{len(s.get("calendar_sources") or [1])} 份），服务器时间以公告为准'+(f'；另有 {int(s["calendar_more"])} 项进行中未列出' if s.get('calendar_more') else '')+'<span>原文链接见简介</span></div>'
         if s.get('brief_publishers'):source=f'<div class="source"><b>快讯来源</b>　{text(" · ".join(s["brief_publishers"]))}<span>每条出处见括号，原文链接见简介</span></div>'
-        classes=f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
+        extras=cornerstone_extras(s) if cornerstone else ''
+        classes=('has-meta ' if '<div class="meta">' in extras else '')+f'scene {mode}'+(' has-media' if logo or picture or diagram else '')+(' has-diagram' if diagram else '')+(' portrait-media' if s.get('resolved_media',{}).get('layout')=='portrait' else '')
         frame=''
         if picture and not diagram and mode in FIT_MODES and s.get('resolved_media'):
             hug,frame=photo_frame(s['resolved_media'],mode,extra);classes+=hug
@@ -154,19 +199,19 @@ def build(root,episode,plan):
         if s.get('activity'):classes+=' activity'
         badge=s.get('badge')
         badge_html=(f'<b class="segment-badge" style="display:inline-block;margin-left:22px;padding:4px 16px;font-size:24px;letter-spacing:1px;color:#fff;transform:skewX(-14deg);background:{ACTIVITY_COLORS[s["activity"]["kind"]] if s.get("activity") else (BADGE_COLORS.get(s.get("navigation_group")) or BADGE_COLORS.get(s.get("segment"),"#101218"))}">{text(badge)}</b>' if badge else '')
-        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"'+(f' style="{frame}"' if frame else '')+f'><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{source}</section>')
+        cards.append(f'<section class="{classes}" id="scene-{text(s["id"])}"'+(f' style="{frame}"' if frame else '')+f'><div class="scene-folio">{folios[index]:02}</div><div class="kicker"><span>{text(scene["section"])}</span>{badge_html}<i></i></div><h1><span class="title-ink">{phrase(s["title"])}</span></h1>{body}{extras}{source}</section>')
         chapters.append(dict(id=s['id'],label=s.get('short_title',s['title']),start=start,end=end))
     captions=load(episode/'captions.json') if (episode/'captions.json').exists() else [dict(id=f'caption-{i}-{j}',**cue) for i,p in enumerate(timing['sentences']) for j,cue in enumerate(sentence_captions(p))]
     for c in captions:
         if '\n' in c['text']:raise ValueError('Only single-line captions are supported')
     from production_policy import modules as module_ranges
     modules=[dict(id=key,label=label,start=start,end=end) for key,label,start,end in module_ranges(ep,offsets,timing['duration'])]
-    spec=dict(duration=timing['duration'],chapters=chapters,modules=modules,blue='#01A1FE',full_bleed_edges=True,right_block_width=64,
+    spec=dict(duration=timing['duration'],chapters=chapters,modules=modules,blue=TEMPLATE_BLUE.get(plan['template'],'#01A1FE'),full_bleed_edges=True,right_block_width=64,
               **navigation_layout('multiplane'),
               chapter_bounds=[dict(x=96+1728*c['start']/timing['duration'],width=1728*(c['end']-c['start'])/timing['duration']) for c in chapters])
     model=dict(duration=timing['duration'],scenes=scenes,captions=captions,progress=spec,template=plan['template'],require_page_image=bool(ep.get('page_image_policy_version')))
     data=json.dumps(model,ensure_ascii=False).replace('</','<\\/')
-    page=f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>新闻视频</title><link rel="stylesheet" href="/multiplane/runtime/shot.css"><link rel="stylesheet" href="news-shot.css"></head><body><div id="stage" class="{plan['template']}" style="--caption-y:{spec['caption']['y']}px;--content-extra-y:{spec['content_extra_y']}px"><div class="edge-band"></div><div class="edge-ticks"></div><div class="publication-label">{text(ep.get('edition_date','').replace('-','.'))}　{text(ep.get('footer_tag','新闻速报'))}</div>{''.join(cards)}<div id="wipe" class="wipe"></div><div id="caption" class="caption"></div><div class="navigation" style="--navigation-offset:{spec['nav_offset_y']}px"><div id="modules"></div><div class="now-label" id="now-label"></div><div id="clock"></div><div id="chapters"></div><div id="track"></div><div id="fill"></div><div id="markers"></div></div></div><script id="story-data" type="application/json">{data}</script><script src="/multiplane/runtime/shot.js"></script><script src="news-shot.js"></script></body></html>'''
+    page=f'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>新闻视频</title><link rel="stylesheet" href="/multiplane/runtime/shot.css"><link rel="stylesheet" href="news-shot.css">{'<link rel="stylesheet" href="cornerstone.css">' if cornerstone else ''}</head><body><div id="stage" class="{plan['template']}" style="--caption-y:{spec['caption']['y']}px;--content-extra-y:{spec['content_extra_y']}px"><div class="edge-band"></div><div class="edge-ticks"></div>{f'<div class="cs-side">{text(SIDE_CODES.get(ep.get("edition_series"),"NEWS"))} — {text(ep.get("edition_date","").replace("-","."))}</div>' if cornerstone else ''}<div class="publication-label">{text(ep.get('edition_date','').replace('-','.'))}　{text(ep.get('footer_tag','新闻速报'))}</div>{''.join(cards)}<div id="wipe" class="wipe"></div><div id="caption" class="caption"></div><div class="navigation" style="--navigation-offset:{spec['nav_offset_y']}px"><div id="modules"></div><div class="now-label" id="now-label"></div><div id="clock"></div><div id="chapters"></div><div id="track"></div><div id="fill"></div><div id="markers"></div></div></div><script id="story-data" type="application/json">{data}</script><script src="/multiplane/runtime/shot.js"></script><script src="news-shot.js"></script></body></html>'''
     (out/'index.html').write_text(page,encoding='utf-8')
     save(episode/'scene-timings.json',offsets);save(episode/'captions.json',captions);save(episode/'progress.json',spec)
     save(out/'storyboard.json',model)

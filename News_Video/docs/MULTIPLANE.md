@@ -74,7 +74,7 @@ B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并
 用户确认后续早报、晚报及临时新闻的封面统一恢复原cover_generator.make_hyperframes/Pillow配置，config.cover_generation.backend=hyperframes、style=legacy；正常调用cover_generator.py <id>即可，不再跟随视频后端自动换用Multiplane封面。视频本体仍是Multiplane B（graphic），render-plan保持不变。旧封面的版式、标题层级、logo处理与双比例输出沿用原实现；真实新闻标题、单次大日期、简短类型说明、双封面及投稿规则照旧。此要求覆盖此前“B版生成双封面”的措辞；B仅指视频画面。只作用于之后新制作的封面，不重做或覆盖已发布封面/视频，不重投旧稿。
 
 
-### 2026-10-31 P3蓝白版（multiplane/persona，当前默认）
+### 2026-10-31 P3蓝白版（multiplane/persona，2026-11-28 起改为可选，默认见下文 Cornerstone 节）
 
 新增可选模板`persona`，参考女神异闻录3的斜切与速度线语言，主色仍为#01A1FE与白色（用户提供参考图实测主蓝#01A1FD），辅以墨黑#101218与深蓝#023077细线。顶部为贯穿全宽的#01A1FE斜切页眉（淡深蓝速度线），下沿一黑一深蓝两道平行斜线；标题黑底白字、蓝色投影；分类与编号都是白色斜切标签配墨黑硬投影，编号为主蓝斜体数字；正文区白底淡蓝斜纹，事实卡片浅蓝交替；字幕白底、两端蓝块；底部导航保留B版白底蓝色高亮。换页时蓝色斜向擦屏在切点前后0.25秒内完成，不影响稳定阅读帧。右侧64px满高蓝块与左侧14px黑边保留。
 
@@ -94,3 +94,15 @@ B失败先诊断修复，不静默改A或旧引擎；明确回退需新修订并
 - 正文字号自适应（fit）：news-shot.js在字体和图片就绪后，为每页从1.4/1.32/1.24/1.16/1.08/1/0.93中选出不越过来源行的最大字号倍率（--fs），剩余高度均分为行距（--air）。要点少的页面字更大、更舒展；要点多时与原版一致或略小，不溢出。
 - 活动页（scene.activity）：标题下方为倒计时条——左侧色块显示“距截止还有/N/天”或“今天/明天 HH:MM 截止”（1天内为橙红，未开始为白底），右侧为截止时间、起止区间及地点/联动方；角标按线上/线下/联动分色。其下1–2条要点。
 - audit-shot.mjs新增：倒计时条不得与标题、要点、图片重叠，文字不得溢出，并计入阅读区边界检查。
+
+## 2026-11-28 Cornerstone 正片模板（multiplane/cornerstone，当前默认）
+
+用户看过 v4 样稿后确认：新制作的早报、晚报和临时新闻默认用 `config.rendering.default_template=cornerstone`。persona、graphic、editorial 仍可用 `--template` 显式选择。已有 render-plan 的在制期次沿用原模板，已发布视频不重做。
+
+- **配色与构图**：深海军蓝底，Klein 蓝 `#2335E8` 为主色；右侧 64px 满高色块、进度条和章节/模块高亮都用这个蓝。`verify_progress_video.py` 按 progress.json 的 `blue` 取色判定（旧 `#01A1FE` 保持原判据，其他颜色按每通道 ±48 容差）。
+- **装饰**：取自角色服饰（羽翼、徽章、星芒、垂饰、月相、网格）。装饰图由 `renderers/cornerstone_art.py` 在构建时确定性生成 15 张 `cs-*.svg`，写进 `assets/`；样式在 `renderers/cornerstone.css`，排版逻辑在 `news-shot.js`（titleBreaks/dossier/heroFit/fitColumn）。
+- **小图标版式**：公司 logo 与系列图放进“印章”版式（徽章底座＋丝带名）；系列图的说明只写正式名“明日方舟”或“明日方舟：终末地”，不写“· 游戏图标”或小写英文代号（所有模板生效，见 `multiplane.brand_label`）。活动日历右上角图标不加花环底座。
+- **阅读栏**：只展示场景已有事实，包括地区、来源类别、北京时间发布时间、截止时间标签，以及不超过约 70 字的原文摘录（`multiplane.cornerstone_extras`）。导览、活动日历和快讯页不加；负责人帖与玩家热议不加摘录。左侧竖排标签为系列代号＋日期。
+- **字体**：构建时从 `C:/Windows/Fonts` 复制 NotoSerifSC-VF、bahnschrift、impact，不入 Git。
+- **验收**：2026-11-27 早报与 2026-11-26 终末地晚报两期缓存样稿用生产代码重建，`audit-shot` 分别 60/46 个采样点 0 失败；逐页截图核对了右侧色块、章节高亮和模块高亮的取色判定。
+- **封面**：仍是 persona 封面（`cover_generation.style=persona`）。Cornerstone 封面样稿已出，但还没接入 `cover_generator.py`。

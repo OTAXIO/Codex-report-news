@@ -222,7 +222,7 @@ import 会按来源给每页自动分栏（`segment`）并加角标，再按栏�
 
 ## 6. 封面、渲染、检查
 - 运行 `python -B cover_generator.py <ID>`（默认 P3 蓝白 persona 版，16:9 与 4:3 两张），看图确认文字不压配图框、日期只出现一次。
-- 运行 `python -B render_sample.py <ID> --no-upload`（默认 multiplane/persona 模板）。
+- 运行 `python -B render_sample.py <ID> --no-upload`（默认 multiplane/cornerstone 模板，2026-11-28 起）。
   - 布局审计失败时按报错修版式，不得放宽审计。
   - 渲染已有停滞保护：连续 300 秒无进度会结束整个进程树并自动重渲 1 次，记录在 episodes/<ID>/render-stalls.json。重试仍失败就停下报告。
   - 已完成的渲染会锁定输入；改内容后报 “Completed render inputs/output changed” 时，新建修订期次 `<ID>-v2`，release 会进 revisions/。

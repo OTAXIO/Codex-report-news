@@ -3,7 +3,7 @@ import hashlib,json,os,shutil,subprocess,threading,time
 from pathlib import Path
 
 BACKENDS={'hyperframes','multiplane'}
-TEMPLATES={'editorial','graphic','persona'}
+TEMPLATES={'editorial','graphic','persona','cornerstone'}
 
 class RenderStalled(RuntimeError):
     """Multiplane emitted no new output for too long; its tree was killed."""

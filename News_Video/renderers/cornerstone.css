@@ -1,0 +1,186 @@
+/* Cornerstone v4 (2026-11-26, user: v3 too plain; bring back the richness of the characters' costumes, and give
+   small pictures / logos a layout of their own). Palette and contrast from the film: a deep ink-navy reading
+   column (x 0-800), a Klein field for the picture (x 800-1856), white figures and plaques, gold only on hanging
+   spikes and jewels. Costume ornaments: six wings with eye-feathers behind the picture, an angular crown crest
+   with an eye above it, mantle coins (a trim between column and field, a coin ring around logos), a shard halo,
+   astrolabe linework, the snake-staff / Moebius plaque carrying the page number. Logos sit in a "seal":
+   white disc, coin ring, shard halo, crest, wings and a white ribbon with the name. */
+@font-face{font-family:TitleSerif;src:url('assets/fonts/NotoSerifSC-VF.ttf');font-weight:200 900}
+@font-face{font-family:HudNum;src:url('assets/fonts/bahnschrift.ttf');font-weight:300 700;font-stretch:75% 100%}
+#stage.cornerstone{--ink:#0B1236;--klein:#2335E8;--ice:#9FB2FF;--mute:#A9B4DA;--gold:#E2B24C;color:#fff;background:linear-gradient(180deg,#0E1744 0,#0A1033 866px,#2335E8 866px 869px,#080C26 869px)}
+#stage.cornerstone:before{z-index:3;width:10px;background:#2335E8}
+#stage.cornerstone .edge-band{background:#2335E8;box-shadow:none}
+#stage.cornerstone .edge-ticks{left:0;top:0;width:1920px;height:1080px;clip-path:none;background:url('assets/cs-column.svg') 0 0/1920px 1080px no-repeat}
+#stage.cornerstone .publication-label{left:112px;top:42px;width:auto;border:0;padding:0 0 0 22px;background:none;font-family:HudNum,NewsSans;font-weight:600;font-size:20px;letter-spacing:4px;color:#DCE3FF}
+#stage.cornerstone .publication-label:before{content:'';position:absolute;left:0;top:7px;width:10px;height:10px;background:#E2B24C;transform:rotate(45deg)}
+#stage.cornerstone .cs-side{position:absolute;left:30px;top:480px;width:600px;margin-left:-282px;transform:rotate(-90deg);text-align:center;font-family:HudNum,NewsSans;font-weight:600;font-size:13px;letter-spacing:6px;color:rgba(201,210,242,.42);white-space:nowrap}
+
+/* Scene: the text is a flex column on the navy; field, plaque, picture and folio are absolute. */
+#stage.cornerstone .scene{display:flex;flex-direction:column;padding:112px 1168px 222px 112px}
+#stage.cornerstone .scene:before{content:'';position:absolute;left:800px;top:0;width:1056px;height:866px;background:url('assets/cs-field.svg') 0 0/1056px 866px no-repeat;pointer-events:none}
+#stage.cornerstone .scene:after{content:'';position:absolute;left:1764px;top:0;width:72px;height:866px;z-index:2;background:url('assets/cs-plaque.svg') 0 0/72px 866px no-repeat;pointer-events:none}
+#stage.cornerstone .scene>.kicker,#stage.cornerstone .scene>h1,#stage.cornerstone .scene>.meta,#stage.cornerstone .scene>.identity,#stage.cornerstone .scene>.countdown,#stage.cornerstone .scene>.lead,#stage.cornerstone .scene>.facts,#stage.cornerstone .scene>.overview-grid,#stage.cornerstone .scene>.cal-grid,#stage.cornerstone .scene>.evidence,#stage.cornerstone .scene>.source{position:relative;left:auto;top:auto;right:auto;bottom:auto;width:auto;max-width:none;height:auto;flex:none}
+#stage.cornerstone .scene>.kicker{order:1}
+#stage.cornerstone .scene>h1{order:2;margin-top:24px}
+#stage.cornerstone .scene>.meta{order:3;margin-top:30px}
+#stage.cornerstone .scene>.identity{order:4;margin-top:28px}
+#stage.cornerstone .scene>.countdown{order:5;margin-top:24px}
+#stage.cornerstone .scene>.lead{order:6;margin-top:28px}
+#stage.cornerstone .scene>.facts,#stage.cornerstone .scene>.overview-grid,#stage.cornerstone .scene>.cal-grid{order:7;margin-top:24px}
+#stage.cornerstone .scene>.evidence{order:8;margin-top:auto}
+#stage.cornerstone .scene>.source{order:9;margin-top:14px}
+#stage.cornerstone .scene:not(:has(>.evidence))>.source{margin-top:auto}
+
+#stage.cornerstone .kicker{display:flex;align-items:center;gap:14px;font-size:22px;white-space:nowrap}
+#stage.cornerstone .kicker span{display:flex;align-items:center;min-width:0;background:none;padding:0;transform:none;color:#fff}
+#stage.cornerstone .rn{display:inline-block;padding:4px 14px;background:#fff;color:#0B1236;font-size:21px;letter-spacing:4px;box-shadow:4px 4px 0 #2335E8}
+#stage.cornerstone .kicker em{min-width:0;overflow:hidden;text-overflow:ellipsis;font-style:normal;margin-left:18px;padding:0;background:none;color:#B9C6FF;font-size:20px;font-weight:700;letter-spacing:1px}
+#stage.cornerstone .kicker em:before{content:'';display:inline-block;margin-right:10px;vertical-align:1px;border-left:9px solid #E2B24C;border-top:6px solid transparent;border-bottom:6px solid transparent}
+#stage.cornerstone .segment-badge{transform:none !important;margin-left:0 !important;padding:3px 10px !important;font-size:18px !important;white-space:nowrap}
+#stage.cornerstone .kicker i{flex:1;min-width:30px;height:1px;background:linear-gradient(90deg,rgba(201,210,242,.55),rgba(201,210,242,0))}
+#stage.cornerstone .scene>h1{font-family:TitleSerif,NewsSans,serif;font-weight:900;font-size:56px;line-height:1.2;letter-spacing:1px;color:#fff;transform:none;text-shadow:0 2px 0 rgba(6,10,40,.6)}
+#stage.cornerstone .scene>h1:after{content:'';position:absolute;left:0;bottom:-16px;width:84px;height:4px;background:linear-gradient(90deg,#E2B24C,#FFF1BE 70%,transparent),linear-gradient(90deg,transparent,transparent);box-shadow:96px 0 0 -1px rgba(201,210,242,.35)}
+#stage.cornerstone h1 .title-ink{background:none;padding:0;box-shadow:none;text-shadow:none}
+#stage.cornerstone .facts .keep.long{white-space:normal}
+
+/* Page number lives on the plaque. */
+#stage.cornerstone .scene-folio{left:1764px;right:auto;top:546px;width:72px;height:auto;padding:0;z-index:3;background:none;transform:none;text-align:center;font-family:HudNum,NewsSans;font-weight:600;font-stretch:75%;font-size:58px;line-height:1;letter-spacing:0;color:#0B1236;-webkit-text-stroke:0;text-shadow:none}
+#stage.cornerstone .scene-folio:before{content:'NO.';display:block;position:static;margin-bottom:8px;font-size:14px;letter-spacing:3px;font-stretch:100%;color:#0B1236;background:none;box-shadow:none}
+
+#stage.cornerstone .meta{display:flex;flex-wrap:wrap;gap:8px}
+#stage.cornerstone .meta span{font-size:18px;line-height:1.3;padding:3px 11px;border:1px solid rgba(201,210,242,.4);color:#DCE3FF;white-space:nowrap;background:rgba(255,255,255,.04)}
+#stage.cornerstone .meta span:before{content:'';display:inline-block;width:7px;height:7px;margin-right:8px;vertical-align:2px;background:#7F92FF;transform:rotate(45deg)}
+#stage.cornerstone .meta span.hot{background:#2335E8;border-color:#2335E8;color:#fff}
+#stage.cornerstone .meta span.hot:before{background:#E2B24C}
+#stage.cornerstone .identity{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:9px 16px;font-size:22px;border:0;background:#fff;color:#0B1236;box-shadow:5px 5px 0 #2335E8}
+#stage.cornerstone .identity b{font-size:26px}
+#stage.cornerstone .identity span{color:#2335E8}
+#stage.cornerstone .identity i{font-style:normal;font-size:18px;padding:2px 10px;background:#2335E8;color:#fff}
+
+/* Facts: hairline rows with condensed ice numerals; the spoken row turns Klein with a gold edge. */
+#stage.cornerstone .scene>.facts{display:flex;flex-direction:column;gap:0;margin-bottom:14px}
+#stage.cornerstone .facts article{flex:none;position:relative;display:flex;align-items:flex-start;gap:16px;margin:0;padding:calc(14px + var(--air,0px)) 14px calc(14px + var(--air,0px)) 12px;border:0;border-top:1px solid rgba(201,210,242,.16);clip-path:none;background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,0))}
+#stage.cornerstone .facts article:last-child{border-bottom:1px solid rgba(201,210,242,.16)}
+#stage.cornerstone .facts article:before{content:'';position:absolute;left:0;top:-3px;width:5px;height:5px;background:#7F92FF}
+#stage.cornerstone .facts article>div{flex:1;min-width:0}
+#stage.cornerstone .point-number{flex:0 0 62px;min-width:0;padding:0;margin-top:1px;background:none;border:0;box-shadow:none;transform:none;text-align:left;font-family:HudNum,NewsSans;font-weight:600;font-stretch:75%;font-size:calc(46px*var(--fs,1));line-height:1;color:#7F92FF;-webkit-text-stroke:0}
+#stage.cornerstone .facts h2{margin:0 0 6px;font-size:calc(29px*var(--fs,1));line-height:1.28;color:#fff;text-wrap:balance}
+#stage.cornerstone .facts p{margin:0;max-width:none;font-size:calc(24px*var(--fs,1));line-height:1.45;color:#A9B4DA;overflow-wrap:anywhere;text-wrap:pretty}
+#stage.cornerstone .scene.original .facts p{white-space:pre-wrap}
+#stage.cornerstone .facts.kv h2{margin:0 0 4px;font-size:calc(19px*var(--fs,1));letter-spacing:4px;color:#9FB2FF}
+#stage.cornerstone .facts.kv h2:after{content:'';display:inline-block;width:64px;height:1px;margin-left:12px;vertical-align:middle;background:linear-gradient(90deg,#9FB2FF,transparent)}
+#stage.cornerstone .facts.kv p{font-size:calc(31px*var(--fs,1));font-weight:700;line-height:1.28;color:#fff}
+#stage.cornerstone .nb{white-space:nowrap}
+#stage.cornerstone .num{font-family:HudNum,NewsSans;font-weight:700;font-stretch:87.5%;font-size:1.2em;line-height:1;color:#8EA2FF;padding:0 1px}
+#stage.cornerstone .facts article.is-active{background:linear-gradient(90deg,rgba(35,53,232,.92),rgba(35,53,232,.22) 90%) !important;box-shadow:inset 4px 0 0 #E2B24C}
+#stage.cornerstone .facts article.is-active .point-number,#stage.cornerstone .facts article.is-active .num{color:#fff}
+#stage.cornerstone .facts article.is-active p{color:#DDE4FF}
+#stage.cornerstone .facts article.is-dim{opacity:.5}
+
+/* Quoted original: a white paper card with blueprint linework. */
+#stage.cornerstone .evidence{margin:0;padding:9px 16px 11px;background:#F4F6FF url('assets/cs-blueprint.svg') 100% 50%/auto 100% no-repeat;border-left:4px solid #E2B24C;box-shadow:5px 5px 0 #2335E8}
+#stage.cornerstone .evidence b{display:flex;align-items:center;gap:10px;font-size:16px;letter-spacing:4px;color:#2335E8}
+#stage.cornerstone .evidence b:before{content:'';width:40px;height:22px;background:url('assets/cs-eye.svg') 0 0/40px 22px no-repeat}
+#stage.cornerstone .evidence b:after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(35,53,232,.5),transparent)}
+#stage.cornerstone .evidence p{margin:4px 0 0;font-family:TitleSerif,NewsSans,serif;font-weight:600;font-size:20px;line-height:1.5;color:#1E2547;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#stage.cornerstone .scene>.source{padding:0 0 0 12px;border:0;border-left:2px solid rgba(201,210,242,.5);background:none;font-size:18px;line-height:1.45;color:#8C96BE}
+#stage.cornerstone .source b{color:#fff}
+#stage.cornerstone .source span{font-size:15px;max-width:620px;color:#8EA2FF}
+
+/* The picture: centred in front of the wings; white matte, a Klein gap and a white hairline, faceted corner plates,
+   the crown crest above and a coin row below. */
+#stage.cornerstone .scene>.photo{left:calc(1282px - var(--hw,900px)/2);top:calc(452px - var(--hh,560px)/2);right:auto;width:var(--hw,900px);height:var(--hh,560px);padding:10px;overflow:visible;z-index:1;background:#fff;transform:none;box-shadow:0 0 0 4px #2335E8,0 0 0 6px rgba(255,255,255,.9),14px 16px 0 6px rgba(8,12,48,.45)}
+#stage.cornerstone .scene>.photo img{display:block;width:100%;height:100%;object-fit:contain;background:#0A0F2C}
+#stage.cornerstone .scene>.photo:before{content:'';position:absolute;inset:-28px;pointer-events:none;background:url('assets/cs-corner-tl.svg') 0 0/132px 132px no-repeat,url('assets/cs-corner-tr.svg') 100% 0/132px 132px no-repeat,url('assets/cs-corner-bl.svg') 0 100%/132px 132px no-repeat,url('assets/cs-corner-br.svg') 100% 100%/132px 132px no-repeat}
+#stage.cornerstone .scene>.photo:after{content:'';position:absolute;left:50%;top:-150px;bottom:-50px;width:300px;margin-left:-150px;pointer-events:none;background:url('assets/cs-crest.svg') 50% 0/245px 166px no-repeat,url('assets/cs-medals.svg') 50% 100%/300px 40px no-repeat}
+
+/* Logos and series art: the seal. Disc centre (1282,440); the seal art (600x720, centre 300,440) sits behind it. */
+#stage.cornerstone .scene>.brand{left:1152px;top:310px;width:260px;text-align:center;z-index:1}
+#stage.cornerstone .scene>.brand:before{content:'';position:absolute;left:-170px;top:-310px;width:600px;height:720px;z-index:-1;pointer-events:none;background:url('assets/cs-seal.svg') 0 0/600px 720px no-repeat}
+#stage.cornerstone .brand-window{position:relative;width:260px;height:260px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;transform:none;background:#fff;box-shadow:0 0 0 5px #2335E8,0 0 0 7px #fff;overflow:hidden}
+#stage.cornerstone .brand img{width:var(--lw,170px);height:var(--lw,170px);object-fit:contain;transform:none;border-radius:16px}
+#stage.cornerstone .brand.series-mark .brand-window{padding:10px;box-sizing:border-box}
+#stage.cornerstone .brand.series-mark img{width:100%;height:100%;object-fit:cover;object-view-box:inset(4% 8% 12% 8%);border-radius:50%}
+#stage.cornerstone .brand b{position:absolute;left:50%;top:420px;transform:translateX(-50%);display:block;margin:0;padding:9px 48px 10px;white-space:nowrap;background:#fff;color:#1A28C4;font-family:TitleSerif,NewsSans,serif;font-weight:800;font-size:27px;line-height:1.2;letter-spacing:4px;clip-path:polygon(0 0,100% 0,calc(100% - 22px) 50%,100% 100%,0 100%,22px 50%);box-shadow:inset 0 3px 0 #fff,inset 0 4px 0 #2335E8,inset 0 -3px 0 #fff,inset 0 -4px 0 #2335E8}
+#stage.cornerstone .brand b:before,#stage.cornerstone .brand b:after{content:none}
+
+/* Activity countdown: a white card. */
+#stage.cornerstone .countdown{height:108px;gap:20px;padding-right:18px;clip-path:none;color:#0B1236;background:#fff;box-shadow:5px 5px 0 #2335E8}
+#stage.cornerstone .count{clip-path:none;background:#2335E8;color:#fff;padding:0 22px}
+#stage.cornerstone .count strong,#stage.cornerstone .cal-days strong{font-family:HudNum,NewsSans;font-weight:700;font-stretch:75%}
+#stage.cornerstone .count strong{font-size:80px}
+#stage.cornerstone .countdown.urgent .count{background:#E8452C}
+#stage.cornerstone .countdown.upcoming .count{background:#0B1236;color:#fff}
+#stage.cornerstone .when h3{font-size:28px;color:#0B1236;overflow:hidden;text-overflow:ellipsis}
+#stage.cornerstone .when p{color:#5A6283;font-size:20px}
+#stage.cornerstone .when .place{color:#0B1236}
+
+/* Overview: wider column (to x 1000), the field and the seal move right. */
+#stage.cornerstone .scene.overview{padding-right:920px}
+#stage.cornerstone .scene.overview:before{left:1040px;width:816px;background:url('assets/cs-field-ov.svg') 0 0/816px 866px no-repeat}
+#stage.cornerstone .scene.overview>.brand{left:1272px}
+#stage.cornerstone .scene>.lead{padding-left:16px;border-left:3px solid #E2B24C;font-family:TitleSerif,NewsSans,serif;font-weight:600;font-size:23px;line-height:1.5;color:#DCE3FF;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;text-wrap:pretty}
+#stage.cornerstone .scene>.overview-grid{display:flex;flex-direction:column;gap:0}
+#stage.cornerstone .overview-grid article{position:relative;display:grid;grid-template-columns:60px auto minmax(0,1fr);column-gap:12px;row-gap:3px;align-items:center;padding:calc(11px + var(--air,0px)) 12px calc(11px + var(--air,0px)) 10px;border:0;border-top:1px solid rgba(201,210,242,.16);clip-path:none;transform:none;background:linear-gradient(90deg,rgba(255,255,255,.035),rgba(255,255,255,0))}
+#stage.cornerstone .overview-grid article:last-child{border-bottom:1px solid rgba(201,210,242,.16)}
+#stage.cornerstone .overview-grid article:before{content:'';position:absolute;left:0;top:-3px;width:5px;height:5px;background:#7F92FF}
+#stage.cornerstone .overview-head{display:contents}
+#stage.cornerstone .overview-idx{grid-column:1;grid-row:1/3;align-self:center;padding:0;background:none;border:0;transform:none;text-align:left;font-family:HudNum,NewsSans;font-weight:600;font-stretch:75%;font-size:calc(46px*var(--fs,1));line-height:1;color:#7F92FF;-webkit-text-stroke:0}
+#stage.cornerstone .category{grid-column:2;grid-row:1;margin:0;padding:1px 9px;font-size:calc(16px*var(--fs,1));letter-spacing:2px;white-space:nowrap;background:#2335E8;color:#fff;transform:none}
+#stage.cornerstone .overview-grid h2{grid-column:3;grid-row:1;margin:0;font-size:calc(27px*var(--fs,1));line-height:1.25;color:#fff}
+#stage.cornerstone .overview-grid p{grid-column:2/4;grid-row:2;margin:0;font-size:calc(21px*var(--fs,1));line-height:1.42;color:#A9B4DA;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:var(--clamp,2);overflow:hidden;text-wrap:pretty}
+#stage.cornerstone .overview-grid article.is-active{background:linear-gradient(90deg,rgba(35,53,232,.92),rgba(35,53,232,.22) 90%) !important;box-shadow:inset 4px 0 0 #E2B24C}
+#stage.cornerstone .overview-grid article.is-active .overview-idx{color:#fff}
+#stage.cornerstone .overview-grid article.is-active .category{background:#fff;color:#2335E8}
+#stage.cornerstone .overview-grid article.is-active p{color:#DDE4FF}
+#stage.cornerstone .overview-grid article.is-dim{opacity:.5}
+
+/* Calendar: navy across, a narrow Klein strip before the plaque, a plain round series portrait (no halo). */
+#stage.cornerstone .scene.calendar{padding-right:236px}
+#stage.cornerstone .scene.calendar:before{left:1700px;width:156px;background:url('assets/cs-field-cal.svg') 0 0/156px 866px no-repeat}
+#stage.cornerstone .scene.calendar>h1{max-width:1150px}
+#stage.cornerstone .scene.calendar>.brand{left:1568px;top:108px;width:96px}
+#stage.cornerstone .scene.calendar>.brand:before{content:none}
+#stage.cornerstone .scene.calendar .brand-window{width:96px;height:96px;padding:0;box-shadow:0 0 0 3px #fff}
+#stage.cornerstone .scene.calendar .brand img{width:96px;height:96px;object-fit:cover;border-radius:50%}
+#stage.cornerstone .scene.calendar .brand b{display:none}
+#stage.cornerstone .scene.calendar>.cal-grid{flex:1 1 auto;min-height:0;margin-top:34px;gap:12px 24px;grid-template-rows:repeat(var(--cal-rows,4),minmax(0,1fr))}
+#stage.cornerstone .cal-row,#stage.cornerstone .cal-row:nth-child(even){clip-path:none;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.02));box-shadow:inset 0 0 0 1px rgba(201,210,242,.2);padding-right:18px}
+#stage.cornerstone .cal-row.is-active{background:linear-gradient(90deg,rgba(35,53,232,.7),rgba(35,53,232,.25)) !important;box-shadow:inset 0 0 0 2px #8EA2FF}
+#stage.cornerstone .cal-row.is-dim{opacity:.55}
+#stage.cornerstone .cal-days{flex-basis:128px;background:#2335E8;color:#fff}
+#stage.cornerstone .cal-days strong{font-size:56px}
+#stage.cornerstone .cal-row.urgent .cal-days,#stage.cornerstone .cal-row.tier-critical .cal-days{background:#E8452C}
+#stage.cornerstone .cal-row.tier-upcoming .cal-days{background:#E2B24C;color:#0B1236}
+#stage.cornerstone .cal-row.tier-version .cal-days{background:#fff;color:#0B1236}
+#stage.cornerstone .cal-text h2{font-size:27px;color:#fff}
+#stage.cornerstone .cal-text h2 i{background:#fff;color:#0B1236}
+#stage.cornerstone .cal-tier{background:#2335E8}
+#stage.cornerstone .cal-text p{font-size:21px;color:#A9B4DA}
+#stage.cornerstone .cal-progress{height:6px;background:rgba(255,255,255,.12)}
+#stage.cornerstone .cal-progress span{background:linear-gradient(90deg,#2335E8,#9FB2FF)}
+
+#stage.cornerstone .scene>.route,#stage.cornerstone .scene>.metrics{left:900px;top:220px;width:740px;z-index:1;color:#fff}
+#stage.cornerstone .metrics strong{color:#fff}
+#stage.cornerstone .metrics p{border-top-color:#fff}
+#stage.cornerstone .scene.has-diagram>.brand{left:1560px;top:110px;width:110px}
+#stage.cornerstone .scene.has-diagram>.brand:before{content:none}
+#stage.cornerstone .scene.has-diagram .brand-window{width:110px;height:110px}
+#stage.cornerstone .scene.has-diagram .brand img{width:76px;height:76px}
+#stage.cornerstone .scene.has-diagram .brand b{display:none}
+
+/* Ink band: serif caption, quiet navigation. */
+#stage.cornerstone .caption{font-family:TitleSerif,NewsSans,serif;font-weight:800;color:#fff;letter-spacing:1px;background:none;box-shadow:none;border:0;text-shadow:none}
+#stage.cornerstone .caption:empty{visibility:hidden}
+#stage.cornerstone .navigation:before{background:none;box-shadow:none}
+#stage.cornerstone #modules{border-top-color:rgba(255,255,255,.14)}
+#stage.cornerstone .module{color:#7C86AD;border-bottom-color:rgba(255,255,255,.12)}
+#stage.cornerstone .module.active{color:#fff;border-bottom-color:#2335E8}   /* progress.blue: verify_progress_video reads it */
+#stage.cornerstone .now-label{color:#fff}
+#stage.cornerstone #clock{font-family:HudNum,NewsSans;font-weight:600;color:#B9C6FF;letter-spacing:2px}
+#stage.cornerstone .chapter{color:#8A93B8}
+#stage.cornerstone .chapter.active{background:#2335E8;color:#fff}
+#stage.cornerstone #track{background:rgba(255,255,255,.12)}
+#stage.cornerstone #fill{background:linear-gradient(90deg,#2335E8,#9FB2FF)}
+#stage.cornerstone .marker{background:rgba(255,255,255,.5)}
+#stage.cornerstone .wipe{display:block;position:absolute;left:0;top:0;width:2800px;height:866px;visibility:hidden;background:url('assets/cs-wipe.svg') 0 0/2800px 866px no-repeat}

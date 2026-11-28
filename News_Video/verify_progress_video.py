@@ -19,7 +19,9 @@ def verify(episode):
         if spec.get('full_bleed_edges'):
             for edge in [im[:,0,:],im[:,-1,:]]:
                 if float(np.mean(np.all(edge>245,axis=1)))>.02:raise ValueError('White sidebar detected in full-bleed video')
-        mask=lambda a:(a[:,0]<80)&(a[:,1]>100)&(a[:,2]>180)
+        blue=spec.get('blue','#01A1FE').lstrip('#');ref=np.array([int(blue[i:i+2],16) for i in (0,2,4)])
+        # Legacy P3 blue keeps its original mask; other template blues match within a per-channel tolerance.
+        mask=(lambda a:(a[:,0]<80)&(a[:,1]>100)&(a[:,2]>180)) if blue.upper()=='01A1FE' else (lambda a:np.all(np.abs(a.astype(int)-ref)<=48,axis=1))
         if spec.get('right_block_width'):
             edge=im[:,-spec['right_block_width']:,:].reshape(-1,3)
             if float(np.mean(mask(edge)))<.98:raise ValueError('Right edge block is not solid blue')
