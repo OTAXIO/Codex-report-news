@@ -1,13 +1,18 @@
 """Edition overview, sequential folios and clean cover metadata."""
-import re
+import math,re
+
+# 2026-11-28 (user): when the stories do not fit on one overview page, continue on more
+# overview pages instead of dropping them. Each page holds at most this many cards.
+OVERVIEW_PER_PAGE=4
 
 def is_overview(scene):
     return scene.get('scene_type')=='overview' or scene.get('id') in {'guide','overview'} or scene.get('section') in {'导览','概览'} or (scene.get('id')=='intro' and ('导览' in scene.get('title','') or '概览' in scene.get('title','') or scene.get('narration')=='这是本视频的导览。'))
 
 def folio_numbers(scenes):
+    """Overview pages form one leading block numbered 00; body pages count from 01."""
     positions=[i for i,s in enumerate(scenes) if is_overview(s)]
-    if positions and positions!=[0]:raise ValueError('One overview is allowed and it must be first')
-    return list(range(0 if positions else 1,len(scenes)+(0 if positions else 1)))
+    if positions!=list(range(len(positions))):raise ValueError('Overview pages must form one block at the start')
+    return [0]*len(positions)+list(range(1,len(scenes)-len(positions)+1))
 
 def overview_group(scene):
     section=scene.get('section','')
@@ -48,13 +53,15 @@ def overview_category(scene,index,series=None):
     return '今日情报' if series in {'arknights','endfield'} else '官方动态'
 
 
-def overview_highlights(scenes,limit=4):
+def overview_highlights(scenes,limit=None):
     """Keep story order while representing actual sections/segments, prioritizing CN game content over global."""
     unique=[];seen=set()
     for scene in scenes:
-        key=scene.get('event_key') or scene.get('item_id') or scene.get('id')
+        # Multi-page activity calendars are one overview entry.
+        key='activity_calendar' if scene.get('scene_type')=='activity_calendar' else scene.get('event_key') or scene.get('item_id') or scene.get('id')
         if key in seen:continue
         seen.add(key);unique.append(scene)
+    if limit is None:limit=len(unique)
     chosen=[];groups=set()
     for i,scene in enumerate(unique):
         if _is_global_game(scene):continue
@@ -107,9 +114,10 @@ def overview_title(scene,strict=False):
 def validate_overview(ep):
     if not ep.get('overview_subject_policy'):return
     body={s['id']:s for s in ep['scenes'] if not is_overview(s)}
-    guide=next((s for s in ep['scenes'] if is_overview(s)),None)
-    if not guide:return
-    for fact in guide.get('facts',[]):
+    guides=[s for s in ep['scenes'] if is_overview(s)]
+    if not guides:return
+    guide=guides[0]
+    for fact in [f for g in guides for f in g.get('facts',[])]:
         scene=body.get(fact.get('scene_id'))
         if not scene:raise ValueError('OVERVIEW: invalid story reference')
         expected,subject=overview_title(scene,True)
@@ -125,6 +133,23 @@ def overview_lead(scenes,temporary=False):
     names=[{'AI 动态':'AI 领域的重点动态','国内新闻':'国内要闻','国际新闻':'国际要闻'}.get(g,g) for g in groups]
     if len(names)>1:return '本期我们先关注'+names[0]+'，随后梳理'+'与'.join(names[1:])+'。'
     return '本期我们将聚焦'+names[0]+'，带你了解相关消息的主要内容。'
+
+
+def paginate(items,per_page=OVERVIEW_PER_PAGE):
+    """Split into the fewest pages of at most per_page items, as evenly as possible (5 -> 3+2)."""
+    if not items:return []
+    pages=math.ceil(len(items)/per_page);size,extra=divmod(len(items),pages);out=[];i=0
+    for n in range(pages):
+        step=size+(n<extra);out.append(items[i:i+step]);i+=step
+    return out
+
+
+def spoken_item(fact,scene):
+    """Short spoken label for a continuation page, taken from the story's own navigation title."""
+    label=(scene.get('short_title') or fact['title']).strip()
+    subject=fact.get('subject')
+    if subject and label.casefold().startswith(subject.casefold()) and len(label)>len(subject)+1:label=label[len(subject):]
+    return re.sub(r'^[\s｜|:：]+','',label).replace('｜',' ')
 
 
 def prepare_overview(ep,preferred=True):
@@ -156,16 +181,29 @@ def prepare_overview(ep,preferred=True):
     guide=dict(id=existing['id'] if existing else 'overview',scene_type='overview',section='概览',
                title=series_titles.get(series,'本期新闻导览'),short_title='导览',
                lead=overview_lead(body,ep.get('edition_slot')=='temporary'),facts=facts,narration='这是本视频的导览。',
-               hold_after_seconds=2.0,show_source=False,overview_generated=True,overview_schema_version=2,
-               total_stories=count,footer_note='本页展示本期重点，其余内容可通过底部导航查看。' if count>len(facts) else '本期重点将按正文顺序展开。')
+               hold_after_seconds=2.0,show_source=False,overview_generated=True,overview_schema_version=3,
+               total_stories=count,footer_note='本期重点将按正文顺序展开。')
     if series:
         # Series videos open with an engaging 1-3 sentence hook summarizing the lead news and key highlights.
         hook=re.sub(r'\s+','',str(ep.get('hook') or ''))
         if not 8<=len(hook)<=110 or re.search(r'(?:本视频|本期|新闻)的?导览',hook) or not hook.endswith(('。','！','？')):
             raise ValueError('HOOK_REQUIRED: editorial needs "hook", 1-3 punchy sentences (8-110 chars) summarizing the lead news and key highlights, ending in punctuation')
         guide.update(narration=hook,lead=hook,hold_after_seconds=0.6)
-    if existing:existing.update(guide)
-    else:scenes.insert(0,guide)
+    pages=paginate(facts)
+    by_id={s['id']:s for s in body}
+    out=[];offset=0
+    for n,page in enumerate(pages):
+        if n==0:item=dict(guide,facts=page)
+        else:
+            spoken='、'.join(spoken_item(f,by_id[f['scene_id']]) for f in page)
+            item=dict(guide,id=f"{guide['id']}-{n+1}",title=guide['title']+'（续）',short_title='导览（续）',facts=page,
+                      lead='本期还有这些内容。',narration='本期还有：'+spoken+'。',hold_after_seconds=0.8)
+        item.update(overview_page=n+1,overview_pages=len(pages),overview_offset=offset);offset+=len(page)
+        out.append(item)
+    if existing:existing.clear();existing.update(out[0]);out[0]=existing
+    first=next((i for i,s in enumerate(scenes) if is_overview(s)),0)
+    scenes[:]=[s for s in scenes if not is_overview(s)]
+    scenes[first:first]=out
     validate_overview(ep)
 
 

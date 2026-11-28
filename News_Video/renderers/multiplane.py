@@ -179,9 +179,10 @@ def build(root,episode,plan):
                         f'<div class="cal-progress"><span style="width:{pct}%"></span></div></div></article>')
             body=f'<div class="cal-grid" style="--cal-rows:{grid_rows}">'+''.join(cal_card(r) for r in rows)+'</div>'+logo
         elif mode=='overview':
-            if len(facts)>4:raise ValueError('Upgrade the overview to at most four complete highlights before rendering')
+            from layout_policy import OVERVIEW_PER_PAGE
+            if len(facts)>OVERVIEW_PER_PAGE:raise ValueError(f'Overview page holds at most {OVERVIEW_PER_PAGE} highlights; rerun prepare_overview to paginate')
             body='<p class="lead">'+text(s.get('lead','本期我们一起了解这些重点动态。'))+'</p><div class="overview-grid">'+''.join(
-                f'<article data-idx="{i}"><div class="overview-head"><span class="overview-idx">{i+1:02}</span><div class="category">{text(f.get("category","重点新闻"))}</div></div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for i,f in enumerate(facts))+'</div>'+logo+picture
+                f'<article data-idx="{i}"><div class="overview-head"><span class="overview-idx">{s.get("overview_offset",0)+i+1:02}</span><div class="category">{text(f.get("category","重点新闻"))}</div></div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></article>' for i,f in enumerate(facts))+'</div>'+logo+picture
         else:
             identity=(f'<div class="identity"><b>{text(s.get("speaker_name",s.get("publisher","")))}</b><span>{text(s.get("speaker_identity",""))}</span><i>{text({"opinion":"个人观点","preview":"预告 / 计划","experience":"使用体会","reshare":"转发信息"}.get(s.get("claim_type"),"推文动态"))}</i></div>' if mode in {'leader','original'} else '')
             body=identity+(countdown(s['activity']) if s.get('activity') else '')+'<div class="facts">'+''.join(f'<article data-idx="{i}"><span class="point-number">{i+1:02}</span><div><h2>{phrase(f["title"])}</h2><p>{phrase(f.get("detail",""))}</p></div></article>' for i,f in enumerate(facts))+'</div>'+logo+picture+diagram

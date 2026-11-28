@@ -19,15 +19,18 @@ class LayoutChecks(unittest.TestCase):
     def test_highlights_use_full_subject_and_actual_section_variety(self):
         scenes=[dict(id='a'+str(i),section='AI 动态',title='OpenAI 更新产品'+str(i),short_title='更新',narration='OpenAI 宣布了一项产品更新。') for i in range(5)]
         scenes.extend([dict(id='domestic',section='国内新闻',title='研究人员在贵州发现化石',narration='接下来是国内外重点新闻，先来看化石。研究人员在贵州发现了化石。'),dict(id='world',section='国际新闻',title='联合国发布气候报告',narration='联合国发布了一份气候报告。')])
-        ep=dict(edition_slot='night',scenes=scenes);prepare_overview(ep);guide=ep['scenes'][0]
-        self.assertEqual(len(guide['facts']),4);self.assertEqual(guide['total_stories'],7)
-        self.assertEqual([f['scene_id'] for f in guide['facts']],['a0','a1','domestic','world'])
-        self.assertTrue(all(f['detail'] for f in guide['facts']))
-        self.assertNotIn('接下来',guide['facts'][2]['detail']);self.assertIn('研究人员',guide['facts'][2]['detail'])
+        ep=dict(edition_slot='night',scenes=scenes);prepare_overview(ep);guides=[s for s in ep['scenes'] if s.get('scene_type')=='overview']
+        facts=[f for g in guides for f in g['facts']]
+        # 2026-11-28: seven stories no longer get cut to four; they continue on a second overview page (4+3).
+        self.assertEqual([len(g['facts']) for g in guides],[4,3]);self.assertEqual(guides[0]['total_stories'],7)
+        self.assertEqual([f['scene_id'] for f in facts],['a0','a1','a2','a3','a4','domestic','world'])
+        self.assertTrue(all(f['detail'] for f in facts))
+        self.assertNotIn('接下来',facts[5]['detail']);self.assertIn('研究人员',facts[5]['detail'])
+        self.assertEqual(folio_numbers(ep['scenes'])[:3],[0,0,1])
     def test_legacy_label_only_guide_is_upgraded_before_voice(self):
         ep=dict(scenes=[dict(id='guide',scene_type='overview',facts=[dict(title='新版本',detail='')],narration='这是本视频的导览。'),dict(id='story',title='WorkBuddy 新增办公功能',narration='WorkBuddy 新增了办公功能。')])
         prepare_overview(ep);self.assertEqual(ep['scenes'][0]['id'],'guide');self.assertEqual(len(ep['scenes']),2)
-        self.assertIn('WorkBuddy',ep['scenes'][0]['facts'][0]['title']);self.assertEqual(ep['scenes'][0]['overview_schema_version'],2)
+        self.assertIn('WorkBuddy',ep['scenes'][0]['facts'][0]['title']);self.assertEqual(ep['scenes'][0]['overview_schema_version'],3)
     def test_social_only_does_not_invent_ai_section(self):
         ep=dict(scenes=[dict(id='domestic',section='国内新闻',title='研究人员发现化石',narration='研究人员发现了化石。')]);prepare_overview(ep)
         self.assertNotIn('AI',ep['scenes'][0]['lead']);self.assertEqual(len(ep['scenes'][0]['facts']),1)
@@ -56,8 +59,33 @@ class LayoutChecks(unittest.TestCase):
         en=dict(id='g1',game='arknights',game_region='global',section='游戏资讯',segment='official',title='国际服活动',narration='国际服推出活动。')
         ep=dict(edition_slot='night',edition_series='arknights',hook='国服新版本与新干员今天上线！',scenes=cn+[en])
         prepare_overview(ep,True)
-        self.assertEqual([f['scene_id'] for f in ep['scenes'][0]['facts']],['c1','c2','c3','c4'])
+        pages=[s for s in ep['scenes'] if s.get('scene_type')=='overview']
+        self.assertEqual([[f['scene_id'] for f in g['facts']] for g in pages],[['c1','c2','c3'],['c4','g1']])
+        self.assertEqual(pages[1]['facts'][1]['category'],'国际服动态')
         ep2=dict(edition_slot='night',edition_series='arknights',hook='国服新版本今天上线！',scenes=cn[:2]+[en])
         prepare_overview(ep2,True)
         self.assertEqual([f['scene_id'] for f in ep2['scenes'][0]['facts']],['c1','c2','g1'])
         self.assertEqual(ep2['scenes'][0]['facts'][2]['category'],'国际服动态')
+    def test_overview_continues_on_more_pages_and_is_idempotent(self):
+        scenes=[dict(id=f's{i}',section='AI 动态',title=f'OpenAI 更新产品{i}',short_title=f'OpenAI 产品{i}',narration='OpenAI 宣布了一项产品更新。') for i in range(9)]
+        ep=dict(edition_slot='morning',scenes=scenes);prepare_overview(ep);prepare_overview(ep)
+        pages=[s for s in ep['scenes'] if s.get('scene_type')=='overview']
+        self.assertEqual([len(p['facts']) for p in pages],[3,3,3]);self.assertEqual(len(ep['scenes']),12)
+        self.assertEqual([p['id'] for p in pages],['overview','overview-2','overview-3'])
+        self.assertEqual([p['overview_offset'] for p in pages],[0,3,6])
+        self.assertEqual(pages[1]['short_title'],'导览（续）');self.assertTrue(pages[1]['title'].endswith('（续）'))
+        self.assertEqual(pages[1]['narration'],'本期还有：OpenAI 产品3、OpenAI 产品4、OpenAI 产品5。')
+        self.assertEqual(folio_numbers(ep['scenes']),[0,0,0]+list(range(1,10)))
+    def test_paginate_balances_pages(self):
+        from layout_policy import paginate
+        self.assertEqual([len(p) for p in paginate(list(range(5)))],[3,2])
+        self.assertEqual([len(p) for p in paginate(list(range(4)))],[4])
+        self.assertEqual([len(p) for p in paginate(list(range(10)))],[4,3,3])
+        self.assertEqual(paginate([]),[])
+    def test_multi_page_calendar_is_one_overview_entry(self):
+        cal=lambda i:dict(id=f'cal{i}',game='endfield',game_region='cn',section='游戏资讯',segment='activities',scene_type='activity_calendar',title=f'活动日历{i}',narration='活动如下。')
+        ep=dict(edition_slot='night',scenes=[dict(id='lead',game='endfield',game_region='cn',section='游戏资讯',title='终末地新活动',narration='终末地新活动开启。'),cal(1),cal(2),cal(3)])
+        prepare_overview(ep)
+        self.assertEqual([f['scene_id'] for f in ep['scenes'][0]['facts']],['lead','cal1'])
+
+if __name__=='__main__':unittest.main()
